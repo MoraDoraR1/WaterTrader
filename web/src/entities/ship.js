@@ -76,8 +76,8 @@ export function buildShipMesh(shipDef) {
   // 갑판을 한 단 낮추고 그 위를 속이 빈 뱃전(불워크)으로 둘러, 갑판이 옴폭 파이고
   // 양옆이 난간처럼 둘러선 형태를 낸다. deckY 아래는 실제 솔리드 선체, 그 위 bulwarkH만큼은
   // 구멍 뚫린 고리 형태 벽이다.
-  const deckY = hullHei * 0.58;
-  const bulwarkH = hullHei * 0.34;
+  const deckY = hullHei * 0.48;
+  const bulwarkH = hullHei * 0.44;
   const railTopY = deckY + bulwarkH;
 
   // 선체 윤곽선(위에서 본 모양) — 이물은 뾰족하게, 고물은 완만하게 넓어지는 실제 범선 형태.
@@ -85,7 +85,7 @@ export function buildShipMesh(shipDef) {
   const hw = hullWid / 2;
   const hl = hullLen / 2;
   const outline = [
-    [-hw * 0.4, -hl * 0.96], [hw * 0.4, -hl * 0.96], // 선미 트랜섬
+    [-hw * 0.22, -hl * 0.96], [hw * 0.22, -hl * 0.96], // 선미 트랜섬 — 좁혀서 용골이 가려지지 않게 함
     [hw * 0.98, -hl * 0.55], [hw * 0.92, hl * 0.15],
     [hw * 0.5, hl * 0.72], [0, hl], // 이물 끝
     [-hw * 0.5, hl * 0.72], [-hw * 0.92, hl * 0.15],
@@ -110,7 +110,8 @@ export function buildShipMesh(shipDef) {
     depth: hullHei * 0.22, bevelEnabled: true, bevelThickness: hullHei * 0.04, bevelSize: hw * 0.02, bevelSegments: 3,
   });
   bilgeGeo.rotateX(-Math.PI / 2);
-  bilgeGeo.scale(0.6, 1, 0.9);
+  // 폭/길이를 더 좁혀 고물 쪽 벽이 용골 곡선을 가리지 않도록 한다
+  bilgeGeo.scale(0.4, 1, 0.66);
   bilgeGeo.translate(0, -hullHei * 0.22, 0);
   const bilgeMesh = new THREE.Mesh(bilgeGeo, new THREE.MeshStandardMaterial({ color: '#140d06', roughness: 0.9 }));
   group.add(bilgeMesh);
@@ -139,11 +140,12 @@ export function buildShipMesh(shipDef) {
   // 구멍(hole)은 바깥 윤곽과 반대 방향(역순)으로 감아야 실제로 뚫린 구멍으로 인식된다.
   const bulwarkHole = new THREE.Path();
   const revOutline = [...outline].reverse();
+  const holeScale = 0.6;
   revOutline.forEach(([x, z], i) => {
-    const ix = x * 0.74, iz = z * 0.74;
+    const ix = x * holeScale, iz = z * holeScale;
     if (i === 0) bulwarkHole.moveTo(ix, -iz); else bulwarkHole.lineTo(ix, -iz);
   });
-  bulwarkHole.lineTo(revOutline[0][0] * 0.74, -revOutline[0][1] * 0.74);
+  bulwarkHole.lineTo(revOutline[0][0] * holeScale, -revOutline[0][1] * holeScale);
   bulwarkOuter.holes.push(bulwarkHole);
   const bulwarkGeo = new THREE.ExtrudeGeometry(bulwarkOuter, {
     depth: bulwarkH, bevelEnabled: true, bevelThickness: bulwarkH * 0.1, bevelSize: hw * 0.02, bevelSegments: 2,
@@ -173,7 +175,7 @@ export function buildShipMesh(shipDef) {
   // 갑판 — 낮아진 바닥면(옴폭 파인 안쪽 공간의 바닥)
   const deckGeo = new THREE.ShapeGeometry(hullShape);
   deckGeo.rotateX(-Math.PI / 2);
-  deckGeo.scale(0.68, 1, 0.68);
+  deckGeo.scale(0.5, 1, 0.5);
   const deck = new THREE.Mesh(deckGeo, new THREE.MeshStandardMaterial({ color: deckColor, roughness: 0.9 }));
   deck.position.y = deckY + 0.03;
   group.add(deck);
