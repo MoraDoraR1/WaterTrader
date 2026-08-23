@@ -130,14 +130,26 @@ export function buildShipMesh(shipDef) {
     for (let i = 0; i < halfWidthProfile.length - 1; i++) {
       const [z0, w0] = halfWidthProfile[i];
       const [z1, w1] = halfWidthProfile[i + 1];
-      if (zc >= z0 && zc <= z1) return THREE.MathUtils.lerp(w0, w1, (zc - z0) / (z1 - z0));
+      if (zc >= z0 && zc <= z1) {
+        const t = (zc - z0) / (z1 - z0);
+        const st = t * t * (3 - 2 * t); // smoothstep — 각 기준점 사이를 부드러운 곡선으로 잇는다(직선 보간 대비 각짐 완화)
+        return THREE.MathUtils.lerp(w0, w1, st);
+      }
     }
     return 0;
   }
+  // halfWidthProfile의 7개 기준점만 잇는 대신, 훨씬 촘촘하게 샘플링해 실제 배 사진처럼
+  // 매끄럽게 흐르는 뱃전 실루엣을 만든다(저해상도 다각형이 아니라 연속 곡선에 가깝게).
+  const SILHOUETTE_SAMPLES = 22;
+  const zMin = halfWidthProfile[0][0], zMax = halfWidthProfile[halfWidthProfile.length - 1][0];
+  const starboardCurve = [];
+  for (let i = 0; i <= SILHOUETTE_SAMPLES; i++) {
+    const z = THREE.MathUtils.lerp(zMin, zMax, i / SILHOUETTE_SAMPLES);
+    starboardCurve.push([halfWidthAt(z), z]);
+  }
   const outline = [
-    [-halfWidthProfile[0][1], halfWidthProfile[0][0]],
-    ...halfWidthProfile.map(([z, w]) => [w, z]),
-    ...[...halfWidthProfile].slice(0, -1).reverse().map(([z, w]) => [-w, z]),
+    ...starboardCurve,
+    ...[...starboardCurve].slice(0, -1).reverse().map(([w, z]) => [-w, z]),
   ];
   // rotateX(-90°) 매핑은 로컬 y가 곧 -world z가 되므로, 아래 좌표는 (x, -z)로 넣는다.
   const hullShape = new THREE.Shape();
@@ -338,7 +350,7 @@ export function buildShipMesh(shipDef) {
   // 선수루(포어캐슬) — 이물 쪽 낮은 갑판 구조물 + 안쪽으로 살짝 들어간 상판(완전한 상자가
   // 아니라 갑판+난간 느낌) + 난간 기둥과 이를 잇는 레일 바.
   const darkPostMat = new THREE.MeshStandardMaterial({ color: '#2e2013' });
-  const forecastleH = hullHei * 0.42 * castleScale;
+  const forecastleH = hullHei * 0.3 * castleScale;
   const fcLen = hullLen * 0.15 * castleScale;
   const forecastle = new THREE.Mesh(
     new THREE.BoxGeometry(hullWid * 0.64, forecastleH, fcLen),
@@ -366,8 +378,11 @@ export function buildShipMesh(shipDef) {
 
   // 선미루 — 선장갑판(퀀터덱, 선장실/조타 공간)과 그 위의 뒷갑판(포프덱) 2단 구조.
   // 포프덱 뒷면을 선체의 실제 맨 끝(halfWidthAt이 0에 가까워지는 -hl 근처)까지 바짝 붙인다.
-  const qdH = hullHei * 1.05 * castleScale, qdLen = hullLen * 0.24 * castleScale;
-  const poopH = hullHei * 0.62 * castleScale, poopLen = hullLen * 0.15 * castleScale;
+  // 참고 사진(실제 범선) 대비 이전 높이(qdH+poopH 합이 hullHei의 2배를 넘음)가 지나치게
+  // 높고 상자 두 개를 쌓은 것처럼 보였다 — 실제 범선은 선미루가 선체 길이 대비 완만하게
+  // 솟은 하나의 구조물에 가깝다. 합계를 hullHei의 1배 안팎으로 낮춘다.
+  const qdH = hullHei * 0.5 * castleScale, qdLen = hullLen * 0.24 * castleScale;
+  const poopH = hullHei * 0.32 * castleScale, poopLen = hullLen * 0.15 * castleScale;
   const poopCenterZ = -hl * 0.985 + poopLen * 0.5;
   const qdCenterZ = poopCenterZ + poopLen / 2 + qdLen / 2 - hullLen * 0.01;
 
@@ -621,9 +636,19 @@ export function buildShipMesh(shipDef) {
   // 돛대/활대가 선미루 선실 벽을 그대로 뚫고 지나가는 것처럼 보인다.
   const mastForeZ = hullLen * 0.32;
   const mastAftZ = qdCenterZ + qdLen / 2 + hullLen * 0.05;
+  // 모든 돛대 z위치를 미리 계산해둔다 — 스테이(삭구)를 "돛대마다 같은 이물/고물 한 점"이
+  // 아니라 "바로 앞/뒤 돛대(또는 뱃머리/선미)"로 이어지도록 하기 위함이다. 전자는 돛대가
+  // 여러 개일 때 모든 스테이가 한 점으로 모이는 부채꼴(X자) 모양이 되어 실제 삭구와 다르게
+  // 지저분해 보인다. 실제 범선은 각 돛대가 바로 이웃한 돛대/구조물로만 지지줄을 뻗는다.
+  const mastZs = [];
   for (let i = 0; i < mastCount; i++) {
     const t = mastCount === 1 ? 0.5 : i / (mastCount - 1);
-    const mastZ = THREE.MathUtils.lerp(mastForeZ, mastAftZ, t);
+    mastZs.push(THREE.MathUtils.lerp(mastForeZ, mastAftZ, t));
+  }
+  for (let i = 0; i < mastCount; i++) {
+    const mastZ = mastZs[i];
+    const foreStayAnchor = i === 0 ? bowTip : new THREE.Vector3(0, railTopY + 0.35, mastZs[i - 1]);
+    const aftStayAnchor = i === mastCount - 1 ? sternDeck : new THREE.Vector3(0, railTopY + 0.35, mastZs[i + 1]);
     const mastHeight = hullHei + 7 * sy * (i === Math.floor(mastCount / 2) ? 1.15 : 0.9);
     const mastBaseY = railTopY + 0.1;
     const mastTopY = mastBaseY + mastHeight;
@@ -638,8 +663,8 @@ export function buildShipMesh(shipDef) {
       mast.position.set(0, mastBaseY + mastHeight / 2, mastZ);
       group.add(mast);
       const mastTop = new THREE.Vector3(0, mastTopY, mastZ);
-      addLine(mastTop, bowTip, 0.035);
-      addLine(mastTop, sternDeck, 0.035);
+      addLine(mastTop, foreStayAnchor, 0.035);
+      addLine(mastTop, aftStayAnchor, 0.035);
       addShrouds(mastTop, mastZ, 2, 0.028);
       // 소형 라틴세일선은 유일한 돛대라 크게, 다중 돛대 함선의 미즌 라틴세일은 다른 가로돛보다
       // 작아야 실제 역사 고증(미즌은 보조 돛)과 맞는다.
@@ -681,10 +706,10 @@ export function buildShipMesh(shipDef) {
       }
     }
 
-    // 삭구(스테이/샤우드) — 돛대 꼭대기에서 이물/고물/뱃전으로
+    // 삭구(스테이/샤우드) — 돛대 꼭대기에서 바로 앞/뒤 돛대(또는 뱃머리/선미)와 뱃전으로
     const mastTop = new THREE.Vector3(0, mastTopY, mastZ);
-    addLine(mastTop, bowTip, 0.03);
-    addLine(mastTop, sternDeck, 0.03);
+    addLine(mastTop, foreStayAnchor, 0.03);
+    addLine(mastTop, aftStayAnchor, 0.03);
     addShrouds(mastTop, mastZ, 3, 0.024);
 
     // 각 단 상단(활대 위치)에 활대 + 사다리꼴 돛 — 아래부터 코스세일/톱세일/톱갤런트세일
