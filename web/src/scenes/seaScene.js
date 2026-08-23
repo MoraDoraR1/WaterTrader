@@ -52,7 +52,7 @@ export class SeaScene {
 
     if (!state.shipHp) initShipHp();
     const shipDef = getShip(state.currentShipId);
-    this.playerMesh = buildShipMesh(shipDef);
+    this.playerMesh = buildShipMesh(shipDef, state.shipPaint);
     this.scene.add(this.playerMesh);
     this.ship = new ShipController(this.playerMesh, shipDef, this.ocean.heightAt);
     this.ship.pos.set(state.shipPos[0], state.shipPos[1]);
@@ -83,6 +83,16 @@ export class SeaScene {
   }
 
   setOnDock(fn) { this.onDock = fn; }
+
+  // 플레이어가 도색을 바꾸면(선박정보 패널) 호출 — 위치/방향/속도는 그대로 두고
+  // 메시만 새 도색으로 다시 만들어 교체한다.
+  rebuildPlayerShip() {
+    const shipDef = getShip(state.currentShipId);
+    this.scene.remove(this.playerMesh);
+    this.playerMesh = buildShipMesh(shipDef, state.shipPaint);
+    this.scene.add(this.playerMesh);
+    this.ship.mesh = this.playerMesh;
+  }
 
   handleLeftClick() {
     if (state.inCombat) {

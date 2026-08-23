@@ -9,6 +9,7 @@ export const state = {
   gold: 1500,
   currentShipId: 'caravela_lateen',
   shipHp: null,
+  shipPaint: null, // null = 국가 기본 도색. {hull, stripe, trim} 지정 시 플레이어 커스텀 도색 적용.
   shipPos: [-560, 300],
   shipHeading: 0,
   dockedCityId: null,
