@@ -26,6 +26,24 @@ const TYPE_PRESETS = {
   clipper: { profileMul: [0.55, 0.85, 0.95, 1, 0.98, 0.5, 1], beamMul: 0.76, freeboardMul: 0.76, castleMul: 0.22, tumbleMul: 0.6, lateenMizzen: false, simpleRig: false, gildLevel: 0, forceTallRig: true },
 };
 
+// 국가별 조선 특색 — "무슨 배인가"(TYPE_PRESETS) 위에 곱해지는 국가 배율.
+// 실제 조선사를 과장해 국가별로 실루엣만 봐도 구분되게 한다(엄밀한 축척 고증이 아니라
+// 게임적 과장): 스페인은 화려한 텀블홈/선루, 네덜란드는 극단적인 배불뚝이(플루이트 세율 회피용
+// 형태), 잉글랜드는 날렵한 저건현, 한자동맹은 코게선 특유의 밋밋하고 각진 실루엣(텀블홈이
+// 작을수록 옆면이 곧게 서서 각져 보인다), 스웨덴은 바사호처럼 과도하게 높고 장식적인 선루,
+// 베네치아(IT)는 갤리선 전통의 날렵함, 프랑스는 태양왕풍 화려함.
+const NATION_MODIFIERS = {
+  PT: { beamMul: 0.95, freeboardMul: 1.0, castleMul: 0.9, tumbleMul: 0.95, gildBonus: 0 },
+  ES: { beamMul: 1.05, freeboardMul: 1.05, castleMul: 1.25, tumbleMul: 1.3, gildBonus: 1 },
+  EN: { beamMul: 0.92, freeboardMul: 0.85, castleMul: 0.75, tumbleMul: 0.85, gildBonus: -1 },
+  NL: { beamMul: 1.25, freeboardMul: 0.9, castleMul: 0.7, tumbleMul: 1.4, gildBonus: -1 },
+  HAN: { beamMul: 1.15, freeboardMul: 1.0, castleMul: 0.6, tumbleMul: 0.6, gildBonus: -1 },
+  IT: { beamMul: 0.85, freeboardMul: 0.9, castleMul: 1.0, tumbleMul: 1.0, gildBonus: 1 },
+  SE: { beamMul: 1.1, freeboardMul: 1.2, castleMul: 1.3, tumbleMul: 1.15, gildBonus: 1 },
+  FR: { beamMul: 0.98, freeboardMul: 1.05, castleMul: 1.05, tumbleMul: 1.05, gildBonus: 1 },
+};
+const DEFAULT_NATION_MOD = { beamMul: 1, freeboardMul: 1, castleMul: 1, tumbleMul: 1, gildBonus: 0 };
+
 // 사다리꼴 돛 — 밑단을 2차 베지어 곡선으로 살짝 부풀려 바람을 머금은 형태를 낸다.
 function trapezoid(topW, botW, h, belly = h * 0.16) {
   const shape = new THREE.Shape();
@@ -91,7 +109,18 @@ export function buildShipMesh(shipDef) {
   const group = new THREE.Group();
   group.name = `ship_${shipDef.id}`;
 
-  const arch = TYPE_PRESETS[shipDef.type] || TYPE_PRESETS.fullrig;
+  const typePreset = TYPE_PRESETS[shipDef.type] || TYPE_PRESETS.fullrig;
+  const natMod = NATION_MODIFIERS[shipDef.country] || DEFAULT_NATION_MOD;
+  // 선종(TYPE_PRESETS)이 기본 실루엣을 정하고, 그 위에 국가 배율(NATION_MODIFIERS)을 곱해
+  // 같은 갈레온이라도 스페인은 화려하고 육중하게, 잉글랜드는 날렵하게 갈라지게 한다.
+  const arch = {
+    ...typePreset,
+    beamMul: typePreset.beamMul * natMod.beamMul,
+    freeboardMul: typePreset.freeboardMul * natMod.freeboardMul,
+    castleMul: typePreset.castleMul * natMod.castleMul,
+    tumbleMul: typePreset.tumbleMul * natMod.tumbleMul,
+    gildLevel: Math.max(0, Math.min(3, typePreset.gildLevel + natMod.gildBonus)),
+  };
 
   // 선체 색상은 국가/커스텀과 무관하게 자연스러운 목재 톤 하나로 통일한다.
   const hullColorLight = new THREE.Color('#6b4526');
@@ -472,10 +501,12 @@ export function buildShipMesh(shipDef) {
   addSternGallery(galleryTopY, galleryZ, poopHalfW * 2, poopH * 0.68);
 
   // 금박 장식(gildLevel) — 화려한 국가(이베리아/발트)일수록 갤러리 위에 조각된 박공(페디먼트)
-  // 장식을 추가로 얹어, 참고 사진 속 화려한 선미 장식을 흉내낸다.
-  if (arch.gildLevel >= 2) {
+  // 장식을 추가로 얹어, 참고 사진 속 화려한 선미 장식을 흉내낸다. 0(전혀 없음)부터 3(가장 화려)
+  // 까지 매 단계가 눈에 띄게 커지도록 크기를 연속적으로 키운다 — 잉글랜드/네덜란드/한자동맹처럼
+  // gildBonus가 음수인 국가는 같은 선종이라도 확실히 소박해 보여야 한다.
+  if (arch.gildLevel >= 1) {
     const pediment = new THREE.Mesh(
-      new THREE.ConeGeometry(poopHalfW * (arch.gildLevel >= 3 ? 0.42 : 0.34), poopH * 0.26, 4),
+      new THREE.ConeGeometry(poopHalfW * (0.16 + arch.gildLevel * 0.1), poopH * (0.14 + arch.gildLevel * 0.06), 4),
       new THREE.MeshStandardMaterial({ color: trimColor, roughness: 0.35, metalness: 0.35 })
     );
     pediment.rotation.y = Math.PI / 4;
