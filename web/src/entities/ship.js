@@ -419,8 +419,13 @@ export function buildShipMesh(shipDef) {
   // 솟은 하나의 구조물에 가깝다. 합계를 hullHei의 1배 안팎으로 낮춘다.
   const qdH = hullHei * 0.5 * castleScale, qdLen = hullLen * 0.24 * castleScale;
   const poopH = hullHei * 0.32 * castleScale, poopLen = hullLen * 0.15 * castleScale;
-  const poopCenterZ = -hl * 0.985 + poopLen * 0.5;
-  const qdCenterZ = poopCenterZ + poopLen / 2 + qdLen / 2 - hullLen * 0.01;
+  // 퀀터덱을 먼저 선체 맨 끝(고물)에 붙이고, 포프덱(과 그 위 조타륜)은 퀀터덱 "지붕" 위에
+  // 얹히는 더 작은 구조물로 둔다. 이전에는 포프덱을 선체 끝에 붙이고 퀀터덱을 그 앞에 이어
+  // 붙이는 순서였는데, 그러면 포프덱 발자국 전체가 퀀터덱 지붕보다 뒤로 빠져서 받쳐주는
+  // 구조 없이 허공에 떠 있는 것처럼 보였다. 포프덱 발자국이 퀀터덱 지붕 안쪽(여유 30%를
+  // 남긴 70% 지점까지만 뒤로)에 들어오도록 해서 실제로 그 위에 얹힌 것처럼 보이게 한다.
+  const qdCenterZ = -hl * 0.985 + qdLen * 0.5;
+  const poopCenterZ = qdCenterZ - (qdLen - poopLen) * 0.35;
 
   // 선체는 고물로 갈수록 좁아지므로(halfWidthAt), 상자 폭을 고정값이 아니라 각 구조물
   // 뒤쪽 끝(가장 좁아지는 지점) 기준 실제 선체 폭에 맞춰 정한다. 그래야 뱃전 난간이
