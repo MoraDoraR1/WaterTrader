@@ -39,6 +39,8 @@ function goToSea(fromCityId) {
   if (fromCityId) {
     // 도시에서 나올 때는 정박했던 위치 그대로 유지
   }
+  // 배 진행 방향 기준으로 "뒤에서 바라보는" 기본 시점으로 초기화(yaw == heading일 때 배 후방)
+  pointerControls.yaw = seaScene.ship.heading;
   citySceneObj = null;
   setScreen('sea');
   hud.showSeaHud(true);

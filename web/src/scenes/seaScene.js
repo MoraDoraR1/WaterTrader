@@ -354,7 +354,8 @@ export class SeaScene {
 
     if (consumeJustPressed('KeyW')) this.ship.throttleUp();
     if (consumeJustPressed('KeyS')) this.ship.throttleDown();
-    this.ship.turnInput = (isDown('KeyD') ? 1 : 0) - (isDown('KeyA') ? 1 : 0);
+    // heading 증가 방향은 반시계(좌현) 회전이므로, D(우현 회전)는 heading을 감소시켜야 한다.
+    this.ship.turnInput = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
 
     if (pointerControls.rightDown) {
       let diff = pointerControls.yaw - this.ship.heading;
