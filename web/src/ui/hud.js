@@ -103,15 +103,6 @@ export const hud = {
     }
   },
 
-  setPaintInputs(paint) {
-    $('si-paint-hull').value = paint.hull;
-    $('si-paint-stripe').value = paint.stripe;
-    $('si-paint-trim').value = paint.trim;
-  },
-  getPaintInputs() {
-    return { hull: $('si-paint-hull').value, stripe: $('si-paint-stripe').value, trim: $('si-paint-trim').value };
-  },
-
   initMinimap(landPolygons, bounds) {
     mmBounds = bounds;
     const canvas = $('minimap-canvas');

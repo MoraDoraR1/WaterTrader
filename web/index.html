@@ -155,19 +155,6 @@
   .si-stat-row .bar-track { flex: 1; height: 8px; margin-top: 0; }
   .si-val { width: 42px; text-align: right; font-size: 0.72rem; color: #f0e6d2; flex-shrink: 0; }
   #ship-info-panel .close-hint { text-align: center; margin-top: 0.7rem; font-size: 0.72rem; color: #8fa6b4; }
-  #si-paint-section { margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid rgba(200,180,120,0.25); }
-  #si-paint-title { font-size: 0.76rem; color: #f3d98a; letter-spacing: 0.05rem; margin-bottom: 0.5rem; }
-  #si-paint-row { display: flex; gap: 0.7rem; }
-  .si-paint-swatch { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; font-size: 0.66rem;
-    color: #cfe0ea; flex: 1; }
-  .si-paint-swatch input[type="color"] { width: 100%; height: 28px; border: 1px solid rgba(200,180,120,0.4);
-    border-radius: 6px; background: none; padding: 0; cursor: pointer; }
-  #si-paint-actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; }
-  #si-paint-actions button { flex: 1; padding: 0.45rem 0.5rem; font-size: 0.72rem; border-radius: 7px;
-    border: 1px solid rgba(200,180,120,0.4); background: rgba(230,193,90,0.12); color: #f0e6d2; cursor: pointer; }
-  #si-paint-actions button:hover { background: rgba(230,193,90,0.26); }
-  #si-paint-actions #si-paint-apply { background: linear-gradient(180deg, #f3d98a, #c9a24a); color: #241a05;
-    font-weight: 700; border: none; }
 </style>
 </head>
 <body>
@@ -259,18 +246,6 @@
       <div class="si-stat-row"><span class="si-label">화력</span><div class="bar-track"><div class="bar-fill si-cannon" id="si-bar-cannons"></div></div><span class="si-val" id="si-val-cannons"></span></div>
       <div class="si-stat-row"><span class="si-label">선회</span><div class="bar-track"><div class="bar-fill si-turn" id="si-bar-turn"></div></div><span class="si-val" id="si-val-turn"></span></div>
       <div class="si-stat-row"><span class="si-label">속도</span><div class="bar-track"><div class="bar-fill si-speed" id="si-bar-speed"></div></div><span class="si-val" id="si-val-speed"></span></div>
-      <div id="si-paint-section">
-        <div id="si-paint-title">선체 도색</div>
-        <div id="si-paint-row">
-          <label class="si-paint-swatch">선체<input type="color" id="si-paint-hull"></label>
-          <label class="si-paint-swatch">줄무늬<input type="color" id="si-paint-stripe"></label>
-          <label class="si-paint-swatch">금박<input type="color" id="si-paint-trim"></label>
-        </div>
-        <div id="si-paint-actions">
-          <button id="si-paint-apply">적용</button>
-          <button id="si-paint-reset">국가 기본값</button>
-        </div>
-      </div>
       <div class="close-hint">T 또는 ESC 로 닫기</div>
     </div>
   </div>

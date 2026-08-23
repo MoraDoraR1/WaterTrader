@@ -24,25 +24,6 @@ const HULL_ARCHETYPES = {
   baltic: { profileMul: [0.72, 0.92, 0.95, 0.93, 0.88, 0.66, 1], beamMul: 0.9, freeboardMul: 1.12, castleMul: 1.2, tumbleMul: 1.1, lateenMizzen: false, simpleRig: false, gildLevel: 3 },
 };
 
-// 국가별 기본 도색(선체 바탕색/줄무늬/금박 트림) — 참고 사진(Götheborg: 짙은 남색+금줄)처럼
-// 목재색 하나가 아니라 실제 범선처럼 칠해진 선체를 국가마다 다르게 낸다.
-// 플레이어가 언제든 선박정보 패널에서 이 값을 덮어써 바꿀 수 있다(paintOverride).
-const NATION_PAINT = {
-  PT: { hull: '#5c1f1f', stripe: '#d4af37', trim: '#d4af37' },
-  ES: { hull: '#14110f', stripe: '#8a1f1f', trim: '#d4af37' },
-  EN: { hull: '#12100d', stripe: '#c8952a', trim: '#1a1712' },
-  NL: { hull: '#1c2b1e', stripe: '#d4af37', trim: '#8a1f1f' },
-  HAN: { hull: '#4a3423', stripe: '#8a1f1f', trim: '#d4af37' },
-  IT: { hull: '#4a1420', stripe: '#d4af37', trim: '#d4af37' },
-  SE: { hull: '#16233f', stripe: '#8a1f1f', trim: '#d4af37' },
-  FR: { hull: '#0e1a2e', stripe: '#d4af37', trim: '#d4af37' },
-};
-const DEFAULT_PAINT = { hull: '#4a3423', stripe: '#d4af5a', trim: '#e6c15a' };
-
-export function getDefaultPaint(country) {
-  return { ...(NATION_PAINT[country] || DEFAULT_PAINT) };
-}
-
 // 사다리꼴 돛 — 밑단을 2차 베지어 곡선으로 살짝 부풀려 바람을 머금은 형태를 낸다.
 function trapezoid(topW, botW, h, belly = h * 0.16) {
   const shape = new THREE.Shape();
@@ -54,10 +35,10 @@ function trapezoid(topW, botW, h, belly = h * 0.16) {
   return new THREE.ShapeGeometry(shape, 8);
 }
 
-function paintHullColors(geo, hullHei, paint) {
-  const below = new THREE.Color('#120d08'); // 흘수선 아래 — 타르 먹인 짙은 색(도색과 무관)
-  const stripe = new THREE.Color(paint.stripe);
-  const above = new THREE.Color(paint.hull);
+function paintHullColors(geo, hullHei) {
+  const below = new THREE.Color('#1c140b'); // 흘수선 아래 — 타르 먹인 짙은 색
+  const stripe = new THREE.Color('#d4af5a'); // 흘수선 트림 라인
+  const above = new THREE.Color('#96693c'); // 흘수선 위 본 선체(밝은 오크색)
   const posAttr = geo.attributes.position;
   const colors = new Float32Array(posAttr.count * 3);
   const tmp = new THREE.Color();
@@ -95,7 +76,7 @@ function addLateenRig(group, mastBaseY, mastHeight, mastZ, yardLen) {
   group.add(sail);
 }
 
-export function buildShipMesh(shipDef, paintOverride = null) {
+export function buildShipMesh(shipDef) {
   const cls = SHIP_CLASSES[shipDef.class];
   const [sx, sy, sz] = cls.hullScale;
   const role = shipDef.role || 'trade';
@@ -104,12 +85,11 @@ export function buildShipMesh(shipDef, paintOverride = null) {
 
   const style = NATION_STYLE[shipDef.country] || 'iberian';
   const arch = HULL_ARCHETYPES[style];
-  const paint = { ...(NATION_PAINT[shipDef.country] || DEFAULT_PAINT), ...(paintOverride || {}) };
-  group.userData.paint = paint;
 
-  const hullColorLight = new THREE.Color(paint.hull).lerp(new THREE.Color('#ffffff'), 0.2);
-  const hullColorDark = new THREE.Color(paint.hull).lerp(new THREE.Color('#000000'), 0.28);
-  const trimColor = new THREE.Color(paint.trim);
+  // 선체 색상은 국가/커스텀과 무관하게 자연스러운 목재 톤 하나로 통일한다.
+  const hullColorLight = new THREE.Color('#6b4526');
+  const hullColorDark = hullColorLight.clone().lerp(new THREE.Color('#2e2013'), 0.35);
+  const trimColor = new THREE.Color('#e6c15a');
   const deckColor = new THREE.Color('#a3814f');
   const trim = new THREE.Color(COUNTRY_COLORS[shipDef.country] || '#888888'); // 국기색(깃발 전용)
   const rigColor = '#2b2015';
@@ -170,7 +150,7 @@ export function buildShipMesh(shipDef, paintOverride = null) {
     depth: deckY, bevelEnabled: true, bevelThickness: deckY * 0.12, bevelSize: hw * 0.06, bevelSegments: 2,
   });
   hullGeo.rotateX(-Math.PI / 2);
-  paintHullColors(hullGeo, hullHei, paint);
+  paintHullColors(hullGeo, hullHei);
   const hullMesh = new THREE.Mesh(hullGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
   group.add(hullMesh);
 

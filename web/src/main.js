@@ -9,7 +9,6 @@ import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, MAINLAND_POLY, BRITAIN_POLY } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
-import { getDefaultPaint } from './entities/ship.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 
 const wrap = document.getElementById('canvas-wrap');
@@ -133,23 +132,9 @@ function openShipInfo() {
     turnRatio: shipDef.turnRate / STAT_MAX.turnRate, turnVal: `${shipDef.turnRate}°/s`,
     speedRatio: shipDef.speed / STAT_MAX.speed, speedVal: `${shipDef.speed}`,
   });
-  hud.setPaintInputs(state.shipPaint || getDefaultPaint(shipDef.country));
   hud.showShipInfo(true);
 }
 function closeShipInfo() { hud.showShipInfo(false); }
-
-document.getElementById('si-paint-apply').addEventListener('click', () => {
-  state.shipPaint = hud.getPaintInputs();
-  seaScene?.rebuildPlayerShip();
-  hud.toast('선체 도색을 적용했습니다.');
-});
-document.getElementById('si-paint-reset').addEventListener('click', () => {
-  state.shipPaint = null;
-  const shipDef = getShip(state.currentShipId);
-  hud.setPaintInputs(getDefaultPaint(shipDef.country));
-  seaScene?.rebuildPlayerShip();
-  hud.toast('국가 기본 도색으로 되돌렸습니다.');
-});
 
 document.querySelectorAll('.gender-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
