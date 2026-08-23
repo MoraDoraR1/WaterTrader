@@ -141,12 +141,12 @@ export function buildShipMesh(shipDef) {
   group.add(gunwale);
 
   // 난간 밑 몰딩(웨이스트 레일) — 건월(뱃전 상단)과 선체 사이를 잇는 밝은 트림 라인으로
-  // 난간부와 선체를 시각적으로 구분한다.
-  const waistRailGeo = new THREE.ExtrudeGeometry(hullShape, { depth: hullHei * 0.05, bevelEnabled: false });
+  // 난간부와 선체를 시각적으로 구분한다. 뱃전 밖으로 뚜렷이 튀어나오도록 두께를 넉넉히 준다.
+  const waistRailGeo = new THREE.ExtrudeGeometry(hullShape, { depth: hullHei * 0.075, bevelEnabled: false });
   waistRailGeo.rotateX(-Math.PI / 2);
-  waistRailGeo.scale(1.055, 1, 1.035);
-  waistRailGeo.translate(0, hullHei * 0.78, 0);
-  const waistRail = new THREE.Mesh(waistRailGeo, new THREE.MeshStandardMaterial({ color: '#d4af5a', roughness: 0.7 }));
+  waistRailGeo.scale(1.08, 1, 1.05);
+  waistRailGeo.translate(0, hullHei * 0.76, 0);
+  const waistRail = new THREE.Mesh(waistRailGeo, new THREE.MeshStandardMaterial({ color: '#e6c15a', roughness: 0.6 }));
   group.add(waistRail);
 
   // 갑판
@@ -228,13 +228,13 @@ export function buildShipMesh(shipDef) {
 
   // 선루 층 구분 몰딩 — 선체/퀀터덱, 퀀터덱/포프덱 경계마다 밝은 트림 띠를 둘러
   // 갑판 단이 어디서 나뉘는지 뚜렷이 드러낸다.
-  const deckLineMat = new THREE.MeshStandardMaterial({ color: '#d4af5a', roughness: 0.7 });
+  const deckLineMat = new THREE.MeshStandardMaterial({ color: '#e6c15a', roughness: 0.6 });
   function addDeckLine(y, width, len) {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(width, hullHei * 0.06, len), deckLineMat);
+    const line = new THREE.Mesh(new THREE.BoxGeometry(width, hullHei * 0.09, len), deckLineMat);
     line.position.set(0, y, -hullLen * 0.34);
     group.add(line);
   }
-  addDeckLine(hullHei + 0.02, hullWid * 0.8, qdLen + 0.06);
+  addDeckLine(hullHei + 0.02, hullWid * 0.82, qdLen + 0.1);
 
   const poopH = hullHei * 0.58 * castleScale, poopLen = hullLen * 0.12 * castleScale;
   const poopMat = new THREE.MeshStandardMaterial({ color: trim.clone().lerp(new THREE.Color('#000'), 0.15), roughness: 0.8 });
@@ -242,19 +242,49 @@ export function buildShipMesh(shipDef) {
   poop.position.set(0, hullHei + qdH + poopH / 2, -hullLen * 0.4);
   group.add(poop);
   {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.54, hullHei * 0.05, poopLen + 0.06), deckLineMat);
+    const line = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.56, hullHei * 0.08, poopLen + 0.1), deckLineMat);
     line.position.set(0, hullHei + qdH + 0.02, -hullLen * 0.4);
     group.add(line);
   }
 
-  // 선미 갤러리 창 — 뒷갑판 후면에 격자형 어두운 창 패널(카메라가 배 뒤쪽에서 보므로 -Z를 향하게 180도 회전)
-  const windowMat = new THREE.MeshStandardMaterial({ color: '#0d1a22', roughness: 0.3, metalness: 0.2 });
-  for (let wx = -1; wx <= 1; wx++) {
-    const win = new THREE.Mesh(new THREE.PlaneGeometry(hullWid * 0.11, qdH * 0.3), windowMat);
-    win.position.set(wx * hullWid * 0.19, hullHei + qdH * 0.55, -hullLen * 0.34 - qdLen / 2 - 0.02);
-    win.rotation.y = Math.PI;
-    group.add(win);
+  // 선미 갤러리 창 — 가장 뒤쪽/가장 위(포프덱) 후면, 즉 배 뒤에서 봤을 때 실제로 눈에
+  // 들어오는 면에 배치한다(퀀터덱 후면은 포프덱에 가려 거의 보이지 않는다). 창은 포프덱
+  // 표면 색이 그대로 창살처럼 비치도록 간격만 두고, 둘레는 실제로 튀어나온 각재 몰딩
+  // (BoxGeometry)으로 둘러 소형선에서도 뚜렷하게 보이도록 한다.
+  const windowMat = new THREE.MeshStandardMaterial({ color: '#0a1620', roughness: 0.25, metalness: 0.3 });
+  const mullionMat = new THREE.MeshStandardMaterial({ color: '#e6c15a', roughness: 0.55 });
+  function addSternGallery(centerY, zPos, w, h) {
+    const cols = [0.32, 0.36, 0.32]; // 가운데 창(선장실)을 살짝 더 넓게
+    const gap = w * 0.07;
+    let cx = -w / 2;
+    cols.forEach((cw) => {
+      const colW = w * cw - gap;
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(colW, h * 0.86), windowMat);
+      win.position.set(cx + w * cw / 2, centerY, zPos);
+      win.rotation.y = Math.PI;
+      group.add(win);
+      cx += w * cw;
+    });
+    // 가로 살(sash) — 창을 위/아래로 나누는 밝은 각재, 표면보다 튀어나오게 배치
+    const sash = new THREE.Mesh(new THREE.BoxGeometry(w * 0.94, h * 0.07, 0.06), mullionMat);
+    sash.position.set(0, centerY, zPos + 0.03);
+    group.add(sash);
+    // 테두리 몰딩 — 창 무리 둘레를 감싸는 얇고 밝은 각재 프레임
+    const bT = h * 0.09;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(w * 1.08, bT, 0.08), mullionMat);
+    top.position.set(0, centerY + h / 2 + bT / 2, zPos + 0.03);
+    group.add(top);
+    const bottom = top.clone();
+    bottom.position.y = centerY - h / 2 - bT / 2;
+    group.add(bottom);
+    const side = new THREE.Mesh(new THREE.BoxGeometry(bT, h + bT * 2, 0.08), mullionMat);
+    side.position.set(-w / 2 - bT / 2, centerY, zPos + 0.03);
+    group.add(side);
+    const side2 = side.clone();
+    side2.position.x = w / 2 + bT / 2;
+    group.add(side2);
   }
+  addSternGallery(hullHei + qdH + poopH * 0.56, -hullLen * 0.4 - poopLen / 2 - 0.03, hullWid * 0.5, poopH * 0.68);
   // 뒷갑판 난간 기둥(발스트레이드)
   for (let i = -2; i <= 2; i++) {
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, hullHei * 0.2, 5), darkPostMat);
