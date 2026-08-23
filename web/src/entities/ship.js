@@ -335,16 +335,23 @@ export function buildShipMesh(shipDef) {
   // 선미루 — 선장갑판(퀀터덱, 선장실/조타 공간)과 그 위의 뒷갑판(포프덱) 2단 구조.
   // 국기색 통짜 패널이 아니라 선체와 같은 목재 톤으로 만들어 "칠해진 상자"가 아니라
   // 목조 선실 구조물처럼 보이게 한다(트림 색은 몰딩·깃발에만 남겨둔다).
-  // 크기를 키우고, 포프덱 뒷면이 선체의 실제 고물 끝(halfWidthProfile 최후단, 약 -hl*0.97)
-  // 가까이 닿도록 배치한다 — 예전엔 선체 고물이 선미루보다 더 뒤로 튀어나와, 선미루가
-  // 작고 선체 안쪽에 동떨어져 있는 것처럼 보였다.
-  const qdH = hullHei * 1.05 * castleScale, qdLen = hullLen * 0.27 * castleScale;
-  const poopH = hullHei * 0.62 * castleScale, poopLen = hullLen * 0.16 * castleScale;
-  const poopCenterZ = -hl * 0.97 + poopLen * 0.5 + hullLen * 0.006;
+  // 포프덱 뒷면을 선체의 실제 맨 끝(halfWidthAt이 0에 가까워지는 -hl 근처)까지 바짝 붙인다.
+  const qdH = hullHei * 1.05 * castleScale, qdLen = hullLen * 0.24 * castleScale;
+  const poopH = hullHei * 0.62 * castleScale, poopLen = hullLen * 0.15 * castleScale;
+  const poopCenterZ = -hl * 0.985 + poopLen * 0.5;
   const qdCenterZ = poopCenterZ + poopLen / 2 + qdLen / 2 - hullLen * 0.01;
 
+  // 선체는 고물로 갈수록 좁아지므로(halfWidthAt), 상자 폭을 고정값이 아니라 각 구조물
+  // 뒤쪽 끝(가장 좁아지는 지점) 기준 실제 선체 폭에 맞춰 정한다. 그래야 뱃전 난간이
+  // 선실 옆으로 삐져나오지 않는다(고정 폭을 쓰면 앞쪽에서 선체가 상자보다 넓어져
+  // 난간이 선실을 뚫고 나온 것처럼 보인다).
+  const qdBackZ = qdCenterZ - qdLen / 2;
+  const qdHalfW = halfWidthAt(qdBackZ) * 0.84;
+  const poopBackZ = poopCenterZ - poopLen / 2;
+  const poopHalfW = halfWidthAt(poopBackZ) * 0.8;
+
   const sternDeckMat = new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.85 });
-  const quarterdeck = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.82, qdH, qdLen), sternDeckMat);
+  const quarterdeck = new THREE.Mesh(new THREE.BoxGeometry(qdHalfW * 2, qdH, qdLen), sternDeckMat);
   quarterdeck.position.set(0, railTopY + qdH / 2, qdCenterZ);
   group.add(quarterdeck);
 
@@ -356,18 +363,18 @@ export function buildShipMesh(shipDef) {
     line.position.set(0, y, qdCenterZ);
     group.add(line);
   }
-  addDeckLine(railTopY + 0.02, hullWid * 0.86, qdLen + 0.1);
+  addDeckLine(railTopY + 0.02, qdHalfW * 2 + 0.05, qdLen + 0.1);
 
   const poopMat = new THREE.MeshStandardMaterial({ color: hullColorLight.clone().lerp(new THREE.Color('#2e2013'), 0.3), roughness: 0.85 });
-  const poop = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.56, poopH, poopLen), poopMat);
+  const poop = new THREE.Mesh(new THREE.BoxGeometry(poopHalfW * 2, poopH, poopLen), poopMat);
   poop.position.set(0, railTopY + qdH + poopH / 2, poopCenterZ);
   group.add(poop);
   {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.62, hullHei * 0.08, poopLen + 0.1), deckLineMat);
+    const line = new THREE.Mesh(new THREE.BoxGeometry(poopHalfW * 2 + 0.05, hullHei * 0.08, poopLen + 0.1), deckLineMat);
     line.position.set(0, railTopY + qdH + 0.02, poopCenterZ);
     group.add(line);
   }
-  const poopTop = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.52, hullHei * 0.03, poopLen * 0.9), new THREE.MeshStandardMaterial({ color: deckColor, roughness: 0.9 }));
+  const poopTop = new THREE.Mesh(new THREE.BoxGeometry(poopHalfW * 1.8, hullHei * 0.03, poopLen * 0.9), new THREE.MeshStandardMaterial({ color: deckColor, roughness: 0.9 }));
   poopTop.position.set(0, railTopY + qdH + poopH + 0.07, poopCenterZ);
   group.add(poopTop);
 
@@ -408,12 +415,12 @@ export function buildShipMesh(shipDef) {
     side2.position.x = w / 2 + bT / 2;
     group.add(side2);
   }
-  addSternGallery(railTopY + qdH + poopH * 0.56, poopCenterZ - poopLen / 2 - 0.03, hullWid * 0.56, poopH * 0.68);
+  addSternGallery(railTopY + qdH + poopH * 0.56, poopCenterZ - poopLen / 2 - 0.03, poopHalfW * 2, poopH * 0.68);
 
   // 쿼터 갤러리(퀀터갤러리) — 선미 양쪽 모서리에 작게 튀어나온 곁창. 갈레온 고증 컷어웨이
   // 도면에 등장하는 특징적인 디테일로, 선미 갤러리와 함께 넣어야 "선미 창 배치"가 완성된다.
   function addQuarterGallery(side) {
-    const gx = side * (hullWid * 0.28 + 0.01);
+    const gx = side * (poopHalfW + 0.01);
     const gz = poopCenterZ - poopLen * 0.15;
     const gy = railTopY + qdH + poopH * 0.5;
     const win = new THREE.Mesh(new THREE.PlaneGeometry(poopLen * 0.5, poopH * 0.5), windowMat);
@@ -432,11 +439,11 @@ export function buildShipMesh(shipDef) {
   function addCabinWindow(side, wy, wz) {
     const ww = hullWid * 0.11, wh = qdH * 0.34;
     const frame = new THREE.Mesh(new THREE.PlaneGeometry(ww * 1.3, wh * 1.22), mullionMat);
-    frame.position.set(side * (hullWid * 0.41 + 0.01), wy, wz);
+    frame.position.set(side * (qdHalfW + 0.01), wy, wz);
     frame.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
     group.add(frame);
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(ww, wh), windowMat);
-    glass.position.set(side * (hullWid * 0.41 + 0.02), wy, wz);
+    glass.position.set(side * (qdHalfW + 0.02), wy, wz);
     glass.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
     group.add(glass);
   }
@@ -452,10 +459,10 @@ export function buildShipMesh(shipDef) {
     const railZ = poopCenterZ - poopLen * 0.3;
     for (let i = -2; i <= 2; i++) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, hullHei * 0.2, 5), darkPostMat);
-      post.position.set((i / 2) * hullWid * 0.2, railTopY + qdH + poopH + 0.1, railZ);
+      post.position.set((i / 2) * poopHalfW * 0.8, railTopY + qdH + poopH + 0.1, railZ);
       group.add(post);
     }
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.42, hullHei * 0.025, 0.045), darkPostMat);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(poopHalfW * 1.7, hullHei * 0.025, 0.045), darkPostMat);
     rail.position.set(0, railY, railZ);
     group.add(rail);
   }
