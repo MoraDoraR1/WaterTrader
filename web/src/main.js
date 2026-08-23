@@ -68,6 +68,7 @@ document.querySelectorAll('.gender-btn').forEach((btn) => {
 document.getElementById('start-btn').addEventListener('click', () => {
   hud.showTitle(false);
   hud.showTopBar(true);
+  hud.showLocationBanner(true);
   hud.showCrosshair(true);
   initShipHp();
   goToSea();

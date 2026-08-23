@@ -37,37 +37,45 @@
     border-radius: 50%; background: rgba(240,230,210,0.85); box-shadow: 0 0 4px rgba(0,0,0,0.6); z-index: 20; pointer-events: none; }
 
   /* ---- Top bars ---- */
-  #top-bar { position: fixed; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between;
-    align-items: flex-start; z-index: 15; pointer-events: none; }
-  #location-banner { background: rgba(8,18,26,0.6); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
-    padding: 0.5rem 1rem; font-size: 1.05rem; letter-spacing: 0.08rem; backdrop-filter: blur(3px); }
-  #location-banner .sub { display: block; font-size: 0.72rem; color: #9fb8c9; margin-top: 2px; }
+  #top-bar { position: fixed; top: 14px; right: 14px; z-index: 15; pointer-events: none; }
   #gold-box { background: rgba(8,18,26,0.6); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
     padding: 0.5rem 1rem; font-size: 1rem; }
 
-  /* ---- Sea HUD ---- */
-  #sea-hud { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 15;
-    display: flex; gap: 1.2rem; align-items: flex-end; pointer-events: none; }
-  #throttle { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 10px;
-    padding: 0.6rem 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  #throttle .notch-row { display: flex; flex-direction: column-reverse; gap: 3px; }
-  .notch { width: 90px; height: 12px; border-radius: 3px; background: rgba(255,255,255,0.08); }
-  .notch.filled-fwd { background: #6fd66f; }
-  .notch.filled-rev { background: #e07a5f; }
-  .notch.zero-line { background: rgba(240,230,210,0.5); height: 2px; }
-  #throttle .label { font-size: 0.72rem; color: #cfe0ea; margin-top: 4px; }
-  #compass { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 50%;
-    width: 74px; height: 74px; display: flex; align-items: center; justify-content: center; position: relative; }
-  #compass-needle { width: 3px; height: 28px; background: #e6c15a; position: absolute; top: 8px; left: 50%;
-    margin-left: -1.5px; transform-origin: 50% 28px; }
-  #compass-n { position: absolute; top: 3px; font-size: 0.6rem; color: #e6c15a; }
-  #ship-hp-box { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
-    padding: 0.5rem 0.8rem; width: 160px; }
+  /* ---- 좌상단: 선체 내구도 ---- */
+  #ship-hp-box { position: fixed; top: 14px; left: 14px; z-index: 15; pointer-events: none;
+    background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
+    padding: 0.5rem 0.8rem; width: 170px; }
   .bar-track { width: 100%; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 4px; }
   .bar-fill { height: 100%; background: linear-gradient(90deg, #5fbf5f, #a9d96b); }
   .bar-fill.enemy { background: linear-gradient(90deg, #c94d3f, #e07a5f); }
   #target-hp-box { position: fixed; top: 78px; left: 50%; transform: translateX(-50%); width: 260px; z-index: 15;
     background: rgba(8,18,26,0.65); border: 1px solid rgba(200,120,120,0.5); border-radius: 8px; padding: 0.5rem 0.9rem; }
+
+  /* ---- 좌하단: 해역 / 가까운 항구 ---- */
+  #location-banner { position: fixed; bottom: 14px; left: 14px; z-index: 15; pointer-events: none;
+    background: rgba(8,18,26,0.6); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
+    padding: 0.5rem 1rem; font-size: 1.05rem; letter-spacing: 0.08rem; backdrop-filter: blur(3px); }
+  #location-banner .sub { display: block; font-size: 0.72rem; color: #9fb8c9; margin-top: 2px; }
+
+  /* ---- 우하단: 나침반 + 속도게이지 + 미니맵 ---- */
+  #nav-panel { position: fixed; bottom: 14px; right: 14px; z-index: 15; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  #compass { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 50%;
+    width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; position: relative; }
+  #compass-needle { width: 3px; height: 22px; background: #e6c15a; position: absolute; top: 6px; left: 50%;
+    margin-left: -1.5px; transform-origin: 50% 22px; }
+  #compass-n { position: absolute; top: 2px; font-size: 0.55rem; color: #e6c15a; }
+  #minimap-row { display: flex; align-items: stretch; gap: 5px; }
+  #throttle-mini { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
+    padding: 0.4rem 0.35rem; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  #throttle-mini .notch-row { display: flex; flex-direction: column-reverse; gap: 2px; }
+  .notch { width: 32px; height: 8px; border-radius: 2px; background: rgba(255,255,255,0.08); }
+  .notch.filled-fwd { background: #6fd66f; }
+  .notch.filled-rev { background: #e07a5f; }
+  .notch.zero-line { background: rgba(240,230,210,0.5); height: 2px; }
+  #throttle-mini .label { font-size: 0.6rem; color: #cfe0ea; margin-top: 3px; white-space: nowrap; }
+  #minimap-wrap { background: rgba(8,18,26,0.7); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px; padding: 4px; }
+  #minimap-canvas { display: block; border-radius: 4px; }
 
   #combat-banner { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 16;
     background: rgba(120,20,20,0.75); border: 1px solid #e07a5f; padding: 0.4rem 1.4rem; border-radius: 6px;
@@ -128,21 +136,26 @@
   </div>
 
   <div id="top-bar" class="hidden">
-    <div id="location-banner">망망대해<span class="sub" id="location-sub">&nbsp;</span></div>
     <div id="gold-box">💰 <span id="gold-amount">0</span> 두캇</div>
+  </div>
+
+  <div id="location-banner" class="hidden">망망대해<span class="sub" id="location-sub">&nbsp;</span></div>
+
+  <div id="ship-hp-box" class="hidden">
+    <div>선체 내구도</div>
+    <div class="bar-track"><div class="bar-fill" id="ship-hp-fill" style="width:100%"></div></div>
   </div>
 
   <div id="combat-banner" class="hidden">⚔ 전투 상황</div>
 
-  <div id="sea-hud" class="hidden">
-    <div id="throttle">
-      <div class="notch-row" id="notch-row"></div>
-      <div class="label" id="throttle-label">정박</div>
-    </div>
+  <div id="nav-panel" class="hidden">
     <div id="compass"><div id="compass-n">N</div><div id="compass-needle"></div></div>
-    <div id="ship-hp-box">
-      <div>선체 내구도</div>
-      <div class="bar-track"><div class="bar-fill" id="ship-hp-fill" style="width:100%"></div></div>
+    <div id="minimap-row">
+      <div id="throttle-mini">
+        <div class="notch-row" id="notch-row"></div>
+        <div class="label" id="throttle-label">정박</div>
+      </div>
+      <div id="minimap-wrap"><canvas id="minimap-canvas" width="150" height="120"></canvas></div>
     </div>
   </div>
 

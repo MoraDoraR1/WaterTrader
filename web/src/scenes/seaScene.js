@@ -8,6 +8,7 @@ import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { CITIES } from '../data/cities.js';
 import { MAINLAND_POLY, BRITAIN_POLY, LAND_POLYGONS, pointOnAnyLand, distanceToPolygonEdge, pointInPolygon } from '../data/coastline.js';
+import { seaRegionAt } from '../data/seaRegions.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, notify } from '../state.js';
@@ -58,6 +59,16 @@ export class SeaScene {
 
     this.scene.updateMatrixWorld(true);
     hud.initThrottle(-3, 5);
+
+    const allPts = [...MAINLAND_POLY, ...BRITAIN_POLY, ...CITIES.map((c) => c.pos)];
+    const xs = allPts.map((p) => p[0]), zs = allPts.map((p) => p[1]);
+    const pad = 60;
+    this.minimapBounds = {
+      minX: Math.min(...xs) - pad, maxX: Math.max(...xs) + pad,
+      minZ: Math.min(...zs) - pad, maxZ: Math.max(...zs) + pad,
+    };
+    hud.initMinimap(LAND_POLYGONS, this.minimapBounds);
+    this.minimapCities = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], color: COUNTRY_COLORS[c.country] || '#e6c15a' }));
   }
 
   setOnDock(fn) { this.onDock = fn; }
@@ -86,7 +97,8 @@ export class SeaScene {
       poly.forEach(([x, z], i) => {
         if (i === 0) shape.moveTo(x, -z); else shape.lineTo(x, -z);
       });
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 18, bevelEnabled: true, bevelThickness: 4, bevelSize: 8, bevelSegments: 3 });
+      // 해안 절벽이 너무 높으면 뒤쪽 도시 미니어처(마운드+건물)를 가려버리므로 낮게 유지한다.
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 7, bevelEnabled: true, bevelThickness: 1.8, bevelSize: 3.5, bevelSegments: 3 });
       geo.rotateX(-Math.PI / 2);
 
       const posAttr = geo.attributes.position;
@@ -355,15 +367,8 @@ export class SeaScene {
     if (consumeJustPressed('KeyW')) this.ship.throttleUp();
     if (consumeJustPressed('KeyS')) this.ship.throttleDown();
     // heading 증가 방향은 반시계(좌현) 회전이므로, D(우현 회전)는 heading을 감소시켜야 한다.
+    // 배의 방향은 오직 A/D 키로만 바뀐다 — 마우스는 시점 회전만 담당한다.
     this.ship.turnInput = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
-
-    if (pointerControls.rightDown) {
-      let diff = pointerControls.yaw - this.ship.heading;
-      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      this.ship.helmInput = THREE.MathUtils.clamp(diff * 1.6, -1, 1);
-    } else {
-      this.ship.helmInput = 0;
-    }
 
     this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z));
     this.ocean.update(elapsed, camera);
@@ -432,13 +437,20 @@ export class SeaScene {
     hud.setShipHp(state.shipHp / getShip(state.currentShipId).hp);
     hud.setGold(state.gold);
 
+    const regionName = seaRegionAt(this.ship.pos.x, this.ship.pos.y);
     const nearest = this._findNearestCityMarker();
     if (nearest.marker && nearest.dist < 300) {
       const city = CITIES.find((c) => c.id === nearest.marker.userData.cityId);
-      hud.setLocation('망망대해', `가까운 항구: ${city.name}`);
+      hud.setLocation(regionName, `가까운 항구: ${city.name}`);
     } else {
-      hud.setLocation('망망대해');
+      hud.setLocation(regionName);
     }
+
+    hud.updateMinimap(
+      { x: this.ship.pos.x, z: this.ship.pos.y, heading: this.ship.heading },
+      this.minimapCities,
+      this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.def.hostile }))
+    );
     if (nearest.marker && nearest.dist < DOCK_RANGE) {
       const city = CITIES.find((c) => c.id === nearest.marker.userData.cityId);
       hud.showInteractPrompt(true, `[좌클릭] ${city.name}에 정박하기`);
