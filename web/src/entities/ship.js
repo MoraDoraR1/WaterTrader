@@ -622,36 +622,56 @@ export function buildShipMesh(shipDef) {
   return group;
 }
 
-const NOTCH_SPEED = 4.2; // 1노치당 m/s
+const NOTCH_SPEED = 4.2; // 1노치당 목표 속도(m/s)
 const MAX_FWD = 5;
 const MAX_REV = -3;
+const ACCEL_BASE = 3.6; // m/s^2 — 목표 속도(레버 위치)로 수렴하는 가속도. 값이 작을수록 배가 무겁게 반응한다.
+const TURN_ACCEL_BASE = 1.7; // rad/s^2 — 목표 선회각속도로 수렴하는 각가속도(타가 듣기까지의 지연/관성)
 
 export class ShipController {
   constructor(mesh, shipDef, heightAt) {
     this.mesh = mesh;
     this.shipDef = shipDef;
     this.heightAt = heightAt;
-    this.notch = 0; // -3 .. 5
+    this.notch = 0; // -3 .. 5 (스로틀 레버 위치)
+    this.curSpeed = 0; // 실제 속도(m/s) — 레버 위치를 향해 가속도로 서서히 수렴한다(관성)
+    this.curTurnRate = 0; // 실제 선회각속도(rad/s) — 타 입력을 향해 서서히 수렴한다(타가 듣는 지연감)
     this.heading = 0; // rad
     this.pos = new THREE.Vector2(0, 0);
     this.turnInput = 0; // -1..1 from A/D
+
+    // 선체가 클수록 무겁게 반응하도록, 선체 스케일(부피감)에 반비례해 가속도를 낮춘다.
+    const cls = SHIP_CLASSES[shipDef.class] || SHIP_CLASSES.medium;
+    const [csx, , csz] = cls.hullScale;
+    const inertia = 1 + (csx * csz - 1) * 0.35;
+    this.accel = ACCEL_BASE / inertia;
+    this.turnAccel = TURN_ACCEL_BASE / inertia;
   }
 
   throttleUp() { this.notch = Math.min(MAX_FWD, this.notch + 1); }
   throttleDown() { this.notch = Math.max(MAX_REV, this.notch - 1); }
 
-  get speedMs() { return this.notch * NOTCH_SPEED; }
+  get speedMs() { return this.curSpeed; }
   get speedRatio() { return this.notch >= 0 ? this.notch / MAX_FWD : this.notch / Math.abs(MAX_REV); }
 
   update(delta, t, isBlocked) {
     const turnRateBase = THREE.MathUtils.degToRad(this.shipDef.turnRate);
-    const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.notch) / MAX_FWD);
-    const dir = this.notch < 0 ? -1 : 1;
-    const totalTurn = this.turnInput * turnRateBase * speedFactor * dir;
-    this.heading += totalTurn * delta;
+    const maxSpeed = NOTCH_SPEED * MAX_FWD;
+    // 실제 속도가 붙은 만큼만 타가 듣는다(정지 상태에서는 선회 반응이 둔하다) — curSpeed 기준으로 계산해
+    // 가속 중에는 선회 감도도 함께 서서히 올라온다.
+    const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.curSpeed) / maxSpeed);
+    const dir = this.curSpeed < 0 ? -1 : 1;
+    const targetTurnRate = this.turnInput * turnRateBase * speedFactor * dir;
+    const maxTurnStep = this.turnAccel * delta;
+    this.curTurnRate += Math.max(-maxTurnStep, Math.min(maxTurnStep, targetTurnRate - this.curTurnRate));
+    this.heading += this.curTurnRate * delta;
 
-    const vx = Math.sin(this.heading) * this.speedMs;
-    const vz = Math.cos(this.heading) * this.speedMs;
+    const targetSpeed = this.notch * NOTCH_SPEED;
+    const maxSpeedStep = this.accel * delta;
+    this.curSpeed += Math.max(-maxSpeedStep, Math.min(maxSpeedStep, targetSpeed - this.curSpeed));
+
+    const vx = Math.sin(this.heading) * this.curSpeed;
+    const vz = Math.cos(this.heading) * this.curSpeed;
     const prevX = this.pos.x, prevY = this.pos.y;
     let nx = prevX + vx * delta, ny = prevY + vz * delta;
 
