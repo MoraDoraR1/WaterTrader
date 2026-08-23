@@ -18,6 +18,17 @@ const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
 const RESPAWN_CITY = 'lisboa';
 
+// 국가/지역별 건물 팔레트 — 남유럽은 따뜻한 회벽+테라코타, 북유럽은 벽돌/석회+슬레이트 톤
+const REGION_PALETTE = {
+  PT: { wall: '#e8ddb5', roof: '#b5573a' },
+  ES: { wall: '#e3d4a8', roof: '#a8492f' },
+  IT: { wall: '#e0c9a0', roof: '#9c4630' },
+  EN: { wall: '#cfc9bd', roof: '#4a5560' },
+  NL: { wall: '#c9beae', roof: '#7a3f2e' },
+  HAN: { wall: '#b8ada0', roof: '#4a4038' },
+  FR: { wall: '#e6ddc8', roof: '#5c6470' },
+};
+
 export class SeaScene {
   constructor() {
     this.scene = new THREE.Scene();
@@ -232,7 +243,7 @@ export class SeaScene {
   }
 
   _buildCityMarkers() {
-    // 도시는 바다 위에서 잘 보이는 작은 "미니어처 마을" 모형으로 표시한다.
+    // 도시는 바다 위에서 잘 보이는 작은 "미니어처 유럽 항구마을" 모형으로 표시한다.
     // (거대한 대륙 벽을 세우지 않음 — 카메라 클리핑과 시야를 가리는 문제를 피하기 위함)
     const cx = CITIES.reduce((s, c) => s + c.pos[0], 0) / CITIES.length;
     const cz = CITIES.reduce((s, c) => s + c.pos[1], 0) / CITIES.length;
@@ -247,44 +258,81 @@ export class SeaScene {
       for (let i = 0; i < city.id.length; i++) seed = (seed * 31 + city.id.charCodeAt(i)) >>> 0;
       const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 
-      const moundRadius = 26;
+      const palette = REGION_PALETTE[city.country] || REGION_PALETTE.FR;
+      const flagColor = COUNTRY_COLORS[city.country] || '#999';
+
+      const moundRadius = 27;
       const mound = new THREE.Mesh(
-        new THREE.CylinderGeometry(moundRadius, moundRadius * 1.08, 5, 12),
+        new THREE.CylinderGeometry(moundRadius, moundRadius * 1.08, 5, 14),
         new THREE.MeshStandardMaterial({ color: '#8a9c72', roughness: 1 })
       );
       mound.position.y = 2.5;
       group.add(mound);
       this.cameraColliders.push(mound);
 
-      const buildingCount = 4;
-      let tallestY = 0, tallestX = 0, tallestZ = 0;
+      // 석축 옹벽 — 마운드 기단을 두르는 낮은 돌담(항구 요새 느낌)
+      const quay = new THREE.Mesh(
+        new THREE.TorusGeometry(moundRadius * 1.02, 0.9, 6, 24),
+        new THREE.MeshStandardMaterial({ color: '#8a8478', roughness: 1 })
+      );
+      quay.rotation.x = Math.PI / 2;
+      quay.position.y = 0.6;
+      group.add(quay);
+
+      const wallMat = new THREE.MeshStandardMaterial({ color: palette.wall, roughness: 0.95 });
+      const roofMat = new THREE.MeshStandardMaterial({ color: palette.roof, roughness: 0.85 });
+
+      // 랜드마크 첨탑(교회/시계탑) — 마을 중심에 두어 유럽 항구도시 특유의 스카이라인을 만든다
+      const towerH = 13 + rand() * 3;
+      const towerGroup = new THREE.Group();
+      const towerBody = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.4, towerH, 8), wallMat);
+      towerBody.position.y = towerH / 2;
+      towerGroup.add(towerBody);
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(2.5, 5.5, 8), roofMat);
+      spire.position.y = towerH + 2.75;
+      towerGroup.add(spire);
+      for (let f = 0; f < 4; f++) {
+        const face = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 1.2), new THREE.MeshStandardMaterial({ color: '#1c1610' }));
+        face.position.set(Math.sin(f * Math.PI / 2) * 2.15, towerH * 0.75, Math.cos(f * Math.PI / 2) * 2.15);
+        face.rotation.y = f * Math.PI / 2;
+        towerGroup.add(face);
+      }
+      towerGroup.position.set(0, 5, -moundRadius * 0.12);
+      group.add(towerGroup);
+      this.cameraColliders.push(towerBody);
+      const tallestY = towerH, tallestX = towerGroup.position.x, tallestZ = towerGroup.position.z;
+
+      // 일반 가옥들 — 지붕 형태를 섞어 스카이라인에 변화를 준다
+      const buildingCount = 6;
       for (let i = 0; i < buildingCount; i++) {
-        const a = (i / buildingCount) * Math.PI * 2 + rand() * 0.6;
-        const r = moundRadius * (0.25 + rand() * 0.4);
+        const a = (i / buildingCount) * Math.PI * 2 + rand() * 0.5;
+        const r = moundRadius * (0.4 + rand() * 0.42);
         const bx = Math.cos(a) * r, bz = Math.sin(a) * r;
-        const w = 4 + rand() * 2.5, d = 4 + rand() * 2.5, h = 4.5 + rand() * 3;
+        const w = 4.2 + rand() * 2.6, d = 4.2 + rand() * 2.6, h = 4.2 + rand() * 2.6;
         const bGroup = new THREE.Group();
-        const body = new THREE.Mesh(
-          new THREE.BoxGeometry(w, h, d),
-          new THREE.MeshStandardMaterial({ color: '#e4dcc3', roughness: 0.95 })
-        );
+        const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
         body.position.y = h / 2;
         bGroup.add(body);
-        const roof = new THREE.Mesh(
-          new THREE.ConeGeometry(Math.max(w, d) * 0.75, 3.2, 4),
-          new THREE.MeshStandardMaterial({ color: COUNTRY_COLORS[city.country] || '#7a5c3a' })
-        );
-        roof.rotation.y = Math.PI / 4;
-        roof.position.y = h + 1.6;
+        const roofStyle = i % 3;
+        let roof;
+        if (roofStyle === 0) {
+          roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.76, 3.4, 4), roofMat);
+          roof.rotation.y = Math.PI / 4;
+        } else if (roofStyle === 1) {
+          roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.68, 2.2, 4), roofMat);
+          roof.rotation.y = Math.PI / 4;
+        } else {
+          roof = new THREE.Mesh(new THREE.BoxGeometry(w * 1.06, 1.1, d * 1.06), roofMat);
+        }
+        roof.position.y = h + (roofStyle === 2 ? 0.55 : 1.6);
         bGroup.add(roof);
         bGroup.position.set(bx, 5, bz);
         group.add(bGroup);
         this.cameraColliders.push(body);
-        if (h > tallestY) { tallestY = h; tallestX = bx; tallestZ = bz; }
       }
 
       // 부두 — 바다(지도 중심) 방향으로 짧게 뻗어 정박 지점 역할
-      const pierLen = 18;
+      const pierLen = 19;
       const pier = new THREE.Mesh(
         new THREE.BoxGeometry(6, 1.2, pierLen),
         new THREE.MeshStandardMaterial({ color: '#5a4326', roughness: 0.9 })
@@ -293,19 +341,31 @@ export class SeaScene {
       pier.position.set(-dir.x * (moundRadius * 0.7 + pierLen * 0.5), 0.6, -dir.y * (moundRadius * 0.7 + pierLen * 0.5));
       group.add(pier);
 
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 9, 6), new THREE.MeshStandardMaterial({ color: '#4a3826' }));
-      pole.position.set(tallestX, 5 + tallestY + 4.5, tallestZ);
-      group.add(pole);
+      // 부두 옆에 정박한 소형 보트
+      const dinghy = new THREE.Group();
+      const dinghyHull = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.6, 0.9, 3.2, 6),
+        new THREE.MeshStandardMaterial({ color: '#5a4326', roughness: 0.9 })
+      );
+      dinghyHull.rotation.x = Math.PI / 2;
+      dinghyHull.scale.set(0.55, 0.55, 1);
+      dinghy.add(dinghyHull);
+      const perp = new THREE.Vector2(-dir.y, dir.x);
+      const pierBaseX = -dir.x * (moundRadius * 0.7 + 6);
+      const pierBaseZ = -dir.y * (moundRadius * 0.7 + 6);
+      dinghy.position.set(pierBaseX + perp.x * 4.5, 0.3, pierBaseZ + perp.y * 4.5);
+      dinghy.rotation.y = Math.atan2(dir.x, dir.y) + 0.3;
+      group.add(dinghy);
 
       const flag = new THREE.Mesh(
         new THREE.PlaneGeometry(6, 3.6),
-        new THREE.MeshStandardMaterial({ color: COUNTRY_COLORS[city.country] || '#999', side: THREE.DoubleSide })
+        new THREE.MeshStandardMaterial({ color: flagColor, side: THREE.DoubleSide })
       );
-      flag.position.set(tallestX + 3, 5 + tallestY + 8, tallestZ);
+      flag.position.set(tallestX + 3.2, 5 + tallestY - 2, tallestZ);
       group.add(flag);
 
       const label = makeLabelSprite(city.name);
-      label.position.set(tallestX, 5 + tallestY + 12, tallestZ);
+      label.position.set(tallestX, 5 + tallestY + 6, tallestZ);
       group.add(label);
 
       group.position.set(city.pos[0], 0, city.pos[1]);
