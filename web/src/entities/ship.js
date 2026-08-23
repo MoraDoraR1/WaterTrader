@@ -234,12 +234,20 @@ export function buildShipMesh(shipDef) {
   group.add(keelMesh);
 
   // 스템(이물 기둥) / 스턴포스트(고물 기둥) — 용골이 선수/선미에서 위로 이어지는 골재를
-  // 짧은 각재로 강조해, 참고 도면처럼 "용골 → 스템/스턴포스트" 구조가 드러나도록 한다.
+  // 강조해, 참고 도면처럼 "용골 → 스템(뱃머리 곡선)" 구조가 옆에서도 뚜렷이 보이도록 한다.
+  // 배가 날렵해 보이는 인상은 대부분 이 이물 곡선이 얼마나 또렷한가에서 온다 — 그래서 짧은
+  // 직선 각재 하나가 아니라, 흘수선 부근에서 시작해 선체 윤곽선보다 앞으로 튀어나오며 사장
+  // 밑동까지 매끄럽게 휘어 오르는 곡선재(빔헤드/이물 장식대)로 만든다.
   const keelAccentMat = new THREE.MeshStandardMaterial({ color: '#1c140b', roughness: 0.9 });
-  const stemMesh = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.05, hullHei * 0.65, hullWid * 0.05), keelAccentMat);
-  stemMesh.position.set(0, hullHei * 0.15, hl * 0.99);
-  stemMesh.rotation.x = -0.35;
-  group.add(stemMesh);
+  const cutwaterCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, -hullHei * 0.1, hl * 0.88),
+    new THREE.Vector3(0, hullHei * 0.22, hl * 1.03),
+    new THREE.Vector3(0, hullHei * 0.6, hl * 1.16),
+    new THREE.Vector3(0, railTopY * 0.9, hl * 1.26),
+  ]);
+  const cutwaterGeo = new THREE.TubeGeometry(cutwaterCurve, 24, Math.max(0.08, hullWid * 0.07), 8, false);
+  const cutwaterMesh = new THREE.Mesh(cutwaterGeo, keelAccentMat);
+  group.add(cutwaterMesh);
   const sternPostMesh = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.06, hullHei * 0.5, hullWid * 0.06), keelAccentMat);
   sternPostMesh.position.set(0, hullHei * 0.02, -hl * 0.98);
   sternPostMesh.rotation.x = 0.12;
