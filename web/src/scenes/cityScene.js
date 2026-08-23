@@ -230,7 +230,7 @@ export class CityScene {
 
     this.character.update(delta, inputVec, pointerControls.yaw, BOUNDS, this.buildingBoxes);
 
-    const camDist = 9.5, baseLift = 1.8;
+    const camDist = 9.5 * pointerControls.zoom, baseLift = 1.8;
     const anchor = new THREE.Vector3(this.character.pos.x, 1.5, this.character.pos.z);
     const horizDist = camDist * Math.cos(pointerControls.pitch);
     const camX = anchor.x - Math.sin(pointerControls.yaw) * horizDist;

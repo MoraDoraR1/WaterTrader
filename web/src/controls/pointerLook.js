@@ -22,18 +22,32 @@ export class PointerLookControls {
     this._lastY = 0;
     this._moved = 0;
 
+    // 마우스 휠 확대/축소 — 카메라 거리 배율(1 = 기본 거리, 작을수록 확대/가까움)
+    this.zoom = 1;
+    this.minZoom = 0.4;
+    this.maxZoom = 2.4;
+    this.zoomSensitivity = 0.0011;
+
     this.onLeftClick = null;
     this.onRightClick = null;
 
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onMouseMove = this._onMouseMove.bind(this);
     this._onMouseUp = this._onMouseUp.bind(this);
+    this._onWheel = this._onWheel.bind(this);
     this._onContextMenu = (e) => e.preventDefault();
 
     this.dom.addEventListener('mousedown', this._onMouseDown);
     document.addEventListener('mousemove', this._onMouseMove);
     document.addEventListener('mouseup', this._onMouseUp);
     this.dom.addEventListener('contextmenu', this._onContextMenu);
+    this.dom.addEventListener('wheel', this._onWheel, { passive: false });
+  }
+
+  _onWheel(e) {
+    e.preventDefault();
+    this.zoom += e.deltaY * this.zoomSensitivity;
+    this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom));
   }
 
   _onMouseDown(e) {
@@ -77,5 +91,6 @@ export class PointerLookControls {
     document.removeEventListener('mouseup', this._onMouseUp);
     this.dom.removeEventListener('mousedown', this._onMouseDown);
     this.dom.removeEventListener('contextmenu', this._onContextMenu);
+    this.dom.removeEventListener('wheel', this._onWheel);
   }
 }

@@ -517,7 +517,7 @@ export class SeaScene {
 
     // 카메라 시점은 오직 마우스 드래그로만 바뀐다 — 배의 진행/방향 전환에 따라
     // 자동으로 움직이거나 재정렬되지 않는다(사용자가 직접 놓은 각도를 그대로 유지).
-    const camDist = 25, baseLift = 5;
+    const camDist = 25 * pointerControls.zoom, baseLift = 5;
     const anchor = new THREE.Vector3(this.ship.pos.x, this.ship.mesh.position.y + 3.5, this.ship.pos.y);
     const horizDist = camDist * Math.cos(pointerControls.pitch);
     let camX = anchor.x - Math.sin(pointerControls.yaw) * horizDist;
