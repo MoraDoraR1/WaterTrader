@@ -446,7 +446,7 @@ export function buildShipMesh(shipDef) {
     new THREE.MeshStandardMaterial({ color: trim.clone().lerp(new THREE.Color('#e6c15a'), 0.4), roughness: 0.6 })
   );
   figurehead.rotation.x = Math.PI * 0.42;
-  figurehead.position.set(0, hullHei * 0.35, hl * 1.06);
+  figurehead.position.set(0, railTopY * 0.42, hl * 1.05);
   group.add(figurehead);
 
   // 방향타 — 고물 아래로 늘어뜨린 얇은 판
@@ -581,20 +581,39 @@ export function buildShipMesh(shipDef) {
     });
   }
 
-  // 선수 사장(bowsprit)
+  // 선수 사장(bowsprit) — 끝 지점(사장 팁)을 실제로 계산해, 그 지점을 기준으로
+  // 스프릿세일이 사장을 따라 매달리도록 한다(이전엔 고정값이라 사장과 무관하게
+  // 흘수선 근처에 붕 떠 있었다).
+  const bowspritAngle = Math.PI / 2.6;
+  const bowspritLen = hullLen * 0.3;
+  const bowspritBaseY = railTopY * 0.7, bowspritBaseZ = hl * 0.95;
   const bowsprit = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.1, 0.16, hullLen * 0.3, 6),
+    new THREE.CylinderGeometry(0.1, 0.16, bowspritLen, 6),
     new THREE.MeshStandardMaterial({ color: '#352616' })
   );
-  bowsprit.rotation.x = Math.PI / 2.6;
-  bowsprit.position.set(0, railTopY * 0.7, hl * 0.95);
+  bowsprit.rotation.x = bowspritAngle;
+  bowsprit.position.set(0, bowspritBaseY, bowspritBaseZ);
   group.add(bowsprit);
   addLine(new THREE.Vector3(0, railTopY * 0.55, hl * 0.55), new THREE.Vector3(0, railTopY, hullLen * (0.32 - (mastCount === 1 ? 0.5 : 0) * 0.62)), 0.03);
 
-  // 스프릿세일 — 선수 사장 아래 작은 삼각 돛
-  const spritGeo = trapezoid(hullWid * 0.75 * sx, 0.05, hullHei * 0.9, hullHei * 0.1);
-  const sprit = new THREE.Mesh(spritGeo, new THREE.MeshStandardMaterial({ color: '#e7ded0', roughness: 0.75, side: THREE.DoubleSide }));
-  sprit.position.set(0, hullHei * 0.35, hl * 1.18);
+  const bowspritTipY = bowspritBaseY + Math.cos(bowspritAngle) * (bowspritLen / 2);
+  const bowspritTipZ = bowspritBaseZ + Math.sin(bowspritAngle) * (bowspritLen / 2);
+
+  // 스프릿세일 — 사장 바깥쪽 절반을 따라 매달리는 작은 사각돛. 다른 돛들과 같은 방식으로
+  // 활대(야드)를 먼저 그려 사장에 걸린 지점을 명확히 보여준 뒤, 그 활대에서 돛이 늘어지도록 한다
+  // (활대 없이 돛만 두면 사장과 무관하게 허공에 붕 떠 보인다).
+  const spritYardW = hullWid * 0.62 * sx;
+  const spritYardZ = THREE.MathUtils.lerp(bowspritBaseZ, bowspritTipZ, 0.72);
+  const spritYardY = THREE.MathUtils.lerp(bowspritBaseY, bowspritTipY, 0.72);
+  const spritYard = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, spritYardW, 6), yardMat);
+  spritYard.rotation.z = Math.PI / 2;
+  spritYard.position.set(0, spritYardY, spritYardZ);
+  group.add(spritYard);
+
+  const spritH = hullHei * 0.55;
+  const spritGeo = trapezoid(spritYardW * 0.96, spritYardW * 0.14, spritH, hullHei * 0.06);
+  const sprit = new THREE.Mesh(spritGeo, sailMat);
+  sprit.position.set(0, spritYardY - spritH * 0.5, spritYardZ);
   group.add(sprit);
 
   // 국기
