@@ -4,6 +4,7 @@ import { buildShipMesh, ShipController } from '../entities/ship.js';
 import { NpcShip } from '../entities/pirate.js';
 import { CannonballPool } from '../entities/cannon.js';
 import { makeLabelSprite } from '../entities/label.js';
+import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { CITIES } from '../data/cities.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
@@ -31,6 +32,7 @@ export class SeaScene {
     this.scene.add(this.ocean.mesh);
 
     this.cityMarkers = [];
+    this.cameraColliders = [];
     this._buildCityMarkers();
 
     if (!state.shipHp) initShipHp();
@@ -49,7 +51,9 @@ export class SeaScene {
     this.combatTarget = null;
     this.t = 0;
     this.onDock = null;
+    this.raycaster = new THREE.Raycaster();
 
+    this.scene.updateMatrixWorld(true);
     hud.initThrottle(-3, 5);
   }
 
@@ -64,8 +68,8 @@ export class SeaScene {
   }
 
   _buildCityMarkers() {
-    // 도시들이 외딴 섬처럼 보이지 않도록, 지도 중심(대략적인 항로 중심)에서
-    // 바깥쪽으로 향하는 방향에 넓은 해안 육지를 배치하고 그 앞쪽 가장자리에 부두를 세운다.
+    // 도시는 바다 위에서 잘 보이는 작은 "미니어처 마을" 모형으로 표시한다.
+    // (거대한 대륙 벽을 세우지 않음 — 카메라 클리핑과 시야를 가리는 문제를 피하기 위함)
     const cx = CITIES.reduce((s, c) => s + c.pos[0], 0) / CITIES.length;
     const cz = CITIES.reduce((s, c) => s + c.pos[1], 0) / CITIES.length;
 
@@ -75,67 +79,81 @@ export class SeaScene {
       if (dir.lengthSq() < 1) dir.set(0, 1);
       dir.normalize();
 
-      const landRadius = 220;
-      const landCenterOffset = dir.clone().multiplyScalar(landRadius * 0.55);
-      const land = this._buildCoastalLand(landRadius, city.id);
-      land.position.set(landCenterOffset.x, 0, landCenterOffset.y);
-      group.add(land);
+      let seed = 0;
+      for (let i = 0; i < city.id.length; i++) seed = (seed * 31 + city.id.charCodeAt(i)) >>> 0;
+      const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 
-      // 부두(선착장) — 바다 쪽(지도 중심 방향)으로 뻗어 나와 실제 정박 상호작용 지점이 된다.
-      const pierLen = 34;
+      const moundRadius = 26;
+      const mound = new THREE.Mesh(
+        new THREE.CylinderGeometry(moundRadius, moundRadius * 1.08, 5, 12),
+        new THREE.MeshStandardMaterial({ color: '#8a9c72', roughness: 1 })
+      );
+      mound.position.y = 2.5;
+      group.add(mound);
+      this.cameraColliders.push(mound);
+
+      const buildingCount = 4;
+      let tallestY = 0, tallestX = 0, tallestZ = 0;
+      for (let i = 0; i < buildingCount; i++) {
+        const a = (i / buildingCount) * Math.PI * 2 + rand() * 0.6;
+        const r = moundRadius * (0.25 + rand() * 0.4);
+        const bx = Math.cos(a) * r, bz = Math.sin(a) * r;
+        const w = 4 + rand() * 2.5, d = 4 + rand() * 2.5, h = 4.5 + rand() * 3;
+        const bGroup = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(w, h, d),
+          new THREE.MeshStandardMaterial({ color: '#e4dcc3', roughness: 0.95 })
+        );
+        body.position.y = h / 2;
+        bGroup.add(body);
+        const roof = new THREE.Mesh(
+          new THREE.ConeGeometry(Math.max(w, d) * 0.75, 3.2, 4),
+          new THREE.MeshStandardMaterial({ color: COUNTRY_COLORS[city.country] || '#7a5c3a' })
+        );
+        roof.rotation.y = Math.PI / 4;
+        roof.position.y = h + 1.6;
+        bGroup.add(roof);
+        bGroup.position.set(bx, 5, bz);
+        group.add(bGroup);
+        this.cameraColliders.push(body);
+        if (h > tallestY) { tallestY = h; tallestX = bx; tallestZ = bz; }
+      }
+
+      // 부두 — 바다(지도 중심) 방향으로 짧게 뻗어 정박 지점 역할
+      const pierLen = 18;
       const pier = new THREE.Mesh(
-        new THREE.BoxGeometry(8, 1.2, pierLen),
+        new THREE.BoxGeometry(6, 1.2, pierLen),
         new THREE.MeshStandardMaterial({ color: '#5a4326', roughness: 0.9 })
       );
-      const pierAngle = Math.atan2(dir.x, dir.y);
-      pier.rotation.y = pierAngle;
-      pier.position.set(-dir.x * pierLen * 0.35, 0.6, -dir.y * pierLen * 0.35);
-      pier.userData.cityId = city.id;
+      pier.rotation.y = Math.atan2(dir.x, dir.y);
+      pier.position.set(-dir.x * (moundRadius * 0.7 + pierLen * 0.5), 0.6, -dir.y * (moundRadius * 0.7 + pierLen * 0.5));
       group.add(pier);
 
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 22, 6), new THREE.MeshStandardMaterial({ color: '#4a3826' }));
-      pole.position.set(-dir.x * pierLen * 0.6, 11, -dir.y * pierLen * 0.6);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 9, 6), new THREE.MeshStandardMaterial({ color: '#4a3826' }));
+      pole.position.set(tallestX, 5 + tallestY + 4.5, tallestZ);
       group.add(pole);
 
       const flag = new THREE.Mesh(
-        new THREE.PlaneGeometry(10, 6),
+        new THREE.PlaneGeometry(6, 3.6),
         new THREE.MeshStandardMaterial({ color: COUNTRY_COLORS[city.country] || '#999', side: THREE.DoubleSide })
       );
-      flag.position.set(-dir.x * pierLen * 0.6 + 5, 19, -dir.y * pierLen * 0.6);
+      flag.position.set(tallestX + 3, 5 + tallestY + 8, tallestZ);
       group.add(flag);
 
       const label = makeLabelSprite(city.name);
-      label.position.set(-dir.x * pierLen * 0.6, 27, -dir.y * pierLen * 0.6);
+      label.position.set(tallestX, 5 + tallestY + 12, tallestZ);
       group.add(label);
 
       group.position.set(city.pos[0], 0, city.pos[1]);
       group.userData.cityId = city.id;
+      const dockDist = moundRadius * 0.7 + pierLen * 0.9;
       group.userData.dockPos = new THREE.Vector2(
-        city.pos[0] - dir.x * pierLen * 0.7,
-        city.pos[1] - dir.y * pierLen * 0.7
+        city.pos[0] - dir.x * dockDist,
+        city.pos[1] - dir.y * dockDist
       );
       this.scene.add(group);
       this.cityMarkers.push(group);
     }
-  }
-
-  _buildCoastalLand(radius, seedId) {
-    let seed = 0;
-    for (let i = 0; i < seedId.length; i++) seed = (seed * 31 + seedId.charCodeAt(i)) >>> 0;
-    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-
-    const points = 14;
-    const shape = new THREE.Shape();
-    for (let i = 0; i <= points; i++) {
-      const a = (i / points) * Math.PI * 2;
-      const r = radius * (0.78 + rand() * 0.4);
-      const x = Math.cos(a) * r, y = Math.sin(a) * r;
-      if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
-    }
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: 15, bevelEnabled: true, bevelThickness: 3, bevelSize: 6, bevelSegments: 2 });
-    geo.rotateX(-Math.PI / 2);
-    const mat = new THREE.MeshStandardMaterial({ color: '#8a9c72', roughness: 1 });
-    return new THREE.Mesh(geo, mat);
   }
 
   dispose() {}
@@ -247,11 +265,18 @@ export class SeaScene {
     }
 
     const camDist = 26, camHeight = 11;
-    const camX = this.ship.pos.x - Math.sin(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
-    const camZ = this.ship.pos.y - Math.cos(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
-    const camY = this.ship.mesh.position.y + camHeight + Math.sin(pointerControls.pitch) * camDist;
-    camera.position.set(camX, camY, camZ);
-    camera.lookAt(this.ship.pos.x, this.ship.mesh.position.y + 4, this.ship.pos.y);
+    const anchor = new THREE.Vector3(this.ship.pos.x, this.ship.mesh.position.y + 4, this.ship.pos.y);
+    let camX = this.ship.pos.x - Math.sin(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
+    let camZ = this.ship.pos.y - Math.cos(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
+    let camY = this.ship.mesh.position.y + camHeight + Math.sin(pointerControls.pitch) * camDist;
+    // 해수면 관통 방지: 카메라 목표 지점의 파고보다 항상 위에 있도록 하한선을 둔다
+    const waveAtCam = this.ocean.heightAt(camX, camZ, elapsed);
+    camY = Math.max(camY, waveAtCam + 2.5);
+
+    const desired = new THREE.Vector3(camX, camY, camZ);
+    const resolved = resolveCameraCollision(this.raycaster, this.cameraColliders, anchor, desired);
+    camera.position.copy(resolved);
+    camera.lookAt(anchor);
 
     // HUD
     hud.setThrottle(this.ship.notch, -3, 5);

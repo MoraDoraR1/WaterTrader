@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildCharacterMesh, CharacterController } from '../entities/character.js';
 import { makeLabelSprite } from '../entities/label.js';
+import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getCity, NPC_ROLE_COLORS, NPC_ROLE_LABELS } from '../data/cities.js';
 import { COUNTRY_COLORS, COUNTRY_NAMES } from '../data/ships.js';
 import { isDown } from '../controls/keys.js';
@@ -42,6 +43,7 @@ export class CityScene {
     this.scene.add(ground);
     this.ground = ground;
 
+    this.buildingColliders = [];
     this._buildPlaza(tint);
     this._buildBuildings(tint);
     this._buildDock();
@@ -58,6 +60,8 @@ export class CityScene {
     this.raycaster = new THREE.Raycaster();
     this.activeDialogueTarget = null;
     this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    this.scene.updateMatrixWorld(true);
+    this.buildingBoxes = this.buildingColliders.map((mesh) => new THREE.Box3().setFromObject(mesh));
   }
 
   _buildPlaza(tint) {
@@ -94,6 +98,7 @@ export class CityScene {
       const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
       body.position.y = h / 2;
       g.add(body);
+      this.buildingColliders.push(body);
       const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.72, 6, 4), roofMat);
       roof.rotation.y = Math.PI / 4;
       roof.position.y = h + 3;
@@ -223,14 +228,18 @@ export class CityScene {
     const strafe = (isDown('KeyD') ? 1 : 0) - (isDown('KeyA') ? 1 : 0);
     const inputVec = new THREE.Vector2(strafe, forward);
 
-    this.character.update(delta, inputVec, pointerControls.yaw, BOUNDS);
+    this.character.update(delta, inputVec, pointerControls.yaw, BOUNDS, this.buildingBoxes);
 
     const camDist = 8.5, camHeight = 3.4;
+    const anchor = new THREE.Vector3(this.character.pos.x, 1.5, this.character.pos.z);
     const camX = this.character.pos.x - Math.sin(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
     const camZ = this.character.pos.z - Math.cos(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
-    const camY = camHeight + Math.sin(pointerControls.pitch) * camDist + 1.2;
-    camera.position.set(camX, Math.max(0.6, camY), camZ);
-    camera.lookAt(this.character.pos.x, 1.5, this.character.pos.z);
+    const camY = Math.max(0.6, camHeight + Math.sin(pointerControls.pitch) * camDist + 1.2);
+    const desired = new THREE.Vector3(camX, camY, camZ);
+    const resolved = resolveCameraCollision(this.raycaster, this.buildingColliders, anchor, desired);
+    resolved.y = Math.max(0.6, resolved.y);
+    camera.position.copy(resolved);
+    camera.lookAt(anchor);
 
     const interactable = this._findInteractable(camera);
     if (interactable) {

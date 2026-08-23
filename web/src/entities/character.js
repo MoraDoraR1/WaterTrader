@@ -85,6 +85,7 @@ export class CharacterController {
     this.speed = 4.6;
     this.turnSpeed = 10;
     this.walking = false;
+    this.radius = 0.6;
   }
 
   setPosition(x, z) {
@@ -100,7 +101,7 @@ export class CharacterController {
     this.moveTarget = null;
   }
 
-  update(delta, inputVec, cameraYaw, bounds) {
+  update(delta, inputVec, cameraYaw, bounds, obstacles) {
     let moveX = 0, moveZ = 0;
     this.walking = false;
 
@@ -130,6 +131,7 @@ export class CharacterController {
         this.pos.x = THREE.MathUtils.clamp(this.pos.x, bounds.minX, bounds.maxX);
         this.pos.z = THREE.MathUtils.clamp(this.pos.z, bounds.minZ, bounds.maxZ);
       }
+      if (obstacles) this._resolveObstacles(obstacles);
       const targetFacing = Math.atan2(moveX, moveZ);
       let diff = targetFacing - this.facing;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
@@ -138,5 +140,28 @@ export class CharacterController {
 
     this.mesh.position.set(this.pos.x, 0, this.pos.z);
     this.mesh.rotation.y = this.facing;
+  }
+
+  // 건물 등 장애물(THREE.Box3 배열)을 뚫고 지나가지 않도록 원-사각형 충돌로 밀어낸다.
+  _resolveObstacles(boxes) {
+    const r = this.radius || 0.5;
+    for (const box of boxes) {
+      const closestX = THREE.MathUtils.clamp(this.pos.x, box.min.x, box.max.x);
+      const closestZ = THREE.MathUtils.clamp(this.pos.z, box.min.z, box.max.z);
+      let dx = this.pos.x - closestX;
+      let dz = this.pos.z - closestZ;
+      const distSq = dx * dx + dz * dz;
+      if (distSq >= r * r) continue;
+      if (distSq > 1e-6) {
+        const dist = Math.sqrt(distSq);
+        this.pos.x = closestX + (dx / dist) * r;
+        this.pos.z = closestZ + (dz / dist) * r;
+      } else {
+        const cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2;
+        const penX = box.max.x - box.min.x, penZ = box.max.z - box.min.z;
+        if (penX < penZ) this.pos.x = this.pos.x < cx ? box.min.x - r : box.max.x + r;
+        else this.pos.z = this.pos.z < cz ? box.min.z - r : box.max.z + r;
+      }
+    }
   }
 }
