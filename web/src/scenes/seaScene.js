@@ -248,11 +248,54 @@ export class SeaScene {
     const cx = CITIES.reduce((s, c) => s + c.pos[0], 0) / CITIES.length;
     const cz = CITIES.reduce((s, c) => s + c.pos[1], 0) / CITIES.length;
 
+    const moundRadius = 27;
+    const pierLen = 19;
+    const MOUND_COLLIDER_R = 30; // this.moundColliders(생성자)의 반경과 동일하게 유지
+    const baseDockDist = moundRadius * 0.7 + pierLen * 0.9;
+    // 부두/정박지가 향할 "방향"을 반드시 열린 바다로만 잡기 위한 탐색 각도 오프셋
+    // (0, +Δ, -Δ, +2Δ, -2Δ, ... 순서로 원래 추정 방향에 가까운 각도부터 검사)
+    const ANGLE_STEP = (Math.PI * 2) / 64;
+    const ANGLE_OFFSETS = [0];
+    for (let i = 1; i <= 32; i++) { ANGLE_OFFSETS.push(i * ANGLE_STEP, -i * ANGLE_STEP); }
+
     for (const city of CITIES) {
       const group = new THREE.Group();
-      const dir = new THREE.Vector2(city.pos[0] - cx, city.pos[1] - cz);
-      if (dir.lengthSq() < 1) dir.set(0, 1);
-      dir.normalize();
+      // 전체 도시 무게중심에서 먼 방향 — 대략적인 "대륙 바깥쪽" 추정치일 뿐, 해안선이
+      // 프랙탈 지터로 굴곡져 있어 이 방향이 실제로는 육지를 가리킬 수도 있다.
+      const heuristicDir = new THREE.Vector2(city.pos[0] - cx, city.pos[1] - cz);
+      if (heuristicDir.lengthSq() < 1) heuristicDir.set(0, 1);
+      heuristicDir.normalize();
+      const heuristicAngle = Math.atan2(heuristicDir.x, heuristicDir.y);
+
+      // 실제 해안선을 검사해 "확실히 뭍이 아닌" 방향/거리를 찾는다. dir 관례상 부두/정박지는
+      // -dir 방향에 위치하므로, 바깥(바다) 방향 벡터는 (sin(angle), cos(angle))의 반대(-)다.
+      // 다른 도시의 마운드 충돌 범위(생성자의 moundColliders와 동일한 반경)도 함께 피해야
+      // 실제 플레이 중 _isBlocked() 판정과 어긋나지 않는다.
+      const clearOfLandAndMounds = (px, pz) => {
+        if (pointOnAnyLand(px, pz)) return false;
+        for (const c2 of CITIES) {
+          const dx = px - c2.pos[0], dz = pz - c2.pos[1];
+          if (dx * dx + dz * dz < MOUND_COLLIDER_R * MOUND_COLLIDER_R) return false;
+        }
+        return true;
+      };
+      const isOpenSeaward = (angle, dist) => {
+        const ox = -Math.sin(angle), oz = -Math.cos(angle);
+        if (!clearOfLandAndMounds(city.pos[0] + ox * dist, city.pos[1] + oz * dist)) return false;
+        return clearOfLandAndMounds(city.pos[0] + ox * (dist + 18), city.pos[1] + oz * (dist + 18));
+      };
+      let outAngle = null;
+      let outDist = baseDockDist;
+      for (let ring = baseDockDist; ring <= baseDockDist + 260 && outAngle === null; ring += 6) {
+        for (const off of ANGLE_OFFSETS) {
+          if (isOpenSeaward(heuristicAngle + off, ring)) { outAngle = heuristicAngle + off; outDist = ring; break; }
+        }
+      }
+      if (outAngle === null) outAngle = heuristicAngle; // 이론상 도달하지 않는 안전망
+      const dir = new THREE.Vector2(Math.sin(outAngle), Math.cos(outAngle));
+      // 정박지가 열린 바다인지 확인된 실제 거리(outDist) — 탐색 시작값(baseDockDist)보다
+      // 멀어졌을 수 있으므로 부두/정박지 배치에 그대로 사용한다.
+      const dockDist = outDist;
 
       let seed = 0;
       for (let i = 0; i < city.id.length; i++) seed = (seed * 31 + city.id.charCodeAt(i)) >>> 0;
@@ -261,7 +304,6 @@ export class SeaScene {
       const palette = REGION_PALETTE[city.country] || REGION_PALETTE.FR;
       const flagColor = COUNTRY_COLORS[city.country] || '#999';
 
-      const moundRadius = 27;
       const mound = new THREE.Mesh(
         new THREE.CylinderGeometry(moundRadius, moundRadius * 1.08, 5, 14),
         new THREE.MeshStandardMaterial({ color: '#8a9c72', roughness: 1 })
@@ -331,8 +373,7 @@ export class SeaScene {
         this.cameraColliders.push(body);
       }
 
-      // 부두 — 바다(지도 중심) 방향으로 짧게 뻗어 정박 지점 역할
-      const pierLen = 19;
+      // 부두 — 검증된 열린 바다 방향(dir)으로 짧게 뻗어 정박 지점 역할
       const pier = new THREE.Mesh(
         new THREE.BoxGeometry(6, 1.2, pierLen),
         new THREE.MeshStandardMaterial({ color: '#5a4326', roughness: 0.9 })
@@ -370,7 +411,7 @@ export class SeaScene {
 
       group.position.set(city.pos[0], 0, city.pos[1]);
       group.userData.cityId = city.id;
-      const dockDist = moundRadius * 0.7 + pierLen * 0.9;
+      // dir/dockDist 조합은 이미 위에서 열린 바다임이 검증된 지점이다.
       group.userData.dockPos = new THREE.Vector2(
         city.pos[0] - dir.x * dockDist,
         city.pos[1] - dir.y * dockDist
