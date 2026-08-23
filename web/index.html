@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>바다상인</title>
+<style>
+  @font-face { font-family: 'system'; src: local('Apple SD Gothic Neo'), local('Malgun Gothic'); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #05131c;
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; color: #f0e6d2; }
+  #canvas-wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .hidden { display: none !important; }
+
+  /* ---- Title screen ---- */
+  #title-screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 30%, #1a3a52 0%, #061520 70%, #020a10 100%); z-index: 50; text-align: center; }
+  #title-screen h1 { font-size: 4.2rem; letter-spacing: 0.4rem; margin: 0 0 0.3rem; color: #f3d98a;
+    text-shadow: 0 0 24px rgba(243,217,138,0.45), 0 4px 10px rgba(0,0,0,0.6); }
+  #title-screen p.subtitle { color: #a9c4d6; margin: 0 0 2.6rem; letter-spacing: 0.15rem; font-size: 1rem; }
+  .gender-select { display: flex; gap: 1.4rem; margin-bottom: 2.2rem; }
+  .gender-btn { width: 148px; padding: 1rem 0.6rem; border: 2px solid #4a6376; background: rgba(10,25,35,0.6);
+    color: #dce8ef; border-radius: 10px; cursor: pointer; font-size: 1rem; transition: all .15s; }
+  .gender-btn:hover { border-color: #f3d98a; background: rgba(243,217,138,0.08); }
+  .gender-btn.active { border-color: #f3d98a; background: rgba(243,217,138,0.18); box-shadow: 0 0 18px rgba(243,217,138,0.25); }
+  .gender-emblem { font-size: 2.2rem; display: block; margin-bottom: 0.4rem; }
+  #start-btn { padding: 0.9rem 3.2rem; font-size: 1.15rem; letter-spacing: 0.3rem; border-radius: 8px; border: none;
+    background: linear-gradient(180deg, #f3d98a, #c9a24a); color: #241a05; font-weight: 700; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+  #start-btn:hover { filter: brightness(1.08); }
+  #title-hint { margin-top: 1.6rem; font-size: 0.8rem; color: #7f9aac; }
+
+  /* ---- Lock prompt ---- */
+  #lock-prompt { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(2,8,12,0.55); cursor: pointer; }
+  #lock-prompt div { padding: 1.1rem 2rem; border: 1px solid rgba(240,230,210,0.4); border-radius: 10px;
+    background: rgba(10,20,28,0.7); font-size: 1.05rem; letter-spacing: 0.1rem; }
+
+  /* ---- Crosshair ---- */
+  #crosshair { position: fixed; top: 50%; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    border-radius: 50%; background: rgba(240,230,210,0.85); box-shadow: 0 0 4px rgba(0,0,0,0.6); z-index: 20; pointer-events: none; }
+
+  /* ---- Top bars ---- */
+  #top-bar { position: fixed; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between;
+    align-items: flex-start; z-index: 15; pointer-events: none; }
+  #location-banner { background: rgba(8,18,26,0.6); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
+    padding: 0.5rem 1rem; font-size: 1.05rem; letter-spacing: 0.08rem; backdrop-filter: blur(3px); }
+  #location-banner .sub { display: block; font-size: 0.72rem; color: #9fb8c9; margin-top: 2px; }
+  #gold-box { background: rgba(8,18,26,0.6); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
+    padding: 0.5rem 1rem; font-size: 1rem; }
+
+  /* ---- Sea HUD ---- */
+  #sea-hud { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 15;
+    display: flex; gap: 1.2rem; align-items: flex-end; pointer-events: none; }
+  #throttle { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 10px;
+    padding: 0.6rem 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  #throttle .notch-row { display: flex; flex-direction: column-reverse; gap: 3px; }
+  .notch { width: 90px; height: 12px; border-radius: 3px; background: rgba(255,255,255,0.08); }
+  .notch.filled-fwd { background: #6fd66f; }
+  .notch.filled-rev { background: #e07a5f; }
+  .notch.zero-line { background: rgba(240,230,210,0.5); height: 2px; }
+  #throttle .label { font-size: 0.72rem; color: #cfe0ea; margin-top: 4px; }
+  #compass { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 50%;
+    width: 74px; height: 74px; display: flex; align-items: center; justify-content: center; position: relative; }
+  #compass-needle { width: 3px; height: 28px; background: #e6c15a; position: absolute; top: 8px; left: 50%;
+    margin-left: -1.5px; transform-origin: 50% 28px; }
+  #compass-n { position: absolute; top: 3px; font-size: 0.6rem; color: #e6c15a; }
+  #ship-hp-box { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
+    padding: 0.5rem 0.8rem; width: 160px; }
+  .bar-track { width: 100%; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 4px; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, #5fbf5f, #a9d96b); }
+  .bar-fill.enemy { background: linear-gradient(90deg, #c94d3f, #e07a5f); }
+  #target-hp-box { position: fixed; top: 78px; left: 50%; transform: translateX(-50%); width: 260px; z-index: 15;
+    background: rgba(8,18,26,0.65); border: 1px solid rgba(200,120,120,0.5); border-radius: 8px; padding: 0.5rem 0.9rem; }
+
+  #combat-banner { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 16;
+    background: rgba(120,20,20,0.75); border: 1px solid #e07a5f; padding: 0.4rem 1.4rem; border-radius: 6px;
+    font-size: 0.95rem; letter-spacing: 0.2rem; }
+
+  /* ---- City HUD ---- */
+  #interact-prompt { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 15;
+    background: rgba(8,18,26,0.7); border: 1px solid rgba(200,180,120,0.4); padding: 0.5rem 1rem; border-radius: 8px;
+    font-size: 0.92rem; }
+  #action-hints { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 15;
+    display: flex; gap: 0.8rem; font-size: 0.72rem; color: #9fb8c9; }
+  #action-hints span { background: rgba(8,18,26,0.55); padding: 3px 8px; border-radius: 5px; }
+
+  /* ---- Dialogue ---- */
+  #dialogue-box { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); width: 480px; max-width: 88vw;
+    z-index: 30; background: rgba(8,16,22,0.88); border: 1px solid rgba(230,193,90,0.5); border-radius: 10px; padding: 1rem 1.2rem; }
+  #dialogue-box .name { color: #e6c15a; font-size: 0.85rem; margin-bottom: 0.35rem; letter-spacing: 0.1rem; }
+  #dialogue-box .line { font-size: 0.95rem; line-height: 1.5; }
+  #dialogue-box .actions { margin-top: 0.7rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  #dialogue-box button { background: rgba(230,193,90,0.15); border: 1px solid rgba(230,193,90,0.5); color: #f0e6d2;
+    padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+  #dialogue-box button:hover { background: rgba(230,193,90,0.3); }
+
+  /* ---- Inventory ---- */
+  #inventory-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 420px; z-index: 35;
+    background: rgba(10,18,24,0.92); border: 1px solid rgba(200,180,120,0.4); border-radius: 12px; padding: 1.2rem; }
+  #inventory-panel h3 { margin: 0 0 0.8rem; letter-spacing: 0.15rem; color: #e6c15a; }
+  #inventory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; }
+  .inv-slot { aspect-ratio: 1; border: 1px solid rgba(200,180,120,0.3); border-radius: 8px; background: rgba(255,255,255,0.03);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; text-align: center; padding: 4px; }
+  .inv-slot .qty { color: #a9c4d6; font-size: 0.65rem; margin-top: 2px; }
+  #inventory-panel .close-hint { text-align: center; margin-top: 0.9rem; font-size: 0.72rem; color: #8fa6b4; }
+
+  /* ---- Toast ---- */
+  #toast { position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 25; background: rgba(8,18,26,0.85);
+    border: 1px solid rgba(200,180,120,0.4); padding: 0.5rem 1.2rem; border-radius: 8px; font-size: 0.9rem;
+    opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+
+  #loading { position: fixed; inset: 0; z-index: 60; background: #05131c; display: flex; align-items: center; justify-content: center;
+    color: #cfe0ea; letter-spacing: 0.2rem; }
+</style>
+</head>
+<body>
+  <div id="loading">항해 준비 중...</div>
+  <div id="canvas-wrap"></div>
+  <div id="crosshair" class="hidden"></div>
+
+  <div id="title-screen">
+    <h1>바다 상인</h1>
+    <p class="subtitle">SEA MERCHANT — 대항해의 시대</p>
+    <div class="gender-select">
+      <button class="gender-btn active" data-gender="male"><span class="gender-emblem">⚓</span>남 항해사</button>
+      <button class="gender-btn" data-gender="female"><span class="gender-emblem">⚓</span>여 항해사</button>
+    </div>
+    <button id="start-btn">항해를 시작한다</button>
+    <p id="title-hint">클릭 후 마우스로 시점을 조작합니다 · ESC로 포인터 해제</p>
+  </div>
+
+  <div id="lock-prompt" class="hidden"><div>클릭하여 조작 시작</div></div>
+
+  <div id="top-bar" class="hidden">
+    <div id="location-banner">망망대해<span class="sub" id="location-sub">&nbsp;</span></div>
+    <div id="gold-box">💰 <span id="gold-amount">0</span> 두캇</div>
+  </div>
+
+  <div id="combat-banner" class="hidden">⚔ 전투 상황</div>
+
+  <div id="sea-hud" class="hidden">
+    <div id="throttle">
+      <div class="notch-row" id="notch-row"></div>
+      <div class="label" id="throttle-label">정박</div>
+    </div>
+    <div id="compass"><div id="compass-n">N</div><div id="compass-needle"></div></div>
+    <div id="ship-hp-box">
+      <div>선체 내구도</div>
+      <div class="bar-track"><div class="bar-fill" id="ship-hp-fill" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <div id="target-hp-box" class="hidden">
+    <div id="target-name">적선</div>
+    <div class="bar-track"><div class="bar-fill enemy" id="target-hp-fill" style="width:100%"></div></div>
+  </div>
+
+  <div id="interact-prompt" class="hidden"></div>
+  <div id="action-hints" class="hidden"></div>
+
+  <div id="dialogue-box" class="hidden">
+    <div class="name" id="dialogue-name"></div>
+    <div class="line" id="dialogue-line"></div>
+    <div class="actions" id="dialogue-actions"></div>
+  </div>
+
+  <div id="inventory-panel" class="hidden">
+    <h3>인벤토리</h3>
+    <div id="inventory-grid"></div>
+    <div class="close-hint">E 를 눌러 닫기</div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="importmap">
+    { "imports": { "three": "./node_modules/three/build/three.module.js" } }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

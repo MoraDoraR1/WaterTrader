@@ -1,0 +1,16 @@
+{
+  "name": "bada-sangin-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch & npx serve . -l 5173"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "dependencies": {
+    "three": "0.160.0"
+  }
+}
