@@ -117,7 +117,7 @@ export class ShipController {
   get speedMs() { return this.notch * NOTCH_SPEED; }
   get speedRatio() { return this.notch >= 0 ? this.notch / MAX_FWD : this.notch / Math.abs(MAX_REV); }
 
-  update(delta, t) {
+  update(delta, t, isBlocked) {
     const turnRateBase = THREE.MathUtils.degToRad(this.shipDef.turnRate);
     const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.notch) / MAX_FWD);
     const dir = this.notch < 0 ? -1 : 1;
@@ -126,8 +126,17 @@ export class ShipController {
 
     const vx = Math.sin(this.heading) * this.speedMs;
     const vz = Math.cos(this.heading) * this.speedMs;
-    this.pos.x += vx * delta;
-    this.pos.y += vz * delta;
+    const prevX = this.pos.x, prevY = this.pos.y;
+    let nx = prevX + vx * delta, ny = prevY + vz * delta;
+
+    if (isBlocked && isBlocked(nx, ny)) {
+      // 육지에 막히면 해안선을 따라 미끄러지듯 각 축으로 시도(완전 정지 대신)
+      if (!isBlocked(nx, prevY)) ny = prevY;
+      else if (!isBlocked(prevX, ny)) nx = prevX;
+      else { nx = prevX; ny = prevY; }
+    }
+    this.pos.x = nx;
+    this.pos.y = ny;
 
     const wave = this.heightAt ? this.heightAt(this.pos.x, this.pos.y, t) : 0;
     const waveAhead = this.heightAt ? this.heightAt(this.pos.x + Math.sin(this.heading) * 4, this.pos.y + Math.cos(this.heading) * 4, t) : 0;

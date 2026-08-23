@@ -7,6 +7,7 @@ import { makeLabelSprite } from '../entities/label.js';
 import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { CITIES } from '../data/cities.js';
+import { MAINLAND_POLY, BRITAIN_POLY, LAND_POLYGONS, pointOnAnyLand } from '../data/coastline.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, notify } from '../state.js';
@@ -33,7 +34,9 @@ export class SeaScene {
 
     this.cityMarkers = [];
     this.cameraColliders = [];
+    this._buildLandmasses();
     this._buildCityMarkers();
+    this.moundColliders = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], r: 30 }));
 
     if (!state.shipHp) initShipHp();
     const shipDef = getShip(state.currentShipId);
@@ -65,6 +68,34 @@ export class SeaScene {
     } else if (this.hoveredCity && this.onDock) {
       this.onDock(this.hoveredCity.id);
     }
+  }
+
+  _buildLandmasses() {
+    const mat = new THREE.MeshStandardMaterial({ color: '#7f9468', roughness: 1 });
+    for (const poly of [MAINLAND_POLY, BRITAIN_POLY]) {
+      // rotateX(-90°) 매핑 (x,y,depth)->(x,depth,-y) 이므로, y에 -z를 넣어야
+      // 최종 메시 좌표가 게임 좌표계(x,z)와 정확히 일치한다(면 뒤집힘/노멀 오류 없이).
+      const shape = new THREE.Shape();
+      poly.forEach(([x, z], i) => {
+        if (i === 0) shape.moveTo(x, -z); else shape.lineTo(x, -z);
+      });
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 18, bevelEnabled: true, bevelThickness: 4, bevelSize: 8, bevelSegments: 2 });
+      geo.rotateX(-Math.PI / 2);
+      const mesh = new THREE.Mesh(geo, mat);
+      this.scene.add(mesh);
+      this.cameraColliders.push(mesh);
+      this.landMeshes = this.landMeshes || [];
+      this.landMeshes.push(mesh);
+    }
+  }
+
+  _isBlocked(x, z) {
+    if (pointOnAnyLand(x, z)) return true;
+    for (const m of this.moundColliders) {
+      const dx = x - m.x, dz = z - m.z;
+      if (dx * dx + dz * dz < m.r * m.r) return true;
+    }
+    return false;
   }
 
   _buildCityMarkers() {
@@ -212,7 +243,7 @@ export class SeaScene {
       this.ship.helmInput = 0;
     }
 
-    this.ship.update(delta, elapsed);
+    this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z));
     this.ocean.update(elapsed, camera);
 
     const hostileNear = this.npcShips.some((n) => !n.dead && n.def.hostile && n.state === 'attack');
