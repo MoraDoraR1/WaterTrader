@@ -71,26 +71,44 @@ export function buildShipMesh(shipDef) {
 
   const hullLen = 10 * sz;
   const hullWid = 3.4 * sx * roleHullMul;
-  const hullHei = 2.2 * sy; // 예전보다 낮춰 뭉텅한 "덩어리" 느낌을 줄인다
+  const hullHei = 2.2 * sy;
 
   // 갑판을 한 단 낮추고 그 위를 속이 빈 뱃전(불워크)으로 둘러, 갑판이 옴폭 파이고
   // 양옆이 난간처럼 둘러선 형태를 낸다. deckY 아래는 실제 솔리드 선체, 그 위 bulwarkH만큼은
   // 구멍 뚫린 고리 형태 벽이다.
-  const deckY = hullHei * 0.48;
-  const bulwarkH = hullHei * 0.44;
+  const deckY = hullHei * 0.44;
+  const bulwarkH = hullHei * 0.50;
   const railTopY = deckY + bulwarkH;
 
-  // 선체 윤곽선(위에서 본 모양) — 이물은 뾰족하게, 고물은 완만하게 넓어지는 실제 범선 형태.
-  // rotateX(-90°) 매핑은 로컬 y가 곧 -world z가 되므로, 아래 좌표는 (x, -z)로 넣는다.
   const hw = hullWid / 2;
   const hl = hullLen / 2;
-  const outline = [
-    [-hw * 0.22, -hl * 0.96], [hw * 0.22, -hl * 0.96], // 선미 트랜섬 — 좁혀서 용골이 가려지지 않게 함
-    [hw * 0.98, -hl * 0.55], [hw * 0.92, hl * 0.15],
-    [hw * 0.5, hl * 0.72], [0, hl], // 이물 끝
-    [-hw * 0.5, hl * 0.72], [-hw * 0.92, hl * 0.15],
-    [-hw * 0.98, -hl * 0.55],
+
+  // ---- 선체 실루엣(위에서 본 평면도) — z별 반폭(half-width) 프로파일 하나를 기준으로
+  // 다각형 윤곽선과 이물/고물 곡선을 동시에 도출한다(선/키 곡선 도면 방식과 동일한 접근).
+  const halfWidthProfile = [
+    [-hl * 0.97, hw * 0.30],
+    [-hl * 0.72, hw * 0.85],
+    [-hl * 0.40, hw * 0.99],
+    [-hl * 0.02, hw * 0.97],
+    [hl * 0.42, hw * 0.80],
+    [hl * 0.75, hw * 0.45],
+    [hl * 1.00, 0.0005],
   ];
+  function halfWidthAt(z) {
+    const zc = THREE.MathUtils.clamp(z, halfWidthProfile[0][0], halfWidthProfile[halfWidthProfile.length - 1][0]);
+    for (let i = 0; i < halfWidthProfile.length - 1; i++) {
+      const [z0, w0] = halfWidthProfile[i];
+      const [z1, w1] = halfWidthProfile[i + 1];
+      if (zc >= z0 && zc <= z1) return THREE.MathUtils.lerp(w0, w1, (zc - z0) / (z1 - z0));
+    }
+    return 0;
+  }
+  const outline = [
+    [-halfWidthProfile[0][1], halfWidthProfile[0][0]],
+    ...halfWidthProfile.map(([z, w]) => [w, z]),
+    ...[...halfWidthProfile].slice(0, -1).reverse().map(([z, w]) => [-w, z]),
+  ];
+  // rotateX(-90°) 매핑은 로컬 y가 곧 -world z가 되므로, 아래 좌표는 (x, -z)로 넣는다.
   const hullShape = new THREE.Shape();
   outline.forEach(([x, z], i) => {
     if (i === 0) hullShape.moveTo(x, -z); else hullShape.lineTo(x, -z);
@@ -110,11 +128,18 @@ export function buildShipMesh(shipDef) {
     depth: hullHei * 0.22, bevelEnabled: true, bevelThickness: hullHei * 0.04, bevelSize: hw * 0.02, bevelSegments: 3,
   });
   bilgeGeo.rotateX(-Math.PI / 2);
-  // 폭/길이를 더 좁혀 고물 쪽 벽이 용골 곡선을 가리지 않도록 한다
   bilgeGeo.scale(0.4, 1, 0.66);
   bilgeGeo.translate(0, -hullHei * 0.22, 0);
   const bilgeMesh = new THREE.Mesh(bilgeGeo, new THREE.MeshStandardMaterial({ color: '#140d06', roughness: 0.9 }));
   group.add(bilgeMesh);
+
+  // 메인 웨일(wale) — 흘수선 트림 라인을 따라 실제로 튀어나온 두꺼운 몰딩 띠(선체 구조재).
+  const waleGeo = new THREE.ExtrudeGeometry(hullShape, { depth: hullHei * 0.09, bevelEnabled: false });
+  waleGeo.rotateX(-Math.PI / 2);
+  waleGeo.scale(1.035, 1, 1.03);
+  waleGeo.translate(0, hullHei * 0.30, 0);
+  const waleMesh = new THREE.Mesh(waleGeo, new THREE.MeshStandardMaterial({ color: '#3a2c1a', roughness: 0.85 }));
+  group.add(waleMesh);
 
   // 용골(keel) — 선체 하부 중심을 따라 이물/고물 쪽으로 완만히 휘어 오르는 골재(스템/스턴포스트 곡선 근사).
   const keelY = -hullHei * 0.26;
@@ -129,23 +154,46 @@ export function buildShipMesh(shipDef) {
   const keelMesh = new THREE.Mesh(keelGeo, new THREE.MeshStandardMaterial({ color: '#1c140b', roughness: 0.9 }));
   group.add(keelMesh);
 
-  // 뱃전(불워크) — 갑판이 한 단 낮아진 만큼 그 위로 벽처럼 둘러선 난간형 구조.
-  // 구멍 뚫린 셰이프를 압출해 속이 빈 고리로 만들어, 갑판이 옴폭 파이고 양옆이
-  // 난간처럼 둘러선 형태를 낸다(내부는 채우지 않고 갑판 바닥만 별도 판으로 깐다).
+  // 스템(이물 기둥) / 스턴포스트(고물 기둥) — 용골이 선수/선미에서 위로 이어지는 골재를
+  // 짧은 각재로 강조해, 참고 도면처럼 "용골 → 스템/스턴포스트" 구조가 드러나도록 한다.
+  const keelAccentMat = new THREE.MeshStandardMaterial({ color: '#1c140b', roughness: 0.9 });
+  const stemMesh = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.05, hullHei * 0.65, hullWid * 0.05), keelAccentMat);
+  stemMesh.position.set(0, hullHei * 0.15, hl * 0.99);
+  stemMesh.rotation.x = -0.35;
+  group.add(stemMesh);
+  const sternPostMesh = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.06, hullHei * 0.5, hullWid * 0.06), keelAccentMat);
+  sternPostMesh.position.set(0, hullHei * 0.02, -hl * 0.98);
+  sternPostMesh.rotation.x = 0.12;
+  group.add(sternPostMesh);
+
+  // 뱃전(불워크) — 갑판보다 한 단 높은 속이 빈 고리형 난간 벽. 고물 쪽(선미)은 점점 폭을
+  // 줄여 거의 사라지게 해(sternPinch), 실제 갈레온처럼 "고물의 벽"이 아니라 선미루(퀀터덱/포프덱)
+  // 자체가 고물 구조를 이루도록 한다 — 이렇게 해야 용골/갑판이 뒤에서도 잘 드러난다.
+  function sternPinch(pts, startFrac = 0.58, minScale = 0.05) {
+    const zStart = -hl * startFrac;
+    return pts.map(([x, z]) => {
+      if (z > zStart) return [x, z];
+      const t = Math.min(1, (z - zStart) / (-hl - zStart));
+      const scale = 1 - t * (1 - minScale);
+      return [x * scale, z];
+    });
+  }
+  const tumbleScale = 0.95; // 상부 선체가 살짝 안으로 기울어지는 텀블홈
+  const bulwarkPts = sternPinch(outline).map(([x, z]) => [x * tumbleScale, z]);
   const bulwarkOuter = new THREE.Shape();
-  outline.forEach(([x, z], i) => {
+  bulwarkPts.forEach(([x, z], i) => {
     if (i === 0) bulwarkOuter.moveTo(x, -z); else bulwarkOuter.lineTo(x, -z);
   });
-  bulwarkOuter.lineTo(outline[0][0], -outline[0][1]);
+  bulwarkOuter.lineTo(bulwarkPts[0][0], -bulwarkPts[0][1]);
   // 구멍(hole)은 바깥 윤곽과 반대 방향(역순)으로 감아야 실제로 뚫린 구멍으로 인식된다.
   const bulwarkHole = new THREE.Path();
-  const revOutline = [...outline].reverse();
-  const holeScale = 0.6;
-  revOutline.forEach(([x, z], i) => {
+  const revBulwarkPts = [...bulwarkPts].reverse();
+  const holeScale = 0.68;
+  revBulwarkPts.forEach(([x, z], i) => {
     const ix = x * holeScale, iz = z * holeScale;
     if (i === 0) bulwarkHole.moveTo(ix, -iz); else bulwarkHole.lineTo(ix, -iz);
   });
-  bulwarkHole.lineTo(revOutline[0][0] * holeScale, -revOutline[0][1] * holeScale);
+  bulwarkHole.lineTo(revBulwarkPts[0][0] * holeScale, -revBulwarkPts[0][1] * holeScale);
   bulwarkOuter.holes.push(bulwarkHole);
   const bulwarkGeo = new THREE.ExtrudeGeometry(bulwarkOuter, {
     depth: bulwarkH, bevelEnabled: true, bevelThickness: bulwarkH * 0.1, bevelSize: hw * 0.02, bevelSegments: 2,
@@ -155,34 +203,55 @@ export function buildShipMesh(shipDef) {
   const bulwarkMesh = new THREE.Mesh(bulwarkGeo, new THREE.MeshStandardMaterial({ color: '#7c5530', roughness: 0.85 }));
   group.add(bulwarkMesh);
 
-  // 레일 캡 — 뱃전 맨 위 테두리를 살짝 넓게 얇게 둘러 입체감을 준다
-  const railCapGeo = new THREE.ExtrudeGeometry(hullShape, { depth: hullHei * 0.06, bevelEnabled: false });
+  // 레일 캡 / 웨이스트 레일 — 뱃전과 같은(고물 쪽에서 함께 사라지는) 윤곽을 써서
+  // 벽이 얇아지는 고물에서 트림 라인만 붕 떠보이지 않도록 한다.
+  const railCapGeo = new THREE.ExtrudeGeometry(bulwarkOuter, { depth: hullHei * 0.06, bevelEnabled: false });
   railCapGeo.rotateX(-Math.PI / 2);
   railCapGeo.scale(1.05, 1, 1.04);
   railCapGeo.translate(0, railTopY - hullHei * 0.06, 0);
   const railCap = new THREE.Mesh(railCapGeo, new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.8 }));
   group.add(railCap);
 
-  // 난간 밑 몰딩(웨이스트 레일) — 뱃전 중간 높이를 두르는 밝은 트림 라인으로
-  // 난간부와 선체를 시각적으로 구분한다. 뱃전 밖으로 뚜렷이 튀어나오도록 두께를 넉넉히 준다.
-  const waistRailGeo = new THREE.ExtrudeGeometry(hullShape, { depth: hullHei * 0.075, bevelEnabled: false });
+  const waistRailGeo = new THREE.ExtrudeGeometry(bulwarkOuter, { depth: hullHei * 0.075, bevelEnabled: false });
   waistRailGeo.rotateX(-Math.PI / 2);
   waistRailGeo.scale(1.08, 1, 1.05);
   waistRailGeo.translate(0, deckY + bulwarkH * 0.4, 0);
   const waistRail = new THREE.Mesh(waistRailGeo, new THREE.MeshStandardMaterial({ color: '#e6c15a', roughness: 0.6 }));
   group.add(waistRail);
 
-  // 갑판 — 낮아진 바닥면(옴폭 파인 안쪽 공간의 바닥)
+  // 시어 레일(sheer line) — 갑판 난간 맨 위 테두리가 이물/고물 쪽으로 갈수록 위로 휘어
+  // 오르는 실제 범선 특유의 곡선. 선체 실루엣(halfWidthAt)을 따라가는 3D 곡선 튜브로 표현한다.
+  function sheerRiseAt(z) {
+    const tb = z / hl;
+    const bowRise = Math.pow(Math.max(0, tb), 1.6) * hullHei * 0.22;
+    const sternRise = Math.pow(Math.max(0, -tb), 1.6) * hullHei * 0.30;
+    return bowRise + sternRise;
+  }
+  function buildSheerRail(side) {
+    const n = 10;
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const z = THREE.MathUtils.lerp(-hl * 0.9, hl * 0.97, i / n);
+      pts.push(new THREE.Vector3(side * halfWidthAt(z) * tumbleScale * 0.99, railTopY + sheerRiseAt(z), z));
+    }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const geo = new THREE.TubeGeometry(curve, 40, Math.max(0.04, hullWid * 0.032), 6, false);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.75 }));
+    group.add(mesh);
+  }
+  buildSheerRail(1);
+  buildSheerRail(-1);
+
+  // 갑판 — 낮아진 바닥면(옴폭 파인 안쪽 공간의 바닥). 뱃전보다 항상 안쪽에 오도록 여유를 둔다.
   const deckGeo = new THREE.ShapeGeometry(hullShape);
   deckGeo.rotateX(-Math.PI / 2);
-  deckGeo.scale(0.5, 1, 0.5);
+  deckGeo.scale(0.58, 1, 0.58);
   const deck = new THREE.Mesh(deckGeo, new THREE.MeshStandardMaterial({ color: deckColor, roughness: 0.9 }));
   deck.position.y = deckY + 0.03;
   group.add(deck);
 
-  // 포문 — 선체가 거의 풀빔인 중앙 구간에만 배치해 뱃전 밖으로 뜨지 않도록 함.
-  // 어두운 포문 판 뒤에 살짝 큰 밝은 틀(리드 프레임)을 깔아 포문 뚜껑처럼 다듬는다.
-  // 역할별로 개수를 가감: 교역용은 줄여 화물칸 느낌을, 전투용은 늘리고 대형/초대형은 2단 포열을 추가
+  // 포문 — 웨일 바로 위, 선체가 거의 풀빔인 중앙 구간에 배치. 어두운 포문 판 뒤에 살짝 큰
+  // 밝은 틀(리드 프레임)을 깔아 포문 뚜껑처럼 다듬는다. 역할별로 개수를 가감.
   const gunportMat = new THREE.MeshStandardMaterial({ color: '#1c130c' });
   const gunportFrameMat = new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.7 });
   function addGunportRow(heightFrac, count, scale = 1) {
@@ -205,7 +274,7 @@ export function buildShipMesh(shipDef) {
   let gunportCount = Math.max(2, Math.round(hullLen / 2.6));
   if (role === 'trade') gunportCount = Math.max(0, gunportCount - 2);
   if (role === 'combat') gunportCount += 2;
-  if (gunportCount > 0) addGunportRow(0.45, gunportCount);
+  if (gunportCount > 0) addGunportRow(0.46, gunportCount);
   const isHeavyCombat = role === 'combat' && (shipDef.class === 'large' || shipDef.class === 'xlarge');
   if (isHeavyCombat) addGunportRow(0.78, Math.max(2, gunportCount - 2), 0.85);
 
@@ -234,15 +303,20 @@ export function buildShipMesh(shipDef) {
   // 대형/초대형 갈레온일수록 참고 도면처럼 웅장한 선루를 가졌다. 선체 크기별로 층고를 배분한다.
   const castleScale = { small: 0.4, medium: 0.65, large: 0.9, xlarge: 1.05 }[shipDef.class] ?? 0.7;
 
-  // 선수루(포어캐슬) — 이물 쪽 낮은 갑판 구조물 + 난간 기둥
+  // 선수루(포어캐슬) — 이물 쪽 낮은 갑판 구조물 + 안쪽으로 살짝 들어간 상판(완전한 상자가
+  // 아니라 갑판+난간 느낌) + 난간 기둥과 이를 잇는 레일 바.
   const darkPostMat = new THREE.MeshStandardMaterial({ color: '#2e2013' });
   const forecastleH = hullHei * 0.42 * castleScale;
+  const fcLen = hullLen * 0.15 * castleScale;
   const forecastle = new THREE.Mesh(
-    new THREE.BoxGeometry(hullWid * 0.64, forecastleH, hullLen * 0.15 * castleScale),
+    new THREE.BoxGeometry(hullWid * 0.64, forecastleH, fcLen),
     new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.85 })
   );
   forecastle.position.set(0, railTopY + forecastleH / 2 + 0.05, hl * 0.66);
   group.add(forecastle);
+  const fcTop = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.58, hullHei * 0.03, fcLen * 0.94), new THREE.MeshStandardMaterial({ color: deckColor, roughness: 0.9 }));
+  fcTop.position.set(0, railTopY + forecastleH + 0.07, hl * 0.66);
+  group.add(fcTop);
   {
     // 난간 기둥 + 그 위를 잇는 레일 바 — 기둥만 있으면 못이 박힌 것처럼 보이므로
     // 반드시 가로 난간대로 연결해 진짜 난간처럼 만든다.
@@ -285,6 +359,9 @@ export function buildShipMesh(shipDef) {
     line.position.set(0, railTopY + qdH + 0.02, -hullLen * 0.4);
     group.add(line);
   }
+  const poopTop = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.46, hullHei * 0.03, poopLen * 0.9), new THREE.MeshStandardMaterial({ color: deckColor, roughness: 0.9 }));
+  poopTop.position.set(0, railTopY + qdH + poopH + 0.07, -hullLen * 0.4);
+  group.add(poopTop);
 
   // 선미 갤러리 창 — 가장 뒤쪽/가장 위(포프덱) 후면, 즉 배 뒤에서 봤을 때 실제로 눈에
   // 들어오는 면에 배치한다(퀀터덱 후면은 포프덱에 가려 거의 보이지 않는다). 창은 포프덱
@@ -324,6 +401,24 @@ export function buildShipMesh(shipDef) {
     group.add(side2);
   }
   addSternGallery(railTopY + qdH + poopH * 0.56, -hullLen * 0.4 - poopLen / 2 - 0.03, hullWid * 0.5, poopH * 0.68);
+
+  // 쿼터 갤러리(퀀터갤러리) — 선미 양쪽 모서리에 작게 튀어나온 곁창. 갈레온 고증 컷어웨이
+  // 도면에 등장하는 특징적인 디테일로, 선미 갤러리와 함께 넣어야 "선미 창 배치"가 완성된다.
+  function addQuarterGallery(side) {
+    const gx = side * (hullWid * 0.25 + 0.01);
+    const gz = -hullLen * 0.4 - poopLen * 0.15;
+    const gy = railTopY + qdH + poopH * 0.5;
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(poopLen * 0.5, poopH * 0.5), windowMat);
+    win.position.set(gx, gy, gz);
+    win.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
+    group.add(win);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.04, poopH * 0.56, poopLen * 0.56), mullionMat);
+    frame.position.set(gx + side * 0.02, gy, gz);
+    group.add(frame);
+  }
+  addQuarterGallery(1);
+  addQuarterGallery(-1);
+
   // 뒷갑판 난간 기둥(발스트레이드) + 이를 잇는 레일 바
   {
     const railY = railTopY + qdH + poopH + 0.1 + hullHei * 0.1;
