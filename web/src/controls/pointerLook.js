@@ -13,10 +13,11 @@ export class PointerLookControls {
     this.dragging = false;
     this.dragButton = null;
     this.sensitivity = 0.0048;
-    // 극단적인 위/아래 각도(거의 수직 부감, 수면에 닿는 저각)를 막아
-    // 항상 자연스러운 3인칭 각도를 유지하도록 범위를 좁혔다.
-    this.minPitch = -0.05;
-    this.maxPitch = 0.62;
+    // 위/아래로 자유롭게 둘러볼 수 있도록 넓은 범위를 허용한다.
+    // 완전한 수직(짐벌락)만 피하고, 수면/지형 관통은 카메라 쪽에서
+    // 별도의 파고 하한선·충돌 판정으로 막는다(각도 자체를 제한하지 않음).
+    this.minPitch = -1.2;
+    this.maxPitch = 1.2;
     this._lastX = 0;
     this._lastY = 0;
     this._moved = 0;
