@@ -71,7 +71,14 @@ export function buildShipMesh(shipDef) {
 
   const hullLen = 10 * sz;
   const hullWid = 3.4 * sx * roleHullMul;
-  const hullHei = 2.6 * sy;
+  const hullHei = 2.2 * sy; // 예전보다 낮춰 뭉텅한 "덩어리" 느낌을 줄인다
+
+  // 갑판을 한 단 낮추고 그 위를 속이 빈 뱃전(불워크)으로 둘러, 갑판이 옴폭 파이고
+  // 양옆이 난간처럼 둘러선 형태를 낸다. deckY 아래는 실제 솔리드 선체, 그 위 bulwarkH만큼은
+  // 구멍 뚫린 고리 형태 벽이다.
+  const deckY = hullHei * 0.58;
+  const bulwarkH = hullHei * 0.34;
+  const railTopY = deckY + bulwarkH;
 
   // 선체 윤곽선(위에서 본 모양) — 이물은 뾰족하게, 고물은 완만하게 넓어지는 실제 범선 형태.
   // rotateX(-90°) 매핑은 로컬 y가 곧 -world z가 되므로, 아래 좌표는 (x, -z)로 넣는다.
@@ -91,7 +98,7 @@ export function buildShipMesh(shipDef) {
   hullShape.lineTo(outline[0][0], -outline[0][1]);
 
   const hullGeo = new THREE.ExtrudeGeometry(hullShape, {
-    depth: hullHei, bevelEnabled: true, bevelThickness: hullHei * 0.12, bevelSize: hw * 0.06, bevelSegments: 2,
+    depth: deckY, bevelEnabled: true, bevelThickness: deckY * 0.12, bevelSize: hw * 0.06, bevelSegments: 2,
   });
   hullGeo.rotateX(-Math.PI / 2);
   paintHullColors(hullGeo, hullHei);
@@ -121,52 +128,73 @@ export function buildShipMesh(shipDef) {
   const keelMesh = new THREE.Mesh(keelGeo, new THREE.MeshStandardMaterial({ color: '#1c140b', roughness: 0.9 }));
   group.add(keelMesh);
 
-  // 텀블홈 — 뱃전이 위로 갈수록 안쪽으로 좁아지는 범선 특유의 실루엣.
-  // 상부 선체보다 살짝 좁은 밴드를 덧대어 허리선에서 안쪽으로 꺾이는 단을 만든다.
-  const tumbleGeo = new THREE.ExtrudeGeometry(hullShape, {
-    depth: hullHei * 0.5, bevelEnabled: true, bevelThickness: hullHei * 0.05, bevelSize: hw * 0.03, bevelSegments: 2,
+  // 뱃전(불워크) — 갑판이 한 단 낮아진 만큼 그 위로 벽처럼 둘러선 난간형 구조.
+  // 구멍 뚫린 셰이프를 압출해 속이 빈 고리로 만들어, 갑판이 옴폭 파이고 양옆이
+  // 난간처럼 둘러선 형태를 낸다(내부는 채우지 않고 갑판 바닥만 별도 판으로 깐다).
+  const bulwarkOuter = new THREE.Shape();
+  outline.forEach(([x, z], i) => {
+    if (i === 0) bulwarkOuter.moveTo(x, -z); else bulwarkOuter.lineTo(x, -z);
   });
-  tumbleGeo.rotateX(-Math.PI / 2);
-  tumbleGeo.scale(0.93, 1, 0.97);
-  tumbleGeo.translate(0, hullHei * 0.52, 0);
-  const tumbleMesh = new THREE.Mesh(tumbleGeo, new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.85 }));
-  group.add(tumbleMesh);
+  bulwarkOuter.lineTo(outline[0][0], -outline[0][1]);
+  // 구멍(hole)은 바깥 윤곽과 반대 방향(역순)으로 감아야 실제로 뚫린 구멍으로 인식된다.
+  const bulwarkHole = new THREE.Path();
+  const revOutline = [...outline].reverse();
+  revOutline.forEach(([x, z], i) => {
+    const ix = x * 0.74, iz = z * 0.74;
+    if (i === 0) bulwarkHole.moveTo(ix, -iz); else bulwarkHole.lineTo(ix, -iz);
+  });
+  bulwarkHole.lineTo(revOutline[0][0] * 0.74, -revOutline[0][1] * 0.74);
+  bulwarkOuter.holes.push(bulwarkHole);
+  const bulwarkGeo = new THREE.ExtrudeGeometry(bulwarkOuter, {
+    depth: bulwarkH, bevelEnabled: true, bevelThickness: bulwarkH * 0.1, bevelSize: hw * 0.02, bevelSegments: 2,
+  });
+  bulwarkGeo.rotateX(-Math.PI / 2);
+  bulwarkGeo.translate(0, deckY, 0);
+  const bulwarkMesh = new THREE.Mesh(bulwarkGeo, new THREE.MeshStandardMaterial({ color: '#7c5530', roughness: 0.85 }));
+  group.add(bulwarkMesh);
 
-  // 건월(뱃전 상단 테두리) — 살짝 더 넓게, 얇게 둘러 입체감을 준다
-  const gunwaleGeo = new THREE.ExtrudeGeometry(hullShape, { depth: hullHei * 0.16, bevelEnabled: false });
-  gunwaleGeo.rotateX(-Math.PI / 2);
-  gunwaleGeo.scale(1.05, 1, 1.04);
-  const gunwale = new THREE.Mesh(gunwaleGeo, new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.8 }));
-  gunwale.position.y = hullHei * 0.86;
-  group.add(gunwale);
+  // 레일 캡 — 뱃전 맨 위 테두리를 살짝 넓게 얇게 둘러 입체감을 준다
+  const railCapGeo = new THREE.ExtrudeGeometry(hullShape, { depth: hullHei * 0.06, bevelEnabled: false });
+  railCapGeo.rotateX(-Math.PI / 2);
+  railCapGeo.scale(1.05, 1, 1.04);
+  railCapGeo.translate(0, railTopY - hullHei * 0.06, 0);
+  const railCap = new THREE.Mesh(railCapGeo, new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.8 }));
+  group.add(railCap);
 
-  // 난간 밑 몰딩(웨이스트 레일) — 건월(뱃전 상단)과 선체 사이를 잇는 밝은 트림 라인으로
+  // 난간 밑 몰딩(웨이스트 레일) — 뱃전 중간 높이를 두르는 밝은 트림 라인으로
   // 난간부와 선체를 시각적으로 구분한다. 뱃전 밖으로 뚜렷이 튀어나오도록 두께를 넉넉히 준다.
   const waistRailGeo = new THREE.ExtrudeGeometry(hullShape, { depth: hullHei * 0.075, bevelEnabled: false });
   waistRailGeo.rotateX(-Math.PI / 2);
   waistRailGeo.scale(1.08, 1, 1.05);
-  waistRailGeo.translate(0, hullHei * 0.76, 0);
+  waistRailGeo.translate(0, deckY + bulwarkH * 0.4, 0);
   const waistRail = new THREE.Mesh(waistRailGeo, new THREE.MeshStandardMaterial({ color: '#e6c15a', roughness: 0.6 }));
   group.add(waistRail);
 
-  // 갑판
+  // 갑판 — 낮아진 바닥면(옴폭 파인 안쪽 공간의 바닥)
   const deckGeo = new THREE.ShapeGeometry(hullShape);
   deckGeo.rotateX(-Math.PI / 2);
-  deckGeo.scale(0.92, 1, 0.92);
+  deckGeo.scale(0.68, 1, 0.68);
   const deck = new THREE.Mesh(deckGeo, new THREE.MeshStandardMaterial({ color: deckColor, roughness: 0.9 }));
-  deck.position.y = hullHei + 0.05;
+  deck.position.y = deckY + 0.03;
   group.add(deck);
 
-  // 포문 — 선체가 거의 풀빔인 중앙 구간에만 배치해 뱃전 밖으로 뜨지 않도록 함
+  // 포문 — 선체가 거의 풀빔인 중앙 구간에만 배치해 뱃전 밖으로 뜨지 않도록 함.
+  // 어두운 포문 판 뒤에 살짝 큰 밝은 틀(리드 프레임)을 깔아 포문 뚜껑처럼 다듬는다.
   // 역할별로 개수를 가감: 교역용은 줄여 화물칸 느낌을, 전투용은 늘리고 대형/초대형은 2단 포열을 추가
   const gunportMat = new THREE.MeshStandardMaterial({ color: '#1c130c' });
+  const gunportFrameMat = new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.7 });
   function addGunportRow(heightFrac, count, scale = 1) {
     for (const side of [-1, 1]) {
       for (let i = 0; i < count; i++) {
         const t = (i + 0.5) / count;
         const gz = -hl * 0.5 + t * hl * 0.65;
+        const gy = hullHei * heightFrac;
+        const frame = new THREE.Mesh(new THREE.PlaneGeometry(0.64 * sx * scale, 0.46 * sy * scale), gunportFrameMat);
+        frame.position.set(side * (hw * 0.945 + 0.012), gy, gz);
+        frame.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
+        group.add(frame);
         const port = new THREE.Mesh(new THREE.PlaneGeometry(0.5 * sx * scale, 0.35 * sy * scale), gunportMat);
-        port.position.set(side * (hw * 0.94 + 0.02), hullHei * heightFrac, gz);
+        port.position.set(side * (hw * 0.94 + 0.02), gy, gz);
         port.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
         group.add(port);
       }
@@ -189,12 +217,12 @@ export function buildShipMesh(shipDef) {
     cargoSpots.forEach(([cx, cz], i) => {
       if (i % 2 === 0) {
         const crate = new THREE.Mesh(new THREE.BoxGeometry(0.55 * sx, 0.5 * sy, 0.55 * sx), crateMat);
-        crate.position.set(cx, hullHei + 0.05 + 0.25 * sy, cz);
+        crate.position.set(cx, deckY + 0.05 + 0.25 * sy, cz);
         crate.rotation.y = i * 0.7;
         group.add(crate);
       } else {
         const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.28 * sx, 0.28 * sx, 0.55 * sy, 10), barrelMat);
-        barrel.position.set(cx, hullHei + 0.05 + 0.28 * sy, cz);
+        barrel.position.set(cx, deckY + 0.05 + 0.28 * sy, cz);
         group.add(barrel);
       }
     });
@@ -211,19 +239,28 @@ export function buildShipMesh(shipDef) {
     new THREE.BoxGeometry(hullWid * 0.64, forecastleH, hullLen * 0.15 * castleScale),
     new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.85 })
   );
-  forecastle.position.set(0, hullHei + forecastleH / 2 + 0.05, hl * 0.66);
+  forecastle.position.set(0, railTopY + forecastleH / 2 + 0.05, hl * 0.66);
   group.add(forecastle);
-  for (let i = -3; i <= 3; i++) {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, hullHei * 0.2, 5), darkPostMat);
-    post.position.set((i / 3) * hullWid * 0.28, hullHei + forecastleH + 0.15, hl * 0.66 + hullLen * 0.07);
-    group.add(post);
+  {
+    // 난간 기둥 + 그 위를 잇는 레일 바 — 기둥만 있으면 못이 박힌 것처럼 보이므로
+    // 반드시 가로 난간대로 연결해 진짜 난간처럼 만든다.
+    const railY = railTopY + forecastleH + 0.15 + hullHei * 0.1;
+    const railZ = hl * 0.66 + hullLen * 0.07;
+    for (let i = -3; i <= 3; i++) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, hullHei * 0.2, 5), darkPostMat);
+      post.position.set((i / 3) * hullWid * 0.28, railTopY + forecastleH + 0.15, railZ);
+      group.add(post);
+    }
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.58, hullHei * 0.025, 0.045), darkPostMat);
+    rail.position.set(0, railY, railZ);
+    group.add(rail);
   }
 
   // 선미루 — 선장갑판(퀀터덱)과 그 위의 뒷갑판(포프덱) 2단 구조 + 선미 갤러리 창
   const qdH = hullHei * 1.0 * castleScale, qdLen = hullLen * 0.22 * castleScale;
   const sternDeckMat = new THREE.MeshStandardMaterial({ color: trim.clone().lerp(new THREE.Color('#000'), 0.25), roughness: 0.8 });
   const quarterdeck = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.76, qdH, qdLen), sternDeckMat);
-  quarterdeck.position.set(0, hullHei + qdH / 2, -hullLen * 0.34);
+  quarterdeck.position.set(0, railTopY + qdH / 2, -hullLen * 0.34);
   group.add(quarterdeck);
 
   // 선루 층 구분 몰딩 — 선체/퀀터덱, 퀀터덱/포프덱 경계마다 밝은 트림 띠를 둘러
@@ -234,16 +271,16 @@ export function buildShipMesh(shipDef) {
     line.position.set(0, y, -hullLen * 0.34);
     group.add(line);
   }
-  addDeckLine(hullHei + 0.02, hullWid * 0.82, qdLen + 0.1);
+  addDeckLine(railTopY + 0.02, hullWid * 0.82, qdLen + 0.1);
 
   const poopH = hullHei * 0.58 * castleScale, poopLen = hullLen * 0.12 * castleScale;
   const poopMat = new THREE.MeshStandardMaterial({ color: trim.clone().lerp(new THREE.Color('#000'), 0.15), roughness: 0.8 });
   const poop = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.5, poopH, poopLen), poopMat);
-  poop.position.set(0, hullHei + qdH + poopH / 2, -hullLen * 0.4);
+  poop.position.set(0, railTopY + qdH + poopH / 2, -hullLen * 0.4);
   group.add(poop);
   {
     const line = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.56, hullHei * 0.08, poopLen + 0.1), deckLineMat);
-    line.position.set(0, hullHei + qdH + 0.02, -hullLen * 0.4);
+    line.position.set(0, railTopY + qdH + 0.02, -hullLen * 0.4);
     group.add(line);
   }
 
@@ -284,19 +321,26 @@ export function buildShipMesh(shipDef) {
     side2.position.x = w / 2 + bT / 2;
     group.add(side2);
   }
-  addSternGallery(hullHei + qdH + poopH * 0.56, -hullLen * 0.4 - poopLen / 2 - 0.03, hullWid * 0.5, poopH * 0.68);
-  // 뒷갑판 난간 기둥(발스트레이드)
-  for (let i = -2; i <= 2; i++) {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, hullHei * 0.2, 5), darkPostMat);
-    post.position.set((i / 2) * hullWid * 0.2, hullHei + qdH + poopH + 0.1, -hullLen * 0.4 - poopLen * 0.3);
-    group.add(post);
+  addSternGallery(railTopY + qdH + poopH * 0.56, -hullLen * 0.4 - poopLen / 2 - 0.03, hullWid * 0.5, poopH * 0.68);
+  // 뒷갑판 난간 기둥(발스트레이드) + 이를 잇는 레일 바
+  {
+    const railY = railTopY + qdH + poopH + 0.1 + hullHei * 0.1;
+    const railZ = -hullLen * 0.4 - poopLen * 0.3;
+    for (let i = -2; i <= 2; i++) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, hullHei * 0.2, 5), darkPostMat);
+      post.position.set((i / 2) * hullWid * 0.2, railTopY + qdH + poopH + 0.1, railZ);
+      group.add(post);
+    }
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.42, hullHei * 0.025, 0.045), darkPostMat);
+    rail.position.set(0, railY, railZ);
+    group.add(rail);
   }
   // 선미등(랜턴)
   const lantern = new THREE.Mesh(
     new THREE.SphereGeometry(hullHei * 0.13, 8, 6),
     new THREE.MeshStandardMaterial({ color: '#f3d98a', emissive: '#c98f2a', emissiveIntensity: 0.5, roughness: 0.4 })
   );
-  lantern.position.set(0, hullHei + qdH + poopH + 0.22, -hullLen * 0.42);
+  lantern.position.set(0, railTopY + qdH + poopH + 0.22, -hullLen * 0.42);
   group.add(lantern);
 
   // 선수상(피겨헤드) — 이물 끝 아래에 작은 장식
@@ -361,14 +405,14 @@ export function buildShipMesh(shipDef) {
 
   // 돛대(하단/중간/상단 다단 구성) + 활대(야드) + 돛 (가로돛 범선 형태)
   const mastCount = cls.mastCount;
-  let sternMastTopY = hullHei, sternMastZ = -hullLen * 0.3;
-  const bowTip = new THREE.Vector3(0, hullHei * 0.7, hl * 0.98);
-  const sternDeck = new THREE.Vector3(0, hullHei * 1.1, -hl * 0.9);
+  let sternMastTopY = railTopY, sternMastZ = -hullLen * 0.3;
+  const bowTip = new THREE.Vector3(0, railTopY * 0.75, hl * 0.98);
+  const sternDeck = new THREE.Vector3(0, railTopY * 1.05, -hl * 0.9);
   for (let i = 0; i < mastCount; i++) {
     const t = mastCount === 1 ? 0.5 : i / (mastCount - 1);
     const mastZ = hullLen * (0.32 - t * 0.62);
     const mastHeight = hullHei + 7 * sy * (i === Math.floor(mastCount / 2) ? 1.15 : 0.9);
-    const mastBaseY = hullHei + 0.1;
+    const mastBaseY = railTopY + 0.1;
     const mastTopY = mastBaseY + mastHeight;
     sternMastTopY = mastTopY;
     sternMastZ = mastZ;
@@ -446,9 +490,9 @@ export function buildShipMesh(shipDef) {
     new THREE.MeshStandardMaterial({ color: '#352616' })
   );
   bowsprit.rotation.x = Math.PI / 2.6;
-  bowsprit.position.set(0, hullHei * 0.65, hl * 0.95);
+  bowsprit.position.set(0, railTopY * 0.7, hl * 0.95);
   group.add(bowsprit);
-  addLine(new THREE.Vector3(0, hullHei * 0.3, hl * 0.55), new THREE.Vector3(0, hullHei * 1.0, hullLen * (0.32 - (mastCount === 1 ? 0.5 : 0) * 0.62)), 0.03);
+  addLine(new THREE.Vector3(0, railTopY * 0.55, hl * 0.55), new THREE.Vector3(0, railTopY, hullLen * (0.32 - (mastCount === 1 ? 0.5 : 0) * 0.62)), 0.03);
 
   // 스프릿세일 — 선수 사장 아래 작은 삼각 돛
   const spritGeo = trapezoid(hullWid * 0.75 * sx, 0.05, hullHei * 0.9, hullHei * 0.1);
@@ -470,7 +514,7 @@ export function buildShipMesh(shipDef) {
       new THREE.PlaneGeometry(1.1 * sx, 0.7 * sy),
       new THREE.MeshStandardMaterial({ color: trim, side: THREE.DoubleSide })
     );
-    bowFlag.position.set(0, hullHei * 1.05, hl * 1.02);
+    bowFlag.position.set(0, railTopY * 1.03, hl * 1.02);
     group.add(bowFlag);
   }
 
