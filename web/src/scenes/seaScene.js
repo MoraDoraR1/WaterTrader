@@ -408,15 +408,8 @@ export class SeaScene {
     state.shipPos = [this.ship.pos.x, this.ship.pos.y];
     state.shipHeading = this.ship.heading;
 
-    // 카메라: 드래그 중이 아니고 실제로 항해 중일 때만 배 후방으로 서서히 재정렬(체이스캠)
-    // — 정박/정지 상태에서는 자유 시점을 방해하지 않는다.
-    if (!pointerControls.dragging && this.ship.notch !== 0) {
-      const targetYaw = this.ship.heading + Math.PI;
-      let diff = targetYaw - pointerControls.yaw;
-      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      pointerControls.yaw += diff * Math.min(1, delta * 1.8);
-    }
-
+    // 카메라 시점은 오직 마우스 드래그로만 바뀐다 — 배의 진행/방향 전환에 따라
+    // 자동으로 움직이거나 재정렬되지 않는다(사용자가 직접 놓은 각도를 그대로 유지).
     const camDist = 25, baseLift = 5;
     const anchor = new THREE.Vector3(this.ship.pos.x, this.ship.mesh.position.y + 3.5, this.ship.pos.y);
     const horizDist = camDist * Math.cos(pointerControls.pitch);
@@ -430,11 +423,7 @@ export class SeaScene {
     const desired = new THREE.Vector3(camX, camY, camZ);
     const resolved = resolveCameraCollision(this.raycaster, this.cameraColliders, anchor, desired);
     camera.position.copy(resolved);
-
-    // 진행 방향으로 살짝 앞을 내다보게 해 이동감을 살린다
-    const forwardDir = new THREE.Vector3(Math.sin(this.ship.heading), 0, Math.cos(this.ship.heading));
-    const lookTarget = anchor.clone().addScaledVector(forwardDir, 7 * Math.abs(this.ship.speedRatio));
-    camera.lookAt(lookTarget);
+    camera.lookAt(anchor);
 
     // HUD
     hud.setThrottle(this.ship.notch, -3, 5);
