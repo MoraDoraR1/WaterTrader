@@ -117,6 +117,22 @@
 
   #loading { position: fixed; inset: 0; z-index: 60; background: #05131c; display: flex; align-items: center; justify-content: center;
     color: #cfe0ea; letter-spacing: 0.2rem; }
+
+  /* ---- 전체 지도(월드맵) ---- */
+  #world-map-panel { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
+  #world-map-book { background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4); border-radius: 14px;
+    padding: 1.2rem 1.4rem 1rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+  #world-map-header { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.7rem; }
+  #world-map-header-text { text-align: center; min-width: 220px; }
+  #world-map-title { font-size: 1.3rem; letter-spacing: 0.2rem; color: #f3d98a; }
+  #world-map-subtitle { font-size: 0.68rem; letter-spacing: 0.25rem; color: #8fa6b4; margin-top: 2px; }
+  .wm-arrow { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(200,180,120,0.45);
+    background: rgba(230,193,90,0.12); color: #f0e6d2; font-size: 1.1rem; cursor: pointer; }
+  .wm-arrow:hover { background: rgba(230,193,90,0.28); }
+  #world-map-canvas { display: block; border: 1px solid rgba(200,180,120,0.3); border-radius: 6px; }
+  #world-map-page { text-align: center; font-size: 0.7rem; color: #8fa6b4; margin-top: 0.5rem; letter-spacing: 0.1rem; }
+  #world-map-panel .close-hint { text-align: center; margin-top: 0.3rem; font-size: 0.72rem; color: #8fa6b4; }
 </style>
 </head>
 <body>
@@ -177,6 +193,22 @@
     <h3>인벤토리</h3>
     <div id="inventory-grid"></div>
     <div class="close-hint">E 를 눌러 닫기</div>
+  </div>
+
+  <div id="world-map-panel" class="hidden">
+    <div id="world-map-book">
+      <div id="world-map-header">
+        <button class="wm-arrow" id="world-map-prev">◀</button>
+        <div id="world-map-header-text">
+          <div id="world-map-title">서유럽 항로</div>
+          <div id="world-map-subtitle">WESTERN EUROPE</div>
+        </div>
+        <button class="wm-arrow" id="world-map-next">▶</button>
+      </div>
+      <canvas id="world-map-canvas" width="640" height="480"></canvas>
+      <div id="world-map-page">1 / 1</div>
+      <div class="close-hint">M 또는 ESC 로 닫기 · ◀ ▶ 로 다른 해역 보기</div>
+    </div>
   </div>
 
   <div id="toast"></div>

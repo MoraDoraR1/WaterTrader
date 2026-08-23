@@ -5,6 +5,11 @@ import { SeaScene } from './scenes/seaScene.js';
 import { CityScene } from './scenes/cityScene.js';
 import { state, setScreen, initShipHp } from './state.js';
 import { hud } from './ui/hud.js';
+import { WORLD_REGIONS } from './data/worldRegions.js';
+import { LAND_POLYGONS, MAINLAND_POLY, BRITAIN_POLY } from './data/coastline.js';
+import { CITIES } from './data/cities.js';
+import { COUNTRY_COLORS } from './data/ships.js';
+import { SEA_REGION_BOXES } from './data/seaRegions.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -44,7 +49,7 @@ function goToSea(fromCityId) {
   citySceneObj = null;
   setScreen('sea');
   hud.showSeaHud(true);
-  hud.showActionHints(true, ['드래그 시점회전', 'W/S 속도', 'A/D 선회', '좌클릭 정박/포격', '스페이스 포격']);
+  hud.showActionHints(true, ['드래그 시점회전', 'W/S 속도', 'A/D 선회', '좌클릭 정박/포격', '스페이스 포격', 'M 전체지도']);
 }
 
 function goToCity(cityId) {
@@ -53,9 +58,51 @@ function goToCity(cityId) {
   hud.showCombatBanner(false);
   citySceneObj = new CityScene(cityId, () => goToSea(cityId));
   setScreen('city');
-  hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리']);
+  hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도']);
   hud.toast(`${citySceneObj.city.name}에 정박했습니다.`);
 }
+
+// ---- 전체 지도(월드맵): M키로 토글, 화살표로 해역 페이지 전환 ----
+// 열람 전용 기능이며 플레이어의 실제 이동/조작과는 무관하다. 열려있는 동안은
+// 게임 시뮬레이션 갱신을 멈춰(스냅샷처럼) 조작이 새지 않도록 한다.
+const worldMapAllPts = [...MAINLAND_POLY, ...BRITAIN_POLY, ...CITIES.map((c) => c.pos)];
+const wmXs = worldMapAllPts.map((p) => p[0]), wmZs = worldMapAllPts.map((p) => p[1]);
+const wmPad = 60;
+const worldMapBounds = {
+  minX: Math.min(...wmXs) - wmPad, maxX: Math.max(...wmXs) + wmPad,
+  minZ: Math.min(...wmZs) - wmPad, maxZ: Math.max(...wmZs) + wmPad,
+};
+const worldMapCities = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], name: c.name, color: COUNTRY_COLORS[c.country] || '#e6c15a' }));
+let worldMapIndex = 0;
+
+function renderWorldMapPage() {
+  const region = WORLD_REGIONS[worldMapIndex];
+  hud.setWorldMapHeader(region.name, region.subtitle, worldMapIndex, WORLD_REGIONS.length);
+  if (region.kind === 'real') {
+    const ship = seaScene ? { x: seaScene.ship.pos.x, z: seaScene.ship.pos.y, heading: seaScene.ship.heading } : null;
+    hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: worldMapBounds, cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship });
+  } else {
+    hud.renderWorldMapPlaceholder();
+  }
+}
+
+function openWorldMap() {
+  if (state.screen === 'title') return;
+  hud.showWorldMap(true);
+  renderWorldMapPage();
+}
+
+function closeWorldMap() {
+  hud.showWorldMap(false);
+}
+
+function cycleWorldMap(dir) {
+  worldMapIndex = (worldMapIndex + dir + WORLD_REGIONS.length) % WORLD_REGIONS.length;
+  renderWorldMapPage();
+}
+
+document.getElementById('world-map-prev').addEventListener('click', () => cycleWorldMap(-1));
+document.getElementById('world-map-next').addEventListener('click', () => cycleWorldMap(1));
 
 document.querySelectorAll('.gender-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -82,6 +129,13 @@ function animate(now) {
   const elapsed = now / 1000;
 
   if (state.screen !== 'title') {
+    if (consumeJustPressed('KeyM')) {
+      hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
+    }
+    if (hud.isWorldMapOpen()) {
+      if (consumeJustPressed('ArrowLeft')) cycleWorldMap(-1);
+      if (consumeJustPressed('ArrowRight')) cycleWorldMap(1);
+    }
     if (consumeJustPressed('KeyF')) {
       if (state.screen === 'city') citySceneObj?.handleInteract(camera);
     }
@@ -91,15 +145,19 @@ function animate(now) {
     if (consumeJustPressed('Escape')) {
       hud.hideDialogue();
       hud.closeInventory();
+      closeWorldMap();
     }
   }
 
-  if (state.screen === 'sea' && seaScene) {
-    seaScene.update(delta, elapsed, camera, pointerControls);
-    renderer.render(seaScene.scene, camera);
-  } else if (state.screen === 'city' && citySceneObj) {
-    citySceneObj.update(delta, elapsed, camera, pointerControls);
-    renderer.render(citySceneObj.scene, camera);
+  // 월드맵 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
+  if (!hud.isWorldMapOpen()) {
+    if (state.screen === 'sea' && seaScene) {
+      seaScene.update(delta, elapsed, camera, pointerControls);
+      renderer.render(seaScene.scene, camera);
+    } else if (state.screen === 'city' && citySceneObj) {
+      citySceneObj.update(delta, elapsed, camera, pointerControls);
+      renderer.render(citySceneObj.scene, camera);
+    }
   }
 
   clearFrame();

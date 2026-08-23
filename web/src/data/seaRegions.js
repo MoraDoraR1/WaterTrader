@@ -22,6 +22,9 @@ const REGIONS = [
   ['북대서양', box(-13.0, -1.0, 34.8, 56.5)],
 ];
 
+// 전체 지도(월드맵)에 해역 이름 라벨을 그릴 때 재사용
+export const SEA_REGION_BOXES = REGIONS;
+
 export function seaRegionAt(x, z) {
   for (const [name, poly] of REGIONS) {
     if (pointInPolygon(x, z, poly)) return name;
