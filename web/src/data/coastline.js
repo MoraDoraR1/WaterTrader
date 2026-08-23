@@ -62,8 +62,46 @@ export const BRITAIN_LONLAT = [
   [-4.8, 51.5],
 ];
 
-export const MAINLAND_POLY = projectAll(MAINLAND_LONLAT);
-export const BRITAIN_POLY = projectAll(BRITAIN_LONLAT);
+// 시드 기반 의사난수 — 매번 동일한 해안선 형태가 나오도록 결정적으로 생성
+function makeRand(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+// 각 변을 여러 구간으로 나누고 수직 방향으로 흔들어 자연스러운 굴곡을 만든다.
+// 원래 꼭짓점(각 도시 인근의 기준점)에서는 흔들림이 0이 되도록 테이퍼링해
+// 지리적 배치(투영 좌표)는 그대로 유지한 채 해안선만 다듬는다.
+function jitterEdges(poly, segments, amount, rand) {
+  const out = [];
+  const n = poly.length;
+  for (let i = 0; i < n; i++) {
+    const [ax, az] = poly[i];
+    const [bx, bz] = poly[(i + 1) % n];
+    const dx = bx - ax, dz = bz - az;
+    const len = Math.hypot(dx, dz) || 1;
+    const nx = -dz / len, nz = dx / len;
+    out.push([ax, az]);
+    for (let s = 1; s < segments; s++) {
+      const t = s / segments;
+      const px = ax + dx * t, pz = az + dz * t;
+      const taper = Math.sin(t * Math.PI); // 양 끝(원래 꼭짓점)에서 0
+      const j = (rand() - 0.5) * 2 * amount * taper;
+      out.push([px + nx * j, pz + nz * j]);
+    }
+  }
+  return out;
+}
+
+function fractalCoastline(lonlatPairs, seed) {
+  const rand = makeRand(seed);
+  let poly = projectAll(lonlatPairs);
+  poly = jitterEdges(poly, 5, 16, rand); // 큰 굴곡(만·곶)
+  poly = jitterEdges(poly, 3, 5, rand); // 잔물결 같은 잔 디테일
+  return poly;
+}
+
+export const MAINLAND_POLY = fractalCoastline(MAINLAND_LONLAT, 20260823);
+export const BRITAIN_POLY = fractalCoastline(BRITAIN_LONLAT, 19470101);
 export const LAND_POLYGONS = [MAINLAND_POLY, BRITAIN_POLY];
 
 // 레이 캐스팅 알고리즘 기반 점-폴리곤 내부 판정 (x,z 평면)
@@ -80,4 +118,23 @@ export function pointInPolygon(x, z, poly) {
 
 export function pointOnAnyLand(x, z) {
   return LAND_POLYGONS.some((poly) => pointInPolygon(x, z, poly));
+}
+
+function pointToSegmentDistance(px, pz, ax, az, bx, bz) {
+  const dx = bx - ax, dz = bz - az;
+  const lenSq = dx * dx + dz * dz;
+  let t = lenSq > 0 ? ((px - ax) * dx + (pz - az) * dz) / lenSq : 0;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + dx * t, cz = az + dz * t;
+  return Math.hypot(px - cx, pz - cz);
+}
+
+// 해안선까지의 최단 거리(버텍스 컬러 그라데이션, 언덕 배치 여백 확보 등에 사용)
+export function distanceToPolygonEdge(x, z, poly) {
+  let minD = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const d = pointToSegmentDistance(x, z, poly[j][0], poly[j][1], poly[i][0], poly[i][1]);
+    if (d < minD) minD = d;
+  }
+  return minD;
 }

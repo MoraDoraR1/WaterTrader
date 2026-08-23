@@ -7,14 +7,16 @@ export class PointerLookControls {
   constructor(domElement) {
     this.dom = domElement;
     this.yaw = Math.PI;
-    this.pitch = -0.25;
+    this.pitch = 0.28;
     this.leftDown = false;
     this.rightDown = false;
     this.dragging = false;
     this.dragButton = null;
-    this.sensitivity = 0.0055;
-    this.minPitch = -1.3;
-    this.maxPitch = 0.9;
+    this.sensitivity = 0.0048;
+    // 극단적인 위/아래 각도(거의 수직 부감, 수면에 닿는 저각)를 막아
+    // 항상 자연스러운 3인칭 각도를 유지하도록 범위를 좁혔다.
+    this.minPitch = -0.05;
+    this.maxPitch = 0.62;
     this._lastX = 0;
     this._lastY = 0;
     this._moved = 0;

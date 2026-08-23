@@ -7,7 +7,7 @@ import { makeLabelSprite } from '../entities/label.js';
 import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { CITIES } from '../data/cities.js';
-import { MAINLAND_POLY, BRITAIN_POLY, LAND_POLYGONS, pointOnAnyLand } from '../data/coastline.js';
+import { MAINLAND_POLY, BRITAIN_POLY, LAND_POLYGONS, pointOnAnyLand, distanceToPolygonEdge, pointInPolygon } from '../data/coastline.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, notify } from '../state.js';
@@ -71,7 +71,14 @@ export class SeaScene {
   }
 
   _buildLandmasses() {
-    const mat = new THREE.MeshStandardMaterial({ color: '#7f9468', roughness: 1 });
+    // ExtrudeGeometry의 윗면(cap)은 폴리곤 테두리 점들로만 삼각분할되어
+    // "내륙" 버텍스가 존재하지 않는다(버텍스 컬러로는 해안→내륙 그라데이션 표현 불가).
+    // 대신 해안까지의 거리 기반 그라데이션을 캔버스에 구워 텍스처로 입힌다.
+    const cliff = new THREE.Color('#8a7658');
+    const cliffWet = new THREE.Color('#544736');
+    const sideMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
+
+    this.landMeshes = this.landMeshes || [];
     for (const poly of [MAINLAND_POLY, BRITAIN_POLY]) {
       // rotateX(-90°) 매핑 (x,y,depth)->(x,depth,-y) 이므로, y에 -z를 넣어야
       // 최종 메시 좌표가 게임 좌표계(x,z)와 정확히 일치한다(면 뒤집힘/노멀 오류 없이).
@@ -79,13 +86,127 @@ export class SeaScene {
       poly.forEach(([x, z], i) => {
         if (i === 0) shape.moveTo(x, -z); else shape.lineTo(x, -z);
       });
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 18, bevelEnabled: true, bevelThickness: 4, bevelSize: 8, bevelSegments: 2 });
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 18, bevelEnabled: true, bevelThickness: 4, bevelSize: 8, bevelSegments: 3 });
       geo.rotateX(-Math.PI / 2);
-      const mesh = new THREE.Mesh(geo, mat);
+
+      const posAttr = geo.attributes.position;
+      let maxY = -Infinity;
+      for (let i = 0; i < posAttr.count; i++) maxY = Math.max(maxY, posAttr.getY(i));
+
+      const colors = new Float32Array(posAttr.count * 3);
+      const tmp = new THREE.Color();
+      for (let i = 0; i < posAttr.count; i++) {
+        const y = posAttr.getY(i);
+        const topness = (y - maxY * 0.55) / (maxY * 0.45);
+        if (topness <= 0.05) {
+          // 절벽면: 수면 근처는 짙게, 위로 갈수록 흙색 (측면은 버텍스가 촘촘해 자연스럽게 이어진다)
+          tmp.copy(cliffWet).lerp(cliff, THREE.MathUtils.clamp(y / (maxY * 0.5), 0, 1));
+        } else {
+          tmp.copy(cliff); // 새 텍스처 윗면 메시에 가려질 아랫단 — 색은 크게 중요하지 않음
+        }
+        colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b;
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const mesh = new THREE.Mesh(geo, sideMat);
       this.scene.add(mesh);
       this.cameraColliders.push(mesh);
-      this.landMeshes = this.landMeshes || [];
       this.landMeshes.push(mesh);
+
+      const capMesh = this._buildTerrainCap(shape, poly, maxY);
+      this.scene.add(capMesh);
+      this.cameraColliders.push(capMesh);
+
+      this._scatterHills(poly, maxY);
+    }
+  }
+
+  _buildTerrainCap(shape, poly, maxY) {
+    const capGeo = new THREE.ShapeGeometry(shape);
+    capGeo.rotateX(-Math.PI / 2);
+    capGeo.translate(0, maxY + 0.15, 0);
+
+    // ShapeGeometry의 기본 UV는 shape 로컬 바운딩 박스 기준이므로,
+    // 같은 바운딩 박스로 캔버스를 구우면 좌표가 정확히 일치한다.
+    let minLX = Infinity, maxLX = -Infinity, minLY = Infinity, maxLY = -Infinity;
+    for (const [x, z] of poly) {
+      minLX = Math.min(minLX, x); maxLX = Math.max(maxLX, x);
+      minLY = Math.min(minLY, -z); maxLY = Math.max(maxLY, -z);
+    }
+
+    const beach = new THREE.Color('#e4d59c');
+    const lowland = new THREE.Color('#6b8f4f');
+    const highland = new THREE.Color('#3f5c37');
+    const tmp = new THREE.Color();
+
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(size, size);
+    for (let py = 0; py < size; py++) {
+      for (let px = 0; px < size; px++) {
+        const lx = minLX + ((px + 0.5) / size) * (maxLX - minLX);
+        const ly = minLY + ((py + 0.5) / size) * (maxLY - minLY);
+        const wx = lx, wz = -ly;
+        const idx = (py * size + px) * 4;
+        if (!pointInPolygon(wx, wz, poly)) {
+          img.data[idx + 3] = 0;
+          continue;
+        }
+        const edgeDist = distanceToPolygonEdge(wx, wz, poly);
+        const t = THREE.MathUtils.clamp(edgeDist / 26, 0, 1);
+        if (t < 0.3) tmp.copy(beach).lerp(lowland, t / 0.3);
+        else tmp.copy(lowland).lerp(highland, (t - 0.3) / 0.7);
+        const n = 0.92 + (((wx * 12.9898 + wz * 78.233) % 1 + 1) % 1) * 0.16;
+        tmp.multiplyScalar(n);
+        // THREE.Color는 내부적으로 리니어 값을 갖고 있으므로, sRGB로 인코딩된
+        // 캔버스 바이트로 구우려면 명시적으로 변환해야 한다(안 그러면 이중 감마 보정으로 새까맣게 보임).
+        tmp.convertLinearToSRGB();
+        img.data[idx] = Math.round(THREE.MathUtils.clamp(tmp.r, 0, 1) * 255);
+        img.data[idx + 1] = Math.round(THREE.MathUtils.clamp(tmp.g, 0, 1) * 255);
+        img.data[idx + 2] = Math.round(THREE.MathUtils.clamp(tmp.b, 0, 1) * 255);
+        img.data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.flipY = false; // ShapeGeometry의 기본 UV(v = (y-min)/(max-min))와 캔버스 row를 그대로 일치시킴
+    tex.needsUpdate = true;
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 1 });
+    return new THREE.Mesh(capGeo, mat);
+  }
+
+  _scatterHills(poly, topY) {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [x, z] of poly) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
+
+    let seed = 777;
+    for (let i = 0; i < poly.length; i++) seed = (seed * 31 + Math.floor(poly[i][0])) >>> 0;
+    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+
+    const area = (maxX - minX) * (maxZ - minZ);
+    const targetCount = Math.round(THREE.MathUtils.clamp(area / 42000, 4, 26));
+    const hillMat = new THREE.MeshStandardMaterial({ color: '#6d8259', roughness: 1, flatShading: true });
+    let placed = 0, attempts = 0;
+    while (placed < targetCount && attempts < targetCount * 25) {
+      attempts++;
+      const x = minX + rand() * (maxX - minX);
+      const z = minZ + rand() * (maxZ - minZ);
+      if (!pointInPolygon(x, z, poly)) continue;
+      if (distanceToPolygonEdge(x, z, poly) < 35) continue;
+
+      const r = 12 + rand() * 22;
+      const h = 8 + rand() * 16;
+      const hill = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7 + Math.floor(rand() * 3)), hillMat);
+      hill.position.set(x, topY + h * 0.5 - 2, z);
+      hill.rotation.y = rand() * Math.PI * 2;
+      hill.scale.y *= 0.7 + rand() * 0.3;
+      this.scene.add(hill);
+      this.cameraColliders.push(hill);
+      placed++;
     }
   }
 
@@ -287,27 +408,33 @@ export class SeaScene {
     state.shipPos = [this.ship.pos.x, this.ship.pos.y];
     state.shipHeading = this.ship.heading;
 
-    // 카메라: 드래그 중이 아니면 배 후방으로 서서히 재정렬(체이스캠)
-    if (!pointerControls.dragging) {
+    // 카메라: 드래그 중이 아니고 실제로 항해 중일 때만 배 후방으로 서서히 재정렬(체이스캠)
+    // — 정박/정지 상태에서는 자유 시점을 방해하지 않는다.
+    if (!pointerControls.dragging && this.ship.notch !== 0) {
       const targetYaw = this.ship.heading + Math.PI;
       let diff = targetYaw - pointerControls.yaw;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      pointerControls.yaw += diff * Math.min(1, delta * 2.5);
+      pointerControls.yaw += diff * Math.min(1, delta * 1.8);
     }
 
-    const camDist = 26, camHeight = 11;
-    const anchor = new THREE.Vector3(this.ship.pos.x, this.ship.mesh.position.y + 4, this.ship.pos.y);
-    let camX = this.ship.pos.x - Math.sin(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
-    let camZ = this.ship.pos.y - Math.cos(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
-    let camY = this.ship.mesh.position.y + camHeight + Math.sin(pointerControls.pitch) * camDist;
+    const camDist = 25, baseLift = 5;
+    const anchor = new THREE.Vector3(this.ship.pos.x, this.ship.mesh.position.y + 3.5, this.ship.pos.y);
+    const horizDist = camDist * Math.cos(pointerControls.pitch);
+    let camX = anchor.x - Math.sin(pointerControls.yaw) * horizDist;
+    let camZ = anchor.z - Math.cos(pointerControls.yaw) * horizDist;
+    let camY = anchor.y + baseLift + Math.sin(pointerControls.pitch) * camDist;
     // 해수면 관통 방지: 카메라 목표 지점의 파고보다 항상 위에 있도록 하한선을 둔다
     const waveAtCam = this.ocean.heightAt(camX, camZ, elapsed);
-    camY = Math.max(camY, waveAtCam + 2.5);
+    camY = Math.max(camY, waveAtCam + 3);
 
     const desired = new THREE.Vector3(camX, camY, camZ);
     const resolved = resolveCameraCollision(this.raycaster, this.cameraColliders, anchor, desired);
     camera.position.copy(resolved);
-    camera.lookAt(anchor);
+
+    // 진행 방향으로 살짝 앞을 내다보게 해 이동감을 살린다
+    const forwardDir = new THREE.Vector3(Math.sin(this.ship.heading), 0, Math.cos(this.ship.heading));
+    const lookTarget = anchor.clone().addScaledVector(forwardDir, 7 * Math.abs(this.ship.speedRatio));
+    camera.lookAt(lookTarget);
 
     // HUD
     hud.setThrottle(this.ship.notch, -3, 5);

@@ -230,11 +230,12 @@ export class CityScene {
 
     this.character.update(delta, inputVec, pointerControls.yaw, BOUNDS, this.buildingBoxes);
 
-    const camDist = 8.5, camHeight = 3.4;
+    const camDist = 9.5, baseLift = 1.8;
     const anchor = new THREE.Vector3(this.character.pos.x, 1.5, this.character.pos.z);
-    const camX = this.character.pos.x - Math.sin(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
-    const camZ = this.character.pos.z - Math.cos(pointerControls.yaw) * Math.cos(pointerControls.pitch) * camDist;
-    const camY = Math.max(0.6, camHeight + Math.sin(pointerControls.pitch) * camDist + 1.2);
+    const horizDist = camDist * Math.cos(pointerControls.pitch);
+    const camX = anchor.x - Math.sin(pointerControls.yaw) * horizDist;
+    const camZ = anchor.z - Math.cos(pointerControls.yaw) * horizDist;
+    const camY = Math.max(0.6, anchor.y + baseLift + Math.sin(pointerControls.pitch) * camDist);
     const desired = new THREE.Vector3(camX, camY, camZ);
     const resolved = resolveCameraCollision(this.raycaster, this.buildingColliders, anchor, desired);
     resolved.y = Math.max(0.6, resolved.y);
