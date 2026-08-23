@@ -5,13 +5,14 @@ const VERT = /* glsl */ `
   varying vec3 vWorldPos;
   varying vec3 vNormal;
 
-  // 3개 사인파를 합성한 간이 거스트너 파도
+  // 3개 사인파를 합성한 간이 거스트너 파도 — 뱃멀미/해안 절벽 밑 빈공간 노출을 막기 위해
+  // 진폭을 크게 낮춘 잔잔한 바다(파고 합 최대 약 2.0, 이전 대비 1/3 수준).
   vec3 wave(vec2 p) {
     float h = 0.0;
-    h += sin(p.x * 0.012 + uTime * 1.1) * 2.2;
-    h += sin(p.y * 0.018 - uTime * 0.8) * 1.4;
-    h += sin((p.x + p.y) * 0.007 + uTime * 0.5) * 1.8;
-    h += sin((p.x - p.y * 0.6) * 0.03 + uTime * 1.7) * 0.5;
+    h += sin(p.x * 0.012 + uTime * 1.1) * 0.7;
+    h += sin(p.y * 0.018 - uTime * 0.8) * 0.45;
+    h += sin((p.x + p.y) * 0.007 + uTime * 0.5) * 0.6;
+    h += sin((p.x - p.y * 0.6) * 0.03 + uTime * 1.7) * 0.18;
     return vec3(0.0, h, 0.0);
   }
 
@@ -83,13 +84,13 @@ export function createOcean(size = 6000, segments = 220) {
     uniforms.uCameraPos.value.copy(camera.position);
   }
 
-  // CPU측 파고 샘플링(배 흔들림/부표 계산용) — 셰이더와 동일한 함수
+  // CPU측 파고 샘플링(배 흔들림/부표 계산용) — 셰이더와 동일한 함수(진폭도 동일하게 낮춤)
   function heightAt(x, z, t) {
     let h = 0;
-    h += Math.sin(x * 0.012 + t * 1.1) * 2.2;
-    h += Math.sin(z * 0.018 - t * 0.8) * 1.4;
-    h += Math.sin((x + z) * 0.007 + t * 0.5) * 1.8;
-    h += Math.sin((x - z * 0.6) * 0.03 + t * 1.7) * 0.5;
+    h += Math.sin(x * 0.012 + t * 1.1) * 0.7;
+    h += Math.sin(z * 0.018 - t * 0.8) * 0.45;
+    h += Math.sin((x + z) * 0.007 + t * 0.5) * 0.6;
+    h += Math.sin((x - z * 0.6) * 0.03 + t * 1.7) * 0.18;
     return h;
   }
 

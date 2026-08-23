@@ -686,9 +686,10 @@ export class ShipController {
 
     const wave = this.heightAt ? this.heightAt(this.pos.x, this.pos.y, t) : 0;
     const waveAhead = this.heightAt ? this.heightAt(this.pos.x + Math.sin(this.heading) * 4, this.pos.y + Math.cos(this.heading) * 4, t) : 0;
-    const pitch = Math.atan2(waveAhead - wave, 4) * 1.5;
+    // 멀미 유발을 줄이기 위해 파도에 따른 피치/롤 흔들림 폭을 낮춤(진폭 자체도 ocean.js에서 줄임)
+    const pitch = Math.atan2(waveAhead - wave, 4) * 0.8;
 
     this.mesh.position.set(this.pos.x, wave, this.pos.y);
-    this.mesh.rotation.set(pitch, this.heading, Math.sin(t * 0.6) * 0.03, 'YXZ');
+    this.mesh.rotation.set(pitch, this.heading, Math.sin(t * 0.6) * 0.015, 'YXZ');
   }
 }
