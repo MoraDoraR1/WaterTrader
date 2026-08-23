@@ -28,9 +28,6 @@ pointerControls.onLeftClick = () => {
 pointerControls.onRightClick = () => {
   if (state.screen === 'city') citySceneObj?.handleRightClick(camera);
 };
-pointerControls.onLockChange = (locked) => {
-  hud.showLockPrompt(!locked && state.screen !== 'title');
-};
 
 let seaScene = null;
 let citySceneObj = null;
@@ -45,7 +42,7 @@ function goToSea(fromCityId) {
   citySceneObj = null;
   setScreen('sea');
   hud.showSeaHud(true);
-  hud.showActionHints(true, ['W/S 속도', 'A/D 선회', '우클릭 홀드 방향조정', '좌클릭 정박/포격', '스페이스 포격']);
+  hud.showActionHints(true, ['드래그 시점회전', 'W/S 속도', 'A/D 선회', '좌클릭 정박/포격', '스페이스 포격']);
 }
 
 function goToCity(cityId) {
@@ -54,7 +51,7 @@ function goToCity(cityId) {
   hud.showCombatBanner(false);
   citySceneObj = new CityScene(cityId, () => goToSea(cityId));
   setScreen('city');
-  hud.showActionHints(true, ['WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리']);
+  hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리']);
   hud.toast(`${citySceneObj.city.name}에 정박했습니다.`);
 }
 
@@ -72,7 +69,6 @@ document.getElementById('start-btn').addEventListener('click', () => {
   hud.showCrosshair(true);
   initShipHp();
   goToSea();
-  pointerControls.requestLock();
 });
 
 let lastTime = performance.now();
@@ -87,8 +83,7 @@ function animate(now) {
       if (state.screen === 'city') citySceneObj?.handleInteract(camera);
     }
     if (consumeJustPressed('KeyE')) {
-      const open = hud.toggleInventory(state.inventory);
-      if (open && document.pointerLockElement) document.exitPointerLock();
+      hud.toggleInventory(state.inventory);
     }
     if (consumeJustPressed('Escape')) {
       hud.hideDialogue();

@@ -32,12 +32,6 @@
   #start-btn:hover { filter: brightness(1.08); }
   #title-hint { margin-top: 1.6rem; font-size: 0.8rem; color: #7f9aac; }
 
-  /* ---- Lock prompt ---- */
-  #lock-prompt { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
-    background: rgba(2,8,12,0.55); cursor: pointer; }
-  #lock-prompt div { padding: 1.1rem 2rem; border: 1px solid rgba(240,230,210,0.4); border-radius: 10px;
-    background: rgba(10,20,28,0.7); font-size: 1.05rem; letter-spacing: 0.1rem; }
-
   /* ---- Crosshair ---- */
   #crosshair { position: fixed; top: 50%; left: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
     border-radius: 50%; background: rgba(240,230,210,0.85); box-shadow: 0 0 4px rgba(0,0,0,0.6); z-index: 20; pointer-events: none; }
@@ -130,10 +124,8 @@
       <button class="gender-btn" data-gender="female"><span class="gender-emblem">⚓</span>여 항해사</button>
     </div>
     <button id="start-btn">항해를 시작한다</button>
-    <p id="title-hint">클릭 후 마우스로 시점을 조작합니다 · ESC로 포인터 해제</p>
+    <p id="title-hint">화면을 드래그하면 시점이 회전합니다 · 클릭은 상호작용/포격</p>
   </div>
-
-  <div id="lock-prompt" class="hidden"><div>클릭하여 조작 시작</div></div>
 
   <div id="top-bar" class="hidden">
     <div id="location-banner">망망대해<span class="sub" id="location-sub">&nbsp;</span></div>

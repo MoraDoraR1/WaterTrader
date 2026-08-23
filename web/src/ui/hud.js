@@ -5,7 +5,6 @@ let toastTimer = null;
 export const hud = {
   showLoading(v) { $('loading').classList.toggle('hidden', !v); },
   showTitle(v) { $('title-screen').classList.toggle('hidden', !v); },
-  showLockPrompt(v) { $('lock-prompt').classList.toggle('hidden', !v); },
   showCrosshair(v) { $('crosshair').classList.toggle('hidden', !v); },
   showTopBar(v) { $('top-bar').classList.toggle('hidden', !v); },
   showSeaHud(v) { $('sea-hud').classList.toggle('hidden', !v); },
