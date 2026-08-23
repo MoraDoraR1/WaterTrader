@@ -8,7 +8,7 @@ import { hud } from './ui/hud.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, MAINLAND_POLY, BRITAIN_POLY } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
-import { COUNTRY_COLORS } from './data/ships.js';
+import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 
 const wrap = document.getElementById('canvas-wrap');
@@ -49,7 +49,9 @@ function goToSea(fromCityId) {
   citySceneObj = null;
   setScreen('sea');
   hud.showSeaHud(true);
-  hud.showActionHints(true, ['드래그 시점회전', 'W/S 속도', 'A/D 선회', '좌클릭 정박/포격', '스페이스 포격', 'M 전체지도']);
+  const role = SHIP_ROLES[seaScene.ship.shipDef.role] || SHIP_ROLES.trade;
+  hud.setShipRoleBadge(role.label, role.color);
+  hud.showActionHints(true, ['드래그 시점회전', 'W/S 속도', 'A/D 선회', '좌클릭 정박/포격', '스페이스 포격', 'M 전체지도', 'T 선박정보']);
 }
 
 function goToCity(cityId) {
@@ -58,7 +60,7 @@ function goToCity(cityId) {
   hud.showCombatBanner(false);
   citySceneObj = new CityScene(cityId, () => goToSea(cityId));
   setScreen('city');
-  hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도']);
+  hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도', 'T 선박정보']);
   hud.toast(`${citySceneObj.city.name}에 정박했습니다.`);
 }
 
@@ -104,6 +106,36 @@ function cycleWorldMap(dir) {
 document.getElementById('world-map-prev').addEventListener('click', () => cycleWorldMap(-1));
 document.getElementById('world-map-next').addEventListener('click', () => cycleWorldMap(1));
 
+// ---- 선박 정보 카드: T키로 토글, 현재 탑승 중인 배의 능력치를 참고 지표(동급 최대치) 대비 막대로 표시 ----
+const STAT_MAX = {
+  hp: Math.max(...SHIPS.map((s) => s.hp)),
+  cargo: Math.max(...SHIPS.map((s) => s.cargo)),
+  cannons: Math.max(...SHIPS.map((s) => s.cannons)),
+  turnRate: Math.max(...SHIPS.map((s) => s.turnRate)),
+  speed: Math.max(...SHIPS.map((s) => s.speed)),
+};
+
+function openShipInfo() {
+  const shipDef = getShip(state.currentShipId);
+  if (!shipDef) return;
+  const role = SHIP_ROLES[shipDef.role] || SHIP_ROLES.trade;
+  const cls = SHIP_CLASSES[shipDef.class];
+  hud.renderShipInfo({
+    name: shipDef.name,
+    roleLabel: role.label,
+    roleColor: role.color,
+    sub: `${COUNTRY_NAMES[shipDef.country] || shipDef.country} · ${cls.label} · ${shipDef.era}`,
+    desc: shipDef.desc,
+    hpRatio: shipDef.hp / STAT_MAX.hp, hpVal: shipDef.hp,
+    cargoRatio: shipDef.cargo / STAT_MAX.cargo, cargoVal: `${shipDef.cargo}t`,
+    cannonsRatio: shipDef.cannons / STAT_MAX.cannons, cannonsVal: `${shipDef.cannons}문`,
+    turnRatio: shipDef.turnRate / STAT_MAX.turnRate, turnVal: `${shipDef.turnRate}°/s`,
+    speedRatio: shipDef.speed / STAT_MAX.speed, speedVal: `${shipDef.speed}`,
+  });
+  hud.showShipInfo(true);
+}
+function closeShipInfo() { hud.showShipInfo(false); }
+
 document.querySelectorAll('.gender-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.gender-btn').forEach((b) => b.classList.remove('active'));
@@ -129,12 +161,15 @@ function animate(now) {
   const elapsed = now / 1000;
 
   if (state.screen !== 'title') {
-    if (consumeJustPressed('KeyM')) {
+    if (consumeJustPressed('KeyM') && !hud.isShipInfoOpen()) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
     }
     if (hud.isWorldMapOpen()) {
       if (consumeJustPressed('ArrowLeft')) cycleWorldMap(-1);
       if (consumeJustPressed('ArrowRight')) cycleWorldMap(1);
+    }
+    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen()) {
+      hud.isShipInfoOpen() ? closeShipInfo() : openShipInfo();
     }
     if (consumeJustPressed('KeyF')) {
       if (state.screen === 'city') citySceneObj?.handleInteract(camera);
@@ -146,11 +181,12 @@ function animate(now) {
       hud.hideDialogue();
       hud.closeInventory();
       closeWorldMap();
+      closeShipInfo();
     }
   }
 
-  // 월드맵 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
-  if (!hud.isWorldMapOpen()) {
+  // 월드맵/선박정보 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
+  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen()) {
     if (state.screen === 'sea' && seaScene) {
       seaScene.update(delta, elapsed, camera, pointerControls);
       renderer.render(seaScene.scene, camera);

@@ -45,9 +45,16 @@
   #ship-hp-box { position: fixed; top: 14px; left: 14px; z-index: 15; pointer-events: none;
     background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
     padding: 0.5rem 0.8rem; width: 170px; }
+  #ship-hp-top { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+  .role-badge { font-size: 0.6rem; padding: 2px 7px; border-radius: 8px; letter-spacing: 0.03rem;
+    color: #16110a; font-weight: 700; white-space: nowrap; }
   .bar-track { width: 100%; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 4px; }
-  .bar-fill { height: 100%; background: linear-gradient(90deg, #5fbf5f, #a9d96b); }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, #5fbf5f, #a9d96b); transition: width .25s; }
   .bar-fill.enemy { background: linear-gradient(90deg, #c94d3f, #e07a5f); }
+  .bar-fill.si-cargo { background: linear-gradient(90deg, #b98a3a, #e6c15a); }
+  .bar-fill.si-cannon { background: linear-gradient(90deg, #b03f2f, #e0645a); }
+  .bar-fill.si-turn { background: linear-gradient(90deg, #2f7fb0, #6fc8e0); }
+  .bar-fill.si-speed { background: linear-gradient(90deg, #3a9e6b, #7fe0a0); }
   #target-hp-box { position: fixed; top: 78px; left: 50%; transform: translateX(-50%); width: 260px; z-index: 15;
     background: rgba(8,18,26,0.65); border: 1px solid rgba(200,120,120,0.5); border-radius: 8px; padding: 0.5rem 0.9rem; }
 
@@ -133,6 +140,21 @@
   #world-map-canvas { display: block; border: 1px solid rgba(200,180,120,0.3); border-radius: 6px; }
   #world-map-page { text-align: center; font-size: 0.7rem; color: #8fa6b4; margin-top: 0.5rem; letter-spacing: 0.1rem; }
   #world-map-panel .close-hint { text-align: center; margin-top: 0.3rem; font-size: 0.72rem; color: #8fa6b4; }
+
+  /* ---- 선박 정보 카드 ---- */
+  #ship-info-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
+  #ship-info-card { width: 380px; max-width: 88vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
+    border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+  #ship-info-header { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+  #ship-info-name { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; }
+  #ship-info-sub { font-size: 0.74rem; color: #9fb8c9; margin-top: 3px; letter-spacing: 0.03rem; }
+  #ship-info-desc { font-size: 0.82rem; color: #dce8ef; line-height: 1.5; margin: 0.8rem 0 1.1rem; }
+  .si-stat-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .si-label { width: 42px; font-size: 0.72rem; color: #cfe0ea; flex-shrink: 0; }
+  .si-stat-row .bar-track { flex: 1; height: 8px; margin-top: 0; }
+  .si-val { width: 42px; text-align: right; font-size: 0.72rem; color: #f0e6d2; flex-shrink: 0; }
+  #ship-info-panel .close-hint { text-align: center; margin-top: 0.7rem; font-size: 0.72rem; color: #8fa6b4; }
 </style>
 </head>
 <body>
@@ -158,7 +180,7 @@
   <div id="location-banner" class="hidden">망망대해<span class="sub" id="location-sub">&nbsp;</span></div>
 
   <div id="ship-hp-box" class="hidden">
-    <div>선체 내구도</div>
+    <div id="ship-hp-top"><span>선체 내구도</span><span id="ship-role-badge" class="role-badge"></span></div>
     <div class="bar-track"><div class="bar-fill" id="ship-hp-fill" style="width:100%"></div></div>
   </div>
 
@@ -208,6 +230,23 @@
       <canvas id="world-map-canvas" width="640" height="480"></canvas>
       <div id="world-map-page">1 / 1</div>
       <div class="close-hint">M 또는 ESC 로 닫기 · ◀ ▶ 로 다른 해역 보기</div>
+    </div>
+  </div>
+
+  <div id="ship-info-panel" class="hidden">
+    <div id="ship-info-card">
+      <div id="ship-info-header">
+        <div id="ship-info-name">-</div>
+        <span id="ship-info-role" class="role-badge"></span>
+      </div>
+      <div id="ship-info-sub">-</div>
+      <p id="ship-info-desc"></p>
+      <div class="si-stat-row"><span class="si-label">내구도</span><div class="bar-track"><div class="bar-fill" id="si-bar-hp"></div></div><span class="si-val" id="si-val-hp"></span></div>
+      <div class="si-stat-row"><span class="si-label">적재량</span><div class="bar-track"><div class="bar-fill si-cargo" id="si-bar-cargo"></div></div><span class="si-val" id="si-val-cargo"></span></div>
+      <div class="si-stat-row"><span class="si-label">화력</span><div class="bar-track"><div class="bar-fill si-cannon" id="si-bar-cannons"></div></div><span class="si-val" id="si-val-cannons"></span></div>
+      <div class="si-stat-row"><span class="si-label">선회</span><div class="bar-track"><div class="bar-fill si-turn" id="si-bar-turn"></div></div><span class="si-val" id="si-val-turn"></span></div>
+      <div class="si-stat-row"><span class="si-label">속도</span><div class="bar-track"><div class="bar-fill si-speed" id="si-bar-speed"></div></div><span class="si-val" id="si-val-speed"></span></div>
+      <div class="close-hint">T 또는 ESC 로 닫기</div>
     </div>
   </div>
 

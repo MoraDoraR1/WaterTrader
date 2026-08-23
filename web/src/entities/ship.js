@@ -30,9 +30,33 @@ function paintHullColors(geo, hullHei) {
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 }
 
+// 라틴세일(삼각돛) — 소형 모험용선(카라벨라 라티나 계열) 전용, 사선 활대에 걸린 삼각형 돛
+function addLateenRig(group, mastBaseY, mastHeight, mastZ, yardLen) {
+  const yard = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, yardLen, 6),
+    new THREE.MeshStandardMaterial({ color: '#3b2a18' })
+  );
+  const yardCenterY = mastBaseY + mastHeight * 0.68;
+  yard.position.set(0, yardCenterY, mastZ);
+  yard.rotation.z = 1.15;
+  group.add(yard);
+
+  const sailH = mastHeight * 0.5;
+  const shape = new THREE.Shape();
+  shape.moveTo(0, sailH * 0.5);
+  shape.lineTo(yardLen * 0.88, -sailH * 0.32);
+  shape.quadraticCurveTo(yardLen * 0.4, -sailH * 0.58, 0, -sailH * 0.5);
+  shape.lineTo(0, sailH * 0.5);
+  const geo = new THREE.ShapeGeometry(shape, 8);
+  const sail = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#e7ded0', roughness: 0.75, side: THREE.DoubleSide }));
+  sail.position.set(0, yardCenterY - sailH * 0.05, mastZ + 0.04);
+  group.add(sail);
+}
+
 export function buildShipMesh(shipDef) {
   const cls = SHIP_CLASSES[shipDef.class];
   const [sx, sy, sz] = cls.hullScale;
+  const role = shipDef.role || 'trade';
   const group = new THREE.Group();
   group.name = `ship_${shipDef.id}`;
 
@@ -41,8 +65,12 @@ export function buildShipMesh(shipDef) {
   const trim = new THREE.Color(COUNTRY_COLORS[shipDef.country] || '#888888');
   const rigColor = '#2b2015';
 
+  // 역할별 선체 실루엣 차이 — 교역용은 둥글고 넉넉하게, 모험용은 날렵하게, 전투용은 표준 비율
+  const roleHullMul = role === 'trade' ? 1.1 : role === 'adventure' ? 0.94 : 1.0;
+  const useLateen = role === 'adventure' && shipDef.class === 'small';
+
   const hullLen = 10 * sz;
-  const hullWid = 3.4 * sx;
+  const hullWid = 3.4 * sx * roleHullMul;
   const hullHei = 2.6 * sy;
 
   // 선체 윤곽선(위에서 본 모양) — 이물은 뾰족하게, 고물은 완만하게 넓어지는 실제 범선 형태.
@@ -87,17 +115,46 @@ export function buildShipMesh(shipDef) {
   group.add(deck);
 
   // 포문 — 선체가 거의 풀빔인 중앙 구간에만 배치해 뱃전 밖으로 뜨지 않도록 함
+  // 역할별로 개수를 가감: 교역용은 줄여 화물칸 느낌을, 전투용은 늘리고 대형/초대형은 2단 포열을 추가
   const gunportMat = new THREE.MeshStandardMaterial({ color: '#1c130c' });
-  const gunportCount = Math.max(2, Math.round(hullLen / 2.6));
-  for (const side of [-1, 1]) {
-    for (let i = 0; i < gunportCount; i++) {
-      const t = (i + 0.5) / gunportCount;
-      const gz = -hl * 0.5 + t * hl * 0.65;
-      const port = new THREE.Mesh(new THREE.PlaneGeometry(0.5 * sx, 0.35 * sy), gunportMat);
-      port.position.set(side * (hw * 0.94 + 0.02), hullHei * 0.45, gz);
-      port.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
-      group.add(port);
+  function addGunportRow(heightFrac, count, scale = 1) {
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < count; i++) {
+        const t = (i + 0.5) / count;
+        const gz = -hl * 0.5 + t * hl * 0.65;
+        const port = new THREE.Mesh(new THREE.PlaneGeometry(0.5 * sx * scale, 0.35 * sy * scale), gunportMat);
+        port.position.set(side * (hw * 0.94 + 0.02), hullHei * heightFrac, gz);
+        port.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
+        group.add(port);
+      }
     }
+  }
+  let gunportCount = Math.max(2, Math.round(hullLen / 2.6));
+  if (role === 'trade') gunportCount = Math.max(0, gunportCount - 2);
+  if (role === 'combat') gunportCount += 2;
+  if (gunportCount > 0) addGunportRow(0.45, gunportCount);
+  const isHeavyCombat = role === 'combat' && (shipDef.class === 'large' || shipDef.class === 'xlarge');
+  if (isHeavyCombat) addGunportRow(0.78, Math.max(2, gunportCount - 2), 0.85);
+
+  // 교역용 갑판 화물(궤짝/술통) — 넉넉한 적재량을 시각적으로 표현
+  if (role === 'trade') {
+    const crateMat = new THREE.MeshStandardMaterial({ color: '#7a5a35', roughness: 0.95 });
+    const barrelMat = new THREE.MeshStandardMaterial({ color: '#5c4020', roughness: 0.9 });
+    const cargoSpots = [
+      [hw * 0.4, -hl * 0.08], [-hw * 0.36, -hl * 0.2], [hw * 0.3, -hl * 0.32], [-hw * 0.32, hl * 0.02],
+    ];
+    cargoSpots.forEach(([cx, cz], i) => {
+      if (i % 2 === 0) {
+        const crate = new THREE.Mesh(new THREE.BoxGeometry(0.55 * sx, 0.5 * sy, 0.55 * sx), crateMat);
+        crate.position.set(cx, hullHei + 0.05 + 0.25 * sy, cz);
+        crate.rotation.y = i * 0.7;
+        group.add(crate);
+      } else {
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.28 * sx, 0.28 * sx, 0.55 * sy, 10), barrelMat);
+        barrel.position.set(cx, hullHei + 0.05 + 0.28 * sy, cz);
+        group.add(barrel);
+      }
+    });
   }
 
   // 선미루 (후방 구조물)
@@ -172,8 +229,8 @@ export function buildShipMesh(shipDef) {
     addLine(mastTop, new THREE.Vector3(hw * 0.9, hullHei * 0.9, mastZ), 0.03);
     addLine(mastTop, new THREE.Vector3(-hw * 0.9, hullHei * 0.9, mastZ), 0.03);
 
-    // 톱(전투용 마스트탑) — 중간 돛대에 원형 발판 + 짧은 크로스바
-    if (mastHeight > hullHei * 3) {
+    // 톱(전투용 마스트탑) — 중간 돛대에 원형 발판 + 짧은 크로스바 (라틴세일 소형선은 생략)
+    if (mastHeight > hullHei * 3 && !useLateen) {
       const topY = mastBaseY + mastHeight * 0.55;
       const top = new THREE.Mesh(
         new THREE.CylinderGeometry(0.55 * sy, 0.4 * sy, 0.12, 8),
@@ -188,6 +245,12 @@ export function buildShipMesh(shipDef) {
       crossbar.rotation.z = Math.PI / 2;
       crossbar.position.set(0, topY + 0.15, mastZ);
       group.add(crossbar);
+    }
+
+    // 라틴세일(소형 모험용선)은 사선 활대의 삼각돛 하나로, 그 외에는 가로돛 2단으로 구성
+    if (useLateen) {
+      addLateenRig(group, mastBaseY, mastHeight, mastZ, hullWid * 2.0 * sx);
+      continue;
     }
 
     // 활대 2단(코스 세일 + 톱세일) + 사다리꼴 돛
@@ -235,9 +298,20 @@ export function buildShipMesh(shipDef) {
   flag.position.set(0, sternMastTopY + 0.6, sternMastZ);
   group.add(flag);
 
+  // 전투용 대형/초대형선은 이물에 군기를 하나 더 달아 위압감을 더한다
+  if (isHeavyCombat) {
+    const bowFlag = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.1 * sx, 0.7 * sy),
+      new THREE.MeshStandardMaterial({ color: trim, side: THREE.DoubleSide })
+    );
+    bowFlag.position.set(0, hullHei * 1.05, hl * 1.02);
+    group.add(bowFlag);
+  }
+
   group.userData.hullHeight = hullHei;
   group.userData.length = hullLen;
   group.userData.width = hullWid;
+  group.userData.role = role;
   return group;
 }
 

@@ -74,6 +74,35 @@ export const hud = {
   },
   setShipHp(ratio) { $('ship-hp-fill').style.width = `${Math.max(0, ratio * 100)}%`; },
 
+  setShipRoleBadge(label, color) {
+    const el = $('ship-role-badge');
+    el.textContent = label;
+    el.style.background = color;
+  },
+
+  showShipInfo(v) { $('ship-info-panel').classList.toggle('hidden', !v); },
+  isShipInfoOpen() { return !$('ship-info-panel').classList.contains('hidden'); },
+
+  renderShipInfo(info) {
+    $('ship-info-name').textContent = info.name;
+    const roleBadge = $('ship-info-role');
+    roleBadge.textContent = info.roleLabel;
+    roleBadge.style.background = info.roleColor;
+    $('ship-info-sub').textContent = info.sub;
+    $('ship-info-desc').textContent = info.desc;
+    const rows = [
+      ['si-bar-hp', 'si-val-hp', info.hpRatio, info.hpVal],
+      ['si-bar-cargo', 'si-val-cargo', info.cargoRatio, info.cargoVal],
+      ['si-bar-cannons', 'si-val-cannons', info.cannonsRatio, info.cannonsVal],
+      ['si-bar-turn', 'si-val-turn', info.turnRatio, info.turnVal],
+      ['si-bar-speed', 'si-val-speed', info.speedRatio, info.speedVal],
+    ];
+    for (const [barId, valId, ratio, val] of rows) {
+      $(barId).style.width = `${Math.max(2, Math.min(100, ratio * 100))}%`;
+      $(valId).textContent = val;
+    }
+  },
+
   initMinimap(landPolygons, bounds) {
     mmBounds = bounds;
     const canvas = $('minimap-canvas');
