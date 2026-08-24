@@ -1373,7 +1373,12 @@ const NOTCH_SPEED = 4.2; // 1노치당 목표 속도(m/s)
 const MAX_FWD = 5;
 const MAX_REV = -3;
 const ACCEL_BASE = 3.6; // m/s^2 — 목표 속도(레버 위치)로 수렴하는 가속도. 값이 작을수록 배가 무겁게 반응한다.
-const TURN_ACCEL_BASE = 1.7; // rad/s^2 — 목표 선회각속도로 수렴하는 각가속도(타가 듣기까지의 지연/관성)
+// rad/s^2 — 목표 선회각속도로 수렴하는 각가속도(타가 듣기까지의 지연/관성).
+// 예전(1.7)에는 최대 선회각속도까지 1초도 안 걸려 도달해 방향키를 누르는 즉시 팍
+// 꺾이는 아케이드 느낌이었다. 낮춰서 완전히 돌아가는 데 2~3초 걸리도록 해
+// 배가 관성으로 서서히 돌기 시작하고, 방향키를 놓아도 관성으로 계속 돌다 서서히
+// 멎는 느낌을 준다(선박 간 상대적인 민첩성 차이는 그대로 유지된다).
+const TURN_ACCEL_BASE = 0.6;
 
 export class ShipController {
   constructor(mesh, shipDef, heightAt) {

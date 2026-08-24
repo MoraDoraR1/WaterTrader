@@ -29,6 +29,7 @@ export const hud = {
     $('nav-panel').classList.toggle('hidden', !v);
   },
   showCombatBanner(v) { $('combat-banner').classList.toggle('hidden', !v); },
+  setCombatBannerText(text) { $('combat-banner').textContent = text; },
   showTargetHp(v) { $('target-hp-box').classList.toggle('hidden', !v); },
   showInteractPrompt(v, text = '') {
     const el = $('interact-prompt');

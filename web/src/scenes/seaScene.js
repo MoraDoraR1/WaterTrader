@@ -18,6 +18,10 @@ import { hud } from '../ui/hud.js';
 const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
 const RESPAWN_CITY = 'lisboa';
+const COLLISION_DAMAGE = 30; // 선체 충돌 시 양측이 함께 받는 피해
+const COLLISION_COOLDOWN = 2.5; // 같은 적선과 연속으로 충돌 피해를 받지 않도록 하는 쿨다운(초)
+const MELEE_CHANCE = 0.25; // 충돌 시 백병전으로 번질 확률
+const MELEE_DURATION = 4.5; // 백병전 지속 시간(초) — 이 동안 양측 모두 포격/이동이 멈춘다
 
 // 국가/지역별 건물 팔레트 — 남유럽은 따뜻한 회벽+테라코타, 북유럽은 벽돌/석회+슬레이트 톤
 const REGION_PALETTE = {
@@ -68,6 +72,8 @@ export class SeaScene {
     this.t = 0;
     this.onDock = null;
     this.raycaster = new THREE.Raycaster();
+    this.collisionTimers = new Map(); // npc.owner -> 남은 충돌 쿨다운(초)
+    this.meleeState = null; // { npc, timer } — 백병전 중일 때만 존재
 
     this.scene.updateMatrixWorld(true);
     hud.initThrottle(-3, 5);
@@ -461,7 +467,76 @@ export class SeaScene {
     return best;
   }
 
+  // 적대적인 배와 실제로 선체가 맞닿으면(레이캐스트 없이 2D 원 겹침으로 근사) 서로 밀어내면서
+  // 함께 피해를 입힌다. 같은 상대와는 쿨다운 동안 반복 피해를 주지 않는다. 매 충돌마다
+  // 일정 확률로 백병전(승선전)으로 전환된다.
+  _resolveShipCollisions(delta) {
+    for (const [owner, timer] of this.collisionTimers) {
+      const next = timer - delta;
+      if (next <= 0) this.collisionTimers.delete(owner);
+      else this.collisionTimers.set(owner, next);
+    }
+    if (this.meleeState) return; // 백병전 중에는 다른 충돌 판정을 하지 않는다
+
+    const playerR = this.playerMesh.userData.length * 0.5;
+    for (const npc of this.npcShips) {
+      if (npc.dead || !npc.def.hostile) continue;
+      const dx = this.ship.pos.x - npc.pos.x, dz = this.ship.pos.y - npc.pos.y;
+      const dist = Math.hypot(dx, dz);
+      const minDist = playerR + npc.radius;
+      if (dist >= minDist) continue;
+
+      const nx = dist > 0.001 ? dx / dist : 1, nz = dist > 0.001 ? dz / dist : 0;
+      const overlap = minDist - dist;
+      this.ship.pos.x += nx * overlap * 0.5;
+      this.ship.pos.y += nz * overlap * 0.5;
+      npc.pos.x -= nx * overlap * 0.5;
+      npc.pos.y -= nz * overlap * 0.5;
+
+      if (this.collisionTimers.has(npc.owner)) continue;
+      this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
+      state.shipHp = Math.max(0, state.shipHp - COLLISION_DAMAGE);
+      npc.takeDamage(COLLISION_DAMAGE);
+      hud.toast('충돌! 양측 선체가 손상되었습니다.');
+      if (npc.dead) { hud.toast(`${npc.def.name}을(를) 격침했습니다!`); continue; }
+      if (Math.random() < MELEE_CHANCE) this._startMelee(npc);
+      break; // 한 프레임에 하나의 충돌만 처리
+    }
+  }
+
+  _startMelee(npc) {
+    this.meleeState = { npc, timer: MELEE_DURATION };
+    hud.setCombatBannerText('⚔ 백병전 중!');
+    hud.toast(`${npc.def.name}과(와) 백병전이 시작되었습니다!`);
+  }
+
+  _resolveMelee() {
+    const { npc } = this.meleeState;
+    this.meleeState = null;
+    hud.setCombatBannerText('⚔ 전투 상황');
+    if (npc.dead) return; // 백병전 중 다른 수단으로 이미 격침된 경우
+
+    const playerCrew = this.ship.shipDef.crew || 20;
+    const npcCrew = npc.shipDef.crew || 20;
+    const playerPower = playerCrew * (0.75 + Math.random() * 0.5);
+    const npcPower = npcCrew * (0.75 + Math.random() * 0.5);
+    // 충돌 쿨다운을 새로 걸어 백병전 직후 곧바로 다시 충돌 피해가 겹치지 않게 한다.
+    this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
+
+    if (playerPower >= npcPower) {
+      const loot = Math.round(80 + Math.random() * 160);
+      state.gold += loot;
+      npc.takeDamage(npc.maxHp);
+      hud.toast(`백병전 승리! 적선을 제압하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`);
+    } else {
+      const dmg = Math.round(50 + Math.random() * 70);
+      state.shipHp = Math.max(0, state.shipHp - dmg);
+      hud.toast(`백병전에서 밀렸습니다! 선체 내구도 ${dmg} 손실.`);
+    }
+  }
+
   fireCannon() {
+    if (this.meleeState) { hud.toast('백병전 중에는 포격할 수 없습니다.'); return; }
     if (this.fireTimer > 0) return;
     const target = this._nearestHostile();
     if (!target || target.pos.distanceTo(this.ship.pos) > 60) {
@@ -489,13 +564,19 @@ export class SeaScene {
   update(delta, elapsed, camera, pointerControls) {
     this.t = elapsed;
 
-    if (consumeJustPressed('KeyW')) this.ship.throttleUp();
-    if (consumeJustPressed('KeyS')) this.ship.throttleDown();
-    // heading 증가 방향은 반시계(좌현) 회전이므로, D(우현 회전)는 heading을 감소시켜야 한다.
-    // 배의 방향은 오직 A/D 키로만 바뀐다 — 마우스는 시점 회전만 담당한다.
-    this.ship.turnInput = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
-
-    this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z));
+    // 백병전 중에는 양쪽 배 모두 그 자리에 붙들려 있다(조작/이동/포격 모두 정지) —
+    // 결판이 나면 자동으로 재개된다.
+    if (this.meleeState) {
+      this.meleeState.timer -= delta;
+      if (this.meleeState.timer <= 0) this._resolveMelee();
+    } else {
+      if (consumeJustPressed('KeyW')) this.ship.throttleUp();
+      if (consumeJustPressed('KeyS')) this.ship.throttleDown();
+      // heading 증가 방향은 반시계(좌현) 회전이므로, D(우현 회전)는 heading을 감소시켜야 한다.
+      // 배의 방향은 오직 A/D 키로만 바뀐다 — 마우스는 시점 회전만 담당한다.
+      this.ship.turnInput = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
+      this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z));
+    }
     this.ocean.update(elapsed, camera);
 
     const hostileNear = this.npcShips.some((n) => !n.dead && n.def.hostile && n.state === 'attack');
@@ -505,8 +586,11 @@ export class SeaScene {
       if (hostileNear) hud.toast('전투 시작! 좌클릭/스페이스바로 포격하세요.');
     }
 
-    for (const npc of this.npcShips) {
-      npc.update(delta, elapsed, this.ship.pos, this.ocean.heightAt, this.cannonPool);
+    if (!this.meleeState) {
+      for (const npc of this.npcShips) {
+        npc.update(delta, elapsed, this.ship.pos, this.ocean.heightAt, this.cannonPool);
+      }
+      this._resolveShipCollisions(delta);
     }
 
     this.fireTimer = Math.max(0, this.fireTimer - delta);
@@ -534,6 +618,7 @@ export class SeaScene {
       this.ship.notch = 0;
       state.gold = Math.max(0, state.gold - 100);
       initShipHp();
+      if (this.meleeState) { this.meleeState = null; hud.setCombatBannerText('⚔ 전투 상황'); }
     }
 
     state.shipPos = [this.ship.pos.x, this.ship.pos.y];
