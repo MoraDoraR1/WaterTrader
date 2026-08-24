@@ -147,6 +147,42 @@ export const hud = {
     body.appendChild(list);
   },
 
+  showMarket(v) { $('market-panel').classList.toggle('hidden', !v); },
+  hideMarket() { $('market-panel').classList.add('hidden'); },
+  isMarketOpen() { return !$('market-panel').classList.contains('hidden'); },
+
+  // rows: [{ name, sub, actions: [{ label, disabled?, onAction }] }]
+  renderMarket({ title, gold, cargo, rows }) {
+    $('market-title').textContent = title;
+    $('market-gold-amount').textContent = gold.toLocaleString('ko-KR');
+    $('market-cargo').textContent = cargo;
+    const body = $('market-body');
+    body.innerHTML = '';
+    const list = document.createElement('div');
+    list.className = 'sy-list';
+    for (const r of rows) {
+      const row = document.createElement('div');
+      row.className = 'sy-row';
+      const main = document.createElement('div');
+      main.className = 'sy-row-main';
+      main.innerHTML = `<div class="sy-row-name">${r.name}</div><div class="sy-row-sub">${r.sub || ''}</div>`;
+      row.appendChild(main);
+      const side = document.createElement('div');
+      side.className = 'sy-row-side sy-row-side-actions';
+      for (const a of (r.actions || [])) {
+        const btn = document.createElement('button');
+        btn.className = 'sy-btn';
+        btn.textContent = a.label;
+        btn.disabled = !!a.disabled;
+        if (a.onAction) btn.onclick = a.onAction;
+        side.appendChild(btn);
+      }
+      row.appendChild(side);
+      list.appendChild(row);
+    }
+    body.appendChild(list);
+  },
+
   initMinimap(landPolygons, bounds) {
     mmBounds = bounds;
     const canvas = $('minimap-canvas');

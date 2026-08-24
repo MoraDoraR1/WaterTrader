@@ -171,20 +171,21 @@ function animate(now) {
   const elapsed = now / 1000;
 
   if (state.screen !== 'title') {
-    if (consumeJustPressed('KeyM') && !hud.isShipInfoOpen() && !hud.isShipyardOpen()) {
+    const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen();
+    if (consumeJustPressed('KeyM') && !anyBigPanelOpen) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
     }
     if (hud.isWorldMapOpen()) {
       if (consumeJustPressed('ArrowLeft')) cycleWorldMap(-1);
       if (consumeJustPressed('ArrowRight')) cycleWorldMap(1);
     }
-    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen() && !hud.isShipyardOpen()) {
+    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen()) {
       hud.isShipInfoOpen() ? closeShipInfo() : openShipInfo();
     }
     if (consumeJustPressed('KeyF')) {
       if (state.screen === 'city') citySceneObj?.handleInteract(camera);
     }
-    if (consumeJustPressed('KeyE')) {
+    if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen()) {
       hud.toggleInventory(state.inventory);
     }
     if (consumeJustPressed('Escape')) {
@@ -193,11 +194,12 @@ function animate(now) {
       closeWorldMap();
       closeShipInfo();
       hud.hideShipyard();
+      hud.hideMarket();
     }
   }
 
-  // 월드맵/선박정보/조선소 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
-  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen()) {
+  // 월드맵/선박정보/조선소/시장 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
+  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen()) {
     if (state.screen === 'sea' && seaScene) {
       seaScene.update(delta, elapsed, camera, pointerControls);
       renderer.render(seaScene.scene, camera);

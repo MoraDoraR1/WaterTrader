@@ -16,10 +16,11 @@ export const state = {
   dockedCityId: null,
   inCombat: false,
   playerHp: 100,
+  // 시작 시점에 실제로 사고파는(둘 중 아무 항구에서나) 품목만 들려 보낸다 — 아직 어느
+  // 항구도 취급하지 않는 품목(비단 등)을 쥐고 시작하면 팔 곳이 없어 죽은 짐이 된다.
   inventory: [
-    { id: 'pepper', name: '후추', qty: 12 },
-    { id: 'silk', name: '비단', qty: 4 },
-    { id: 'wine', name: '포도주', qty: 8 },
+    { id: 'pepper', name: '후추', qty: 10 },
+    { id: 'wine', name: '포도주', qty: 6 },
   ],
 };
 

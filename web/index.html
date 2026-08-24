@@ -185,6 +185,21 @@
   .sy-btn:hover:not(:disabled) { background: rgba(230,193,90,0.32); }
   .sy-btn:disabled { opacity: 0.55; cursor: default; }
   #shipyard-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
+  .sy-row-side-actions { flex-direction: row; }
+
+  /* ---- 시장 ---- */
+  #market-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
+  #market-card { width: 560px; max-width: 92vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
+    border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+  #market-header { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.3rem; }
+  #market-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; }
+  #market-gold { font-size: 0.85rem; color: #cfe0ea; }
+  #market-cargo-row { font-size: 0.74rem; color: #9fb8c9; margin-bottom: 0.6rem; }
+  #market-cargo { color: #e6c15a; }
+  #market-body { max-height: 50vh; overflow-y: auto; }
+  #market-title { font-size: 0.82rem; color: #9fb8c9; margin-bottom: 0.6rem; letter-spacing: 0.03rem; }
+  #market-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
 </style>
 </head>
 <body>
@@ -293,6 +308,19 @@
       </div>
       <div id="shipyard-title"></div>
       <div id="shipyard-body"></div>
+      <div class="close-hint">ESC 로 닫기</div>
+    </div>
+  </div>
+
+  <div id="market-panel" class="hidden">
+    <div id="market-card">
+      <div id="market-header">
+        <div id="market-header-title">🏺 시장</div>
+        <div id="market-gold">💰 <span id="market-gold-amount">0</span> 두캇</div>
+      </div>
+      <div id="market-cargo-row">적재 <span id="market-cargo">0/0t</span></div>
+      <div id="market-title"></div>
+      <div id="market-body"></div>
       <div class="close-hint">ESC 로 닫기</div>
     </div>
   </div>

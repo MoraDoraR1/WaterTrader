@@ -8,6 +8,7 @@ import { isDown } from '../controls/keys.js';
 import { state } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { openShipyard } from '../ui/shipyardPanel.js';
+import { openMarket } from '../ui/marketPanel.js';
 
 const BOUNDS = { minX: -85, maxX: 85, minZ: -85, maxZ: 85 };
 const INTERACT_RANGE = 6.5;
@@ -199,7 +200,7 @@ export class CityScene {
   }
 
   handleInteract(camera) {
-    if (hud.isInventoryOpen() || hud.isShipyardOpen()) return;
+    if (hud.isInventoryOpen() || hud.isShipyardOpen() || hud.isMarketOpen()) return;
     const target = this._findInteractable(camera);
     if (!target) { hud.toast('상호작용할 대상이 없습니다.'); return; }
 
@@ -213,6 +214,13 @@ export class CityScene {
         { label: '배 구매', onClick: () => { hud.hideDialogue(); openShipyard('buy'); } },
         { label: '수리', onClick: () => { hud.hideDialogue(); openShipyard('repair'); } },
         { label: '부품', onClick: () => { hud.hideDialogue(); openShipyard('parts'); } },
+        { label: '닫기', onClick: () => hud.hideDialogue() },
+      ]);
+      return;
+    }
+    if (npc.role === 'merchant') {
+      hud.showDialogue(npc.name, npc.line, [
+        { label: '거래', onClick: () => { hud.hideDialogue(); openMarket(this.city.id); } },
         { label: '닫기', onClick: () => hud.hideDialogue() },
       ]);
       return;
