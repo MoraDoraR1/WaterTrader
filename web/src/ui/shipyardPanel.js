@@ -3,7 +3,7 @@
 import { state } from '../state.js';
 import { hud } from './hud.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_NAMES, getShip } from '../data/ships.js';
-import { PART_SLOTS, partsBySlot, getPart } from '../data/shipParts.js';
+import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef } from '../data/shipParts.js';
 import {
   buyShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
   setActiveShip, sellFleetShip, FLEET_CAP,
@@ -29,6 +29,7 @@ const SORT_MODES = {
   price_desc: { label: '가격↓', cmp: (a, b) => b.price - a.price },
   hp_desc: { label: '내구↓', cmp: (a, b) => b.hp - a.hp },
   cargo_desc: { label: '적재↓', cmp: (a, b) => b.cargo - a.cargo },
+  speed_desc: { label: '속도↓', cmp: (a, b) => b.speed - a.speed },
 };
 
 function renderBuyFilterRow() {
@@ -62,7 +63,7 @@ function renderBuyTab() {
     return {
       name: s.name,
       badge: role.label, badgeColor: role.color,
-      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 화력 ${s.cannons} · 적재 ${s.cargo}t`,
+      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 화력 ${s.cannons} · 적재 ${s.cargo}t · 속도 ${s.speed}`,
       priceLabel: isOwned ? '보유 중' : `${fmt(s.price)} 두캇`,
       actionLabel: isOwned ? '보유 중' : fleetFull ? '함대 만석' : '구매',
       disabled,
@@ -86,18 +87,19 @@ function renderFleetTab() {
   const rows = [{
     name: `⚑ ${currentDef.name} (기함)`,
     badge: '조종 중', badgeColor: '#f3d98a',
-    sub: `내구 ${Math.round(state.shipHp)} / ${getCurrentEffectiveShipDef().hp}`,
+    sub: `내구 ${Math.round(state.shipHp)} / ${getCurrentEffectiveShipDef().hp} · 속도 ${getCurrentEffectiveShipDef().speed}`,
     actionLabel: '조종 중',
     disabled: true,
     highlight: true,
   }];
   for (const f of state.fleet) {
     const def = getShip(f.shipId);
+    const effDef = getEffectiveShipDef(def, f.shipParts);
     const credit = Math.round(def.price * 0.4);
     rows.push({
       name: def.name,
       badge: '예비', badgeColor: '#8fa8b8',
-      sub: `내구 ${Math.round(f.shipHp)} / ${def.hp} · 항구에 정박 중`,
+      sub: `내구 ${Math.round(f.shipHp)} / ${effDef.hp} · 속도 ${effDef.speed} · 항구에 정박 중`,
       priceLabel: `판매가 ${fmt(credit)} 두캇`,
       actionLabel: '기함으로 교체',
       onAction: () => {
