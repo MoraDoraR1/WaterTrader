@@ -3,7 +3,7 @@ import { PointerLookControls } from './controls/pointerLook.js';
 import { consumeJustPressed, clearFrame } from './controls/keys.js';
 import { SeaScene } from './scenes/seaScene.js';
 import { CityScene } from './scenes/cityScene.js';
-import { state, setScreen, initShipHp, subscribe } from './state.js';
+import { state, setScreen, initShipHp, subscribe, notify } from './state.js';
 import { hud } from './ui/hud.js';
 import { wireShipyardTabs } from './ui/shipyardPanel.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
@@ -14,6 +14,7 @@ import { getEffectiveShipDef, PART_SLOTS, getPart } from './data/shipParts.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 import { payWagesOnDock } from './systems/crew.js';
+import { audio } from './systems/audio.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -52,6 +53,8 @@ function goToSea(fromCityId) {
   pointerControls.yaw = seaScene.ship.heading;
   citySceneObj = null;
   setScreen('sea');
+  audio.startOcean();
+  audio.stopHarbor();
   hud.showSeaHud(true);
   const role = SHIP_ROLES[seaScene.ship.shipDef.role] || SHIP_ROLES.trade;
   hud.setShipRoleBadge(role.label, role.color);
@@ -69,6 +72,8 @@ function goToCity(cityId) {
   pointerControls.yaw = citySceneObj.spawnFacing;
   pointerControls.pitch = 0.05;
   setScreen('city');
+  audio.startHarbor();
+  audio.stopOcean();
   hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도', 'T 선박정보']);
 
   const { wage, paid } = payWagesOnDock();
@@ -118,6 +123,15 @@ function cycleWorldMap(dir) {
   worldMapIndex = (worldMapIndex + dir + WORLD_REGIONS.length) % WORLD_REGIONS.length;
   renderWorldMapPage();
 }
+
+document.getElementById('mute-btn').addEventListener('click', () => {
+  state.audioMuted = !state.audioMuted;
+  audio.setMuted(state.audioMuted);
+  const btn = document.getElementById('mute-btn');
+  btn.textContent = state.audioMuted ? '🔇' : '🔊';
+  btn.classList.toggle('muted', state.audioMuted);
+  notify({ audioMutedChanged: true });
+});
 
 document.getElementById('world-map-prev').addEventListener('click', () => cycleWorldMap(-1));
 document.getElementById('world-map-next').addEventListener('click', () => cycleWorldMap(1));
@@ -189,6 +203,10 @@ function enterGame() {
   hud.showLocationBanner(true);
   hud.showCrosshair(true);
   if (state.shipHp == null) initShipHp();
+  // 오디오는 반드시 사용자 제스처(이 클릭) 안에서 초기화해야 브라우저 자동재생 정책에 막히지 않는다.
+  audio.ensureContext();
+  audio.resume();
+  audio.setMuted(!!state.audioMuted);
   goToSea();
 }
 
@@ -204,6 +222,9 @@ if (savedGame) {
 document.getElementById('continue-btn').addEventListener('click', () => {
   applySave(savedGame);
   document.querySelectorAll('.gender-btn').forEach((b) => b.classList.toggle('active', b.dataset.gender === state.gender));
+  const muteBtn = document.getElementById('mute-btn');
+  muteBtn.textContent = state.audioMuted ? '🔇' : '🔊';
+  muteBtn.classList.toggle('muted', !!state.audioMuted);
   enterGame();
 });
 

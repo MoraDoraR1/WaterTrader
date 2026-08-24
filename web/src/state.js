@@ -29,6 +29,7 @@ export const state = {
   fleet: [], // 예비 함대 — { uid, shipId, shipHp, shipParts, name } — 항구에 정박해 있는(현재 조종 중이 아닌) 배들
   captureCount: 0, // 나포 성공 횟수(랭크 산정에 반영)
   marketState: {}, // cityId -> goodId -> { mul, updatedAt } — 플레이어 매매로 흔들린 뒤 시간이 지나며 되돌아오는 시세 배율
+  audioMuted: false,
 };
 
 export function initShipHp() {

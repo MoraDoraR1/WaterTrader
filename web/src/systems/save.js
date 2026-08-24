@@ -33,6 +33,7 @@ export function saveGame() {
     fleet: state.fleet,
     captureCount: state.captureCount,
     marketState: state.marketState,
+    audioMuted: state.audioMuted,
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -69,6 +70,7 @@ export function applySave(data) {
   state.fleet = Array.isArray(data.fleet) ? data.fleet : [];
   state.captureCount = typeof data.captureCount === 'number' ? data.captureCount : 0;
   state.marketState = data.marketState && typeof data.marketState === 'object' ? data.marketState : {};
+  state.audioMuted = !!data.audioMuted;
 }
 
 export function deleteSave() {

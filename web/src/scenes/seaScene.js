@@ -21,6 +21,7 @@ import { hud } from '../ui/hud.js';
 import { checkBountyKill } from '../systems/quests.js';
 import { loseMoraleFromCombat, getMoralePowerMul } from '../systems/crew.js';
 import { FLEET_CAP } from '../systems/shipyard.js';
+import { audio } from '../systems/audio.js';
 
 const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
@@ -539,6 +540,7 @@ export class SeaScene {
       state.shipHp = Math.max(0, state.shipHp - COLLISION_DAMAGE);
       loseMoraleFromCombat();
       npc.takeDamage(COLLISION_DAMAGE);
+      audio.playHit();
       hud.toast('충돌! 양측 선체가 손상되었습니다.');
       if (npc.dead) {
         hud.toast(`${npc.def.name}을(를) 격침했습니다!`);
@@ -572,6 +574,7 @@ export class SeaScene {
     this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
 
     if (playerPower >= npcPower) {
+      audio.playWinStinger();
       const fleetHasRoom = state.fleet.length + 1 < FLEET_CAP;
       if (fleetHasRoom && npc.shipDef) {
         this.pendingCapture = npc;
@@ -587,6 +590,7 @@ export class SeaScene {
         this._confirmSink(npc, fleetHasRoom ? null : '함대가 가득 차 나포할 수 없었습니다. ');
       }
     } else {
+      audio.playLoseStinger();
       const dmg = Math.round(50 + Math.random() * 70);
       state.shipHp = Math.max(0, state.shipHp - dmg);
       loseMoraleFromCombat();
@@ -608,6 +612,7 @@ export class SeaScene {
   _confirmCapture(npc) {
     this.pendingCapture = null;
     hud.hideDialogue();
+    audio.playCaptureFanfare();
     // 격전 끝에 나포한 배라 만신창이 상태로 함대에 들어온다 — 항구에서 수리해야 온전히 쓸 수 있다.
     const capturedHp = Math.round(npc.shipDef.hp * (0.3 + Math.random() * 0.25));
     state.fleet = [...state.fleet, { uid: `fleet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, shipId: npc.shipDef.id, shipHp: capturedHp, shipParts: {}, name: null }];
@@ -655,6 +660,7 @@ export class SeaScene {
       return;
     }
     this.fireTimer = FIRE_COOLDOWN;
+    audio.playCannon();
     const toTarget = new THREE.Vector2(target.pos.x - this.ship.pos.x, target.pos.y - this.ship.pos.y);
     const relAngle = Math.atan2(toTarget.x, toTarget.y) - this.ship.heading;
     const side = Math.sin(relAngle) >= 0 ? 1 : -1;
@@ -699,6 +705,7 @@ export class SeaScene {
     for (const escort of this.escorts) escort.update(delta, elapsed, this.ship, this.ocean.heightAt);
     this.rain.update(delta, this.weather.stormIntensity, new THREE.Vector3(this.ship.pos.x, 0, this.ship.pos.y));
     hud.setWeather(this.weather.label, this.weather.stormIntensity > 0.1);
+    audio.updateOcean(this.weather.stormIntensity);
 
     const hostileNear = this.npcShips.some((n) => !n.dead && n.def.hostile && n.state === 'attack');
     if (hostileNear !== state.inCombat) {
@@ -724,6 +731,7 @@ export class SeaScene {
       ...this.npcShips.filter((n) => !n.dead).map((n) => ({ owner: n.owner, position: n.position, radius: n.radius, ref: n })),
     ];
     this.cannonPool.update(delta, targets, (target, ball) => {
+      audio.playHit();
       if (target.ref === 'player') {
         state.shipHp = Math.max(0, state.shipHp - 18);
         loseMoraleFromCombat();
