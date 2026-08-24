@@ -53,8 +53,13 @@ const GALLEY_PRESETS = {
   galera_real: { beamMul: 1.0, ornament: 3, canopyMul: 1.35, ramMul: 1.15, pennants: 3 },
   galeazza_veneziana: { beamMul: 1.1, ornament: 1, canopyMul: 1.1, ramMul: 1.2, pennants: 2 },
   galeazza_reale: { beamMul: 1.05, ornament: 2, canopyMul: 1.25, ramMul: 1.3, pennants: 3 },
+  // 로마 데케레스 — 화약 이전 시대의 완전히 다른 갤리. HS 올림피아스(고증 복원 트라이림)
+  // 참고 사진 기준 재설계: 청동 삼지창형 충각, 이물에 그린 눈(오큘루스) 장식, 위로 솟은
+  // 곡선 선수/선미 기둥, 3단으로 겹친 노(트라이림 특유의 실루엣), 라틴세일이 아니라
+  // 사각 가로돛, 방향타 대신 고물 양옆의 쌍노(steering oar). ancient 플래그로 별도 분기.
+  roman_deceres: { beamMul: 1.05, ornament: 1, canopyMul: 0.5, ramMul: 1.3, pennants: 1, ancient: true, oarBanks: 3 },
 };
-const DEFAULT_GALLEY_PRESET = { beamMul: 1, ornament: 0, canopyMul: 1, ramMul: 1, pennants: 1 };
+const DEFAULT_GALLEY_PRESET = { beamMul: 1, ornament: 0, canopyMul: 1, ramMul: 1, pennants: 1, ancient: false, oarBanks: 1 };
 
 // 사다리꼴 돛 — 밑단을 2차 베지어 곡선으로 살짝 부풀려 바람을 머금은 형태를 낸다.
 function trapezoid(topW, botW, h, belly = h * 0.16) {
@@ -989,20 +994,59 @@ function buildGalleyMesh(shipDef) {
   const hullMesh = new THREE.Mesh(hullGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
   group.add(hullMesh);
 
-  // 이물 충각(ram) — 갤리 특유의 수면 위로 길게 뻗은 뾰족한 뱃머리 장식. ramMul로 배마다
-  // 충각 크기를 달리해(레알/갈레아짜는 더 길고 당당하게) 이물에서부터 정체성이 드러나게 한다.
-  const ramLen = hullLen * 0.22 * gp.ramMul;
-  const ram = new THREE.Mesh(new THREE.ConeGeometry(hw * 0.12 * gp.ramMul, ramLen, 5), new THREE.MeshStandardMaterial({ color: '#2e2013', roughness: 0.8 }));
-  ram.rotation.x = Math.PI / 2;
-  ram.position.set(0, deckY * 0.35, hl + hullLen * 0.09);
-  group.add(ram);
-  // 장식 등급(ornament) 2 이상은 충각 밑동에 금박 장식구를 둘러 기함다운 위엄을 더한다
-  // (레알/레알레처럼 실제로 조각·금박을 두른 기함급 갤리를 흉내낸 것).
-  if (gp.ornament >= 2) {
-    const ramCollar = new THREE.Mesh(new THREE.TorusGeometry(hw * 0.14 * gp.ramMul, hw * 0.03, 6, 10), gildMat);
-    ramCollar.rotation.y = Math.PI / 2;
-    ramCollar.position.set(0, deckY * 0.35, hl + 0.05);
-    group.add(ramCollar);
+  if (gp.ancient) {
+    // 청동 충각(embolon) — 그리스/로마 트라이림 특유의 수면 높이 삼지창형 충각(HS 올림피아스
+    // 복원선 실측 사진 기준). 화약 이전 시대 갤리는 이 충각으로 적선 노를 부수거나 선체를
+    // 들이받는 것이 주 전술이라, 나무 원뿔이 아니라 납작하고 넓은 청동 핀 형태로 만든다.
+    const bronzeMat = new THREE.MeshStandardMaterial({ color: '#8a6a2a', roughness: 0.4, metalness: 0.65 });
+    const ramLen = hullLen * 0.09 * gp.ramMul;
+    const finCount = 3;
+    const finSpread = hw * 0.55 * gp.ramMul;
+    for (let i = 0; i < finCount; i++) {
+      const t = i / (finCount - 1) - 0.5; // -0.5, 0, 0.5 — 옆으로 부채꼴로 펼쳐지는 삼지창형 날
+      const fin = new THREE.Mesh(new THREE.ConeGeometry(hw * 0.1 * gp.ramMul, ramLen, 3), bronzeMat);
+      fin.rotation.x = Math.PI / 2;
+      fin.position.set(t * finSpread, deckY * 0.15, hl + ramLen * 0.35);
+      group.add(fin);
+    }
+    // 이물에 그려 넣은 눈(오큘루스) — 고대 지중해 갤리 특유의 장식으로, 별다른 구조물 없이도
+    // 이 배가 "고대 갤리"임을 즉시 알아보게 하는 가장 상징적인 요소.
+    const oculusY = deckY * 0.7;
+    for (const side of [-1, 1]) {
+      const white = new THREE.Mesh(new THREE.CircleGeometry(hullHei * 0.16, 16), new THREE.MeshStandardMaterial({ color: '#e8e2d0', roughness: 0.6, side: THREE.DoubleSide }));
+      white.rotation.y = side * Math.PI / 2;
+      white.position.set(side * hw * 0.98, oculusY, hl * 0.68);
+      group.add(white);
+      const pupil = new THREE.Mesh(new THREE.CircleGeometry(hullHei * 0.07, 12), new THREE.MeshStandardMaterial({ color: '#1a1410', roughness: 0.5, side: THREE.DoubleSide }));
+      pupil.rotation.copy(white.rotation);
+      pupil.position.set(side * (hw * 0.98 + side * 0.01), oculusY, hl * 0.68);
+      group.add(pupil);
+    }
+    // 위로 솟구쳐 곡선을 그리는 이물/고물 기둥(아크로스톨리온) — 참고 사진처럼 갑판보다
+    // 훨씬 높이, 뒤로 완만히 휘며 올라간다.
+    const sternPostCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, railTopY, hl * 0.92),
+      new THREE.Vector3(0, railTopY + hullHei * 1.1, hl * 0.8),
+      new THREE.Vector3(0, railTopY + hullHei * 1.9, hl * 0.68),
+    ]);
+    const sternPostGeo = new THREE.TubeGeometry(sternPostCurve, 16, Math.max(0.04, hw * 0.05), 6, false);
+    group.add(new THREE.Mesh(sternPostGeo, new THREE.MeshStandardMaterial({ color: '#5a3a20', roughness: 0.75 })));
+  } else {
+    // 이물 충각(ram) — 갤리 특유의 수면 위로 길게 뻗은 뾰족한 뱃머리 장식. ramMul로 배마다
+    // 충각 크기를 달리해(레알/갈레아짜는 더 길고 당당하게) 이물에서부터 정체성이 드러나게 한다.
+    const ramLen = hullLen * 0.22 * gp.ramMul;
+    const ram = new THREE.Mesh(new THREE.ConeGeometry(hw * 0.12 * gp.ramMul, ramLen, 5), new THREE.MeshStandardMaterial({ color: '#2e2013', roughness: 0.8 }));
+    ram.rotation.x = Math.PI / 2;
+    ram.position.set(0, deckY * 0.35, hl + hullLen * 0.09);
+    group.add(ram);
+    // 장식 등급(ornament) 2 이상은 충각 밑동에 금박 장식구를 둘러 기함다운 위엄을 더한다
+    // (레알/레알레처럼 실제로 조각·금박을 두른 기함급 갤리를 흉내낸 것).
+    if (gp.ornament >= 2) {
+      const ramCollar = new THREE.Mesh(new THREE.TorusGeometry(hw * 0.14 * gp.ramMul, hw * 0.03, 6, 10), gildMat);
+      ramCollar.rotation.y = Math.PI / 2;
+      ramCollar.position.set(0, deckY * 0.35, hl + 0.05);
+      group.add(ramCollar);
+    }
   }
 
   // 낮은 뱃전 트림(전체 실루엣을 얇게 두르는 밝은 몰딩) — 깊은 웰 데크 구조 없이 얇은 테두리만
@@ -1020,18 +1064,27 @@ function buildGalleyMesh(shipDef) {
   group.add(deck);
 
   // 노(oar) — 갤리의 정체성. 선체 중앙 70% 구간에 촘촘히, 양옆으로 비스듬히 물에 담근다.
-  // 크기가 커질수록(대형/초대형 갈레아스급) 노잡이 열도 함께 늘어난다.
+  // 크기가 커질수록(대형/초대형 갈레아스급) 노잡이 열도 함께 늘어난다. oarBanks가 1보다
+  // 크면(고대 트라이림) 노를 위아래로 겹쳐 여러 단(탈라미안/지지안/트라니테)을 재현한다 —
+  // 참고 사진 속 트라이림 옆면에 대각선으로 늘어선 노 구멍 배치와 같은 원리다.
   const oarMat = new THREE.MeshStandardMaterial({ color: '#3b2a18', roughness: 0.9 });
   const oarCountByClass = { small: 8, medium: 11, large: 15, xlarge: 20 };
   const oarCount = oarCountByClass[shipDef.class] ?? 8;
-  for (let i = 0; i < oarCount; i++) {
-    const t = (i + 0.5) / oarCount;
-    const oz = -hl * 0.72 + t * hl * 1.3;
-    for (const side of [-1, 1]) {
-      const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, hullWid * 1.15, 5), oarMat);
-      oar.position.set(side * hw * 0.55, deckY - hullHei * 0.55, oz);
-      oar.rotation.z = side * 1.15;
-      group.add(oar);
+  const oarBanks = gp.oarBanks || 1;
+  for (let b = 0; b < oarBanks; b++) {
+    const bankT = oarBanks === 1 ? 0 : b / (oarBanks - 1); // 0=가장 아래(탈라미안)~1=가장 위(트라니테)
+    const bankYOff = bankT * hullHei * 0.42;
+    const bankOutOff = bankT * hw * 0.12;
+    const oarLenMul = 1 - (1 - bankT) * 0.12;
+    for (let i = 0; i < oarCount; i++) {
+      const t = (i + 0.5) / oarCount;
+      const oz = -hl * 0.72 + t * hl * 1.3;
+      for (const side of [-1, 1]) {
+        const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, hullWid * 1.15 * oarLenMul, 5), oarMat);
+        oar.position.set(side * (hw * 0.55 + bankOutOff), deckY - hullHei * 0.55 + bankYOff, oz);
+        oar.rotation.z = side * 1.15;
+        group.add(oar);
+      }
     }
   }
 
@@ -1073,10 +1126,26 @@ function buildGalleyMesh(shipDef) {
     }
   }
 
-  // 방향타 + 닻(다른 선종과 동일한 방식)
-  const rudder = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.08, hullHei * 0.7, hullLen * 0.08), new THREE.MeshStandardMaterial({ color: '#2e2013', roughness: 0.9 }));
-  rudder.position.set(0, 0, -hl * 0.99);
-  group.add(rudder);
+  // 방향타 — 고대 갤리는 중앙 방향타가 아니라 고물 양옆에 노 형태의 쌍노(steering oar)를
+  // 매달아 조종했다(중앙 방향타는 훨씬 후대의 발명품이다).
+  if (gp.ancient) {
+    const steerMat = new THREE.MeshStandardMaterial({ color: '#3b2a18', roughness: 0.9 });
+    for (const side of [-1, 1]) {
+      const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, hullHei * 1.6, 6), steerMat);
+      oar.position.set(side * hw * 0.75, deckY - hullHei * 0.3, -hl * 0.95);
+      oar.rotation.x = 0.65;
+      oar.rotation.z = side * 0.25;
+      group.add(oar);
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(hullHei * 0.35, hullHei * 0.55, 0.03), steerMat);
+      blade.position.set(side * hw * 0.75, deckY - hullHei * 1.05, -hl * 1.08);
+      blade.rotation.x = 0.65;
+      group.add(blade);
+    }
+  } else {
+    const rudder = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.08, hullHei * 0.7, hullLen * 0.08), new THREE.MeshStandardMaterial({ color: '#2e2013', roughness: 0.9 }));
+    rudder.position.set(0, 0, -hl * 0.99);
+    group.add(rudder);
+  }
 
   // 이물 함포(있는 경우) — 갤리는 현측 포열이 아니라 이물에 소수의 함포를 집중 배치했다
   if (role === 'combat' && shipDef.cannons > 0) {
@@ -1128,7 +1197,28 @@ function buildGalleyMesh(shipDef) {
   addLine(mastTop, new THREE.Vector3(0, railTopY * 0.6, hl * 0.9), 0.03);
   addLine(mastTop, new THREE.Vector3(0, railTopY + aftH, -hl * 0.8), 0.03);
   for (const side of [-1, 1]) addLine(mastTop, new THREE.Vector3(side * hw * 0.9, railTopY, mastZ), 0.024);
-  addLateenRig(group, mastBaseY, mastHeight, mastZ, hullWid * 1.7 * sx);
+  if (gp.ancient) {
+    // 라틴세일(삼각돛)은 훨씬 후대(중세)의 발명품이라, 고대 갤리에는 활대에 매단 사각
+    // 가로돛을 단다 — 참고 사진 속 올림피아스의 돛대·활대 구성과 같은 방식.
+    const yardW = hullWid * 1.6 * sx;
+    const yard = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, yardW, 6), rigMat);
+    yard.rotation.z = Math.PI / 2;
+    yard.position.set(0, mastBaseY + mastHeight * 0.82, mastZ);
+    group.add(yard);
+    const sailH = mastHeight * 0.42;
+    const sailShape = new THREE.Shape();
+    sailShape.moveTo(-yardW * 0.46, sailH / 2);
+    sailShape.lineTo(yardW * 0.46, sailH / 2);
+    sailShape.lineTo(yardW * 0.42, -sailH / 2);
+    sailShape.lineTo(-yardW * 0.42, -sailH / 2);
+    sailShape.lineTo(-yardW * 0.46, sailH / 2);
+    const sail = new THREE.Mesh(new THREE.ShapeGeometry(sailShape), new THREE.MeshStandardMaterial({ color: '#d8cba8', roughness: 0.8, side: THREE.DoubleSide }));
+    sail.rotation.y = Math.PI / 2;
+    sail.position.set(0, mastBaseY + mastHeight * 0.82 - sailH * 0.55, mastZ);
+    group.add(sail);
+  } else {
+    addLateenRig(group, mastBaseY, mastHeight, mastZ, hullWid * 1.7 * sx);
+  }
 
   // 국기
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.2 * sx, 0.75 * sy), new THREE.MeshStandardMaterial({ color: trim, side: THREE.DoubleSide }));

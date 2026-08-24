@@ -133,6 +133,12 @@ export const SHIPS = [
     country: 'EN', era: '1866', speed: 17, turnRate: 26, hp: 1500, cargo: 480, cannons: 6, crew: 45, price: 12500,
     desc: '역대 최대급 복합선체 클리퍼. 이민·양모 수송에 쓰인 초대형 쾌속 상선으로, 클리퍼 중에서도 압도적인 크기를 자랑한다.' },
 
+  // ── 초대형 갤리 (화약 이전 시대, 고대 지중해 노젓는 대형 전함) ──
+  // 함포가 없는 대신(화약 자체가 없던 시대) 압도적인 내구도·승무원·충각 공격력으로 맞선다.
+  { id: 'roman_deceres', name: '로마 데케레스 (Roman Deceres)', class: 'xlarge', role: 'combat', type: 'galley',
+    country: 'IT', era: '기원전 1세기', speed: 11, turnRate: 50, hp: 1600, cargo: 40, cannons: 0, crew: 450, price: 6000,
+    desc: '악티움 해전급 로마 최대 등급 다단 노선(데케레스). 청동 충각과 압도적인 노잡이·해병 승선 인원으로 들이받고 백병전을 벌이는 고대 해전의 정점.' },
+
   // ── 초대형선 (기함급 전열함) ──
   { id: 'henry_grace_a_dieu', name: '헨리 그레이스 어 듀 (Henry Grace à Dieu)', class: 'xlarge', role: 'combat', type: 'shipline',
     country: 'EN', era: '1514', speed: 7, turnRate: 20, hp: 2600, cargo: 700, cannons: 80, crew: 180, price: 15000,
