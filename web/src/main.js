@@ -63,6 +63,11 @@ function goToCity(cityId) {
   hud.showTargetHp(false);
   hud.showCombatBanner(false);
   citySceneObj = new CityScene(cityId, () => goToSea(cityId));
+  // 항구관리인을 마주보는 상태로 입항하도록, 배 쪽에서 쓰던 "시점=진행방향" 관례와 동일하게
+  // 카메라 시점(yaw)도 스폰 시 그 방향으로 맞춘다. pitch도 눈높이 근처로 낮춰야
+  // 체이스캠 특유의 내려다보는 각도 때문에 화면 중앙 레이가 관리인 발밑 아래로 빗나가지 않는다.
+  pointerControls.yaw = citySceneObj.spawnFacing;
+  pointerControls.pitch = 0.05;
   setScreen('city');
   hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도', 'T 선박정보']);
 

@@ -58,7 +58,24 @@ export class CityScene {
     this.characterMesh = buildCharacterMesh(this.gender);
     this.scene.add(this.characterMesh);
     this.character = new CharacterController(this.characterMesh);
-    this.character.setPosition(0, 40);
+
+    // 입항하면 광장 한복판이 아니라 항구관리인 바로 앞에서 시작한다 — 원형 배치의 중심(0,-10)
+    // 쪽으로 몇 걸음 다가선 지점에 세우고, spawnFacing에 그 관리인을 바라보는 각도를 저장해
+    // main.js가 카메라 시점(yaw)도 같이 맞추게 한다.
+    const harbormaster = this.npcObjects.find((o) => o.userData.npc.role === 'harbormaster');
+    if (harbormaster) {
+      const centerX = 0, centerZ = -10;
+      const hx = harbormaster.position.x, hz = harbormaster.position.z;
+      let dx = centerX - hx, dz = centerZ - hz;
+      const len = Math.hypot(dx, dz) || 1;
+      dx /= len; dz /= len;
+      const spawnX = hx + dx * 3.5, spawnZ = hz + dz * 3.5;
+      this.character.setPosition(spawnX, spawnZ);
+      this.spawnFacing = Math.atan2(hx - spawnX, hz - spawnZ);
+    } else {
+      this.character.setPosition(0, 40);
+      this.spawnFacing = Math.PI;
+    }
 
     this.raycaster = new THREE.Raycaster();
     this.activeDialogueTarget = null;
@@ -182,6 +199,10 @@ export class CityScene {
   }
 
   _raycastFromCenter(camera, objects) {
+    // update()의 카메라 충돌 처리(resolveCameraCollision)가 같은 raycaster의
+    // near/far를 임시로 좁혀 쓰고 복원하지 않으므로, 상호작용 판정 전에 항상 원상복구한다.
+    this.raycaster.near = 0;
+    this.raycaster.far = Infinity;
     this.raycaster.setFromCamera({ x: 0, y: 0 }, camera);
     return this.raycaster.intersectObjects(objects, true);
   }
@@ -228,6 +249,7 @@ export class CityScene {
     }
     if (npc.role === 'harbormaster') {
       hud.showDialogue(npc.name, npc.line, [
+        { label: '출항', onClick: () => { hud.hideDialogue(); this.onExit(); } },
         { label: '의뢰', onClick: () => { hud.hideDialogue(); openQuestBoard(this.city.id); } },
         { label: '닫기', onClick: () => hud.hideDialogue() },
       ]);
