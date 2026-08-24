@@ -992,8 +992,10 @@ function buildGalleyMesh(shipDef) {
   group.add(deck);
 
   // 노(oar) — 갤리의 정체성. 선체 중앙 70% 구간에 촘촘히, 양옆으로 비스듬히 물에 담근다.
+  // 크기가 커질수록(대형/초대형 갈레아스급) 노잡이 열도 함께 늘어난다.
   const oarMat = new THREE.MeshStandardMaterial({ color: '#3b2a18', roughness: 0.9 });
-  const oarCount = shipDef.class === 'medium' ? 11 : 8;
+  const oarCountByClass = { small: 8, medium: 11, large: 15, xlarge: 20 };
+  const oarCount = oarCountByClass[shipDef.class] ?? 8;
   for (let i = 0; i < oarCount; i++) {
     const t = (i + 0.5) / oarCount;
     const oz = -hl * 0.72 + t * hl * 1.3;
@@ -1034,6 +1036,21 @@ function buildGalleyMesh(shipDef) {
       cannon.rotation.x = Math.PI / 2;
       cannon.position.set(off * hw, railTopY + 0.1, hl * 0.7);
       group.add(cannon);
+    }
+    // 대형/초대형(갈레아스급)은 순수 갤리와 달리 노 사이 공간에 현측 포열도 갖췄다 —
+    // 레판토 해전에서 베네치아 갈레아스가 실제로 이런 구성을 썼다.
+    if (shipDef.class === 'large' || shipDef.class === 'xlarge') {
+      const broadsideCount = shipDef.class === 'xlarge' ? 5 : 3;
+      for (let i = 0; i < broadsideCount; i++) {
+        const t = (i + 0.5) / broadsideCount;
+        const cz = -hl * 0.55 + t * hl * 0.95;
+        for (const side of [-1, 1]) {
+          const bCannon = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, hullWid * 0.5, 6), cannonMat);
+          bCannon.rotation.z = Math.PI / 2;
+          bCannon.position.set(side * hw * 0.7, deckY + hullHei * 0.1, cz);
+          group.add(bCannon);
+        }
+      }
     }
   }
 

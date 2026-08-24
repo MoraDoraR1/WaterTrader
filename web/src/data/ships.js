@@ -27,7 +27,9 @@ export const SHIP_TYPES = {
   galleon: { label: '갈레온', era: '1520~1650s', nations: ['ES', 'PT', 'EN', 'NL', 'IT'], sizes: ['medium', 'large', 'xlarge'] },
   fullrig: { label: '범선(대형 상선)', era: '1600~1750s', nations: ['NL', 'EN', 'FR', 'SE'], sizes: ['medium', 'large'] },
   shipline: { label: '전열함', era: '1650~1850s', nations: ['EN', 'FR', 'ES', 'SE'], sizes: ['large', 'xlarge'] },
-  galley: { label: '갤리', era: '고대~1600s', nations: ['IT', 'ES'], sizes: ['small', 'medium'] },
+  // 대형/초대형은 갈레아스(Galeazza) — 갤리와 범선을 절충한 대형 노젓는 군함으로,
+  // 레판토 해전(1571)·스페인 무적함대(1588)에 실전 투입된 실존 함종이다.
+  galley: { label: '갤리', era: '고대~1600s', nations: ['IT', 'ES'], sizes: ['small', 'medium', 'large', 'xlarge'] },
   schooner: { label: '스쿠너', era: '1770s~1850s', nations: ['EN', 'NL'], sizes: ['small', 'medium'] },
   clipper: { label: '클리퍼', era: '1845~1870s', nations: ['EN'], sizes: ['medium', 'large'] },
 };
@@ -59,6 +61,12 @@ export const SHIPS = [
   { id: 'galera_real', name: '갈레라 레알 (Galera Real)', class: 'medium', role: 'combat', type: 'galley',
     country: 'ES', era: '1571', speed: 10, turnRate: 75, hp: 480, cargo: 50, cannons: 6, crew: 180, price: 1600,
     desc: '레판토 해전급 스페인 기함 갤리. 이물에 집중 배치한 함포로 돌격전에 특화.' },
+  { id: 'galeazza_veneziana', name: '갈레아짜 (Galeazza)', class: 'large', role: 'combat', type: 'galley',
+    country: 'IT', era: '1571', speed: 8, turnRate: 42, hp: 900, cargo: 70, cannons: 20, crew: 300, price: 3200,
+    desc: '갤리와 범선을 절충한 베네치아의 대형 노젓는 군함. 이물 함포에 더해 현측에도 포열을 갖춰 레판토 해전에서 위력을 떨쳤다. 선회는 느리지만 화력은 일반 갤리를 압도.' },
+  { id: 'galeazza_reale', name: '갈레아짜 레알레 (Galeazza Reale)', class: 'xlarge', role: 'combat', type: 'galley',
+    country: 'ES', era: '1588', speed: 7, turnRate: 30, hp: 1300, cargo: 90, cannons: 30, crew: 400, price: 5200,
+    desc: '스페인 무적함대에 편성된 최대급 갈레아스 기함. 노와 돛을 겸용하는 함종 중 사상 최대 규모로, 강력한 화력을 자랑하지만 그만큼 둔중하다.' },
 
   // ── 중형선 (교역/균형형) ──
   { id: 'nau_santa_maria', name: '나오 산타마리아 (Nau Santa María)', class: 'medium', role: 'trade', type: 'carrack',
