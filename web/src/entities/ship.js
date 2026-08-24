@@ -44,6 +44,18 @@ const NATION_MODIFIERS = {
 };
 const DEFAULT_NATION_MOD = { beamMul: 1, freeboardMul: 1, castleMul: 1, tumbleMul: 1, gildBonus: 0 };
 
+// 갤리는 선종 하나에 배 4척뿐이라 TYPE_PRESETS 같은 일반화된 축보다, 각 배의 실제 이름/평판을
+// 그대로 반영하는 개별 프리셋이 낫다: "소틸레(가늘고 가벼움)"는 이름 그대로 날렵하게,
+// "레알(왕실 기함)"은 레판토 해전 실제 돈 후안 데 아우스트리아 기함처럼 화려하게,
+// 갈레아짜 두 척은 육중하고 무장이 앞선 절충형으로 구분한다.
+const GALLEY_PRESETS = {
+  galea_sottile: { beamMul: 0.82, ornament: 0, canopyMul: 0.75, ramMul: 0.85, pennants: 1 },
+  galera_real: { beamMul: 1.0, ornament: 3, canopyMul: 1.35, ramMul: 1.15, pennants: 3 },
+  galeazza_veneziana: { beamMul: 1.1, ornament: 1, canopyMul: 1.1, ramMul: 1.2, pennants: 2 },
+  galeazza_reale: { beamMul: 1.05, ornament: 2, canopyMul: 1.25, ramMul: 1.3, pennants: 3 },
+};
+const DEFAULT_GALLEY_PRESET = { beamMul: 1, ornament: 0, canopyMul: 1, ramMul: 1, pennants: 1 };
+
 // 사다리꼴 돛 — 밑단을 2차 베지어 곡선으로 살짝 부풀려 바람을 머금은 형태를 낸다.
 function trapezoid(topW, botW, h, belly = h * 0.16) {
   const shape = new THREE.Shape();
@@ -132,7 +144,10 @@ export function buildShipMesh(shipDef) {
 
   // 역할별 선체 실루엣 차이 — 교역용은 둥글고 넉넉하게, 모험용은 날렵하게, 전투용은 표준 비율
   const roleHullMul = role === 'trade' ? 1.1 : role === 'adventure' ? 0.94 : 1.0;
-  const useLateen = role === 'adventure' && shipDef.class === 'small' && !arch.gaffRig;
+  // 라틴세일 단일 돛대는 "소형 모험용선"이라는 조건만으로 걸면 스쿠너/클리퍼처럼 애초에
+  // 라틴세일과 무관한 선종까지 걸려든다(실제로 소형 클리퍼가 돛대 3개짜리 라틴세일선이
+  // 되어버리는 버그가 있었다). 캐러벨에만 명시적으로 적용한다.
+  const useLateen = role === 'adventure' && shipDef.class === 'small' && shipDef.type === 'caravel';
 
   const hullLen = 10 * sz;
   const hullWid = 3.4 * sx * roleHullMul * arch.beamMul;
@@ -922,11 +937,14 @@ function buildGalleyMesh(shipDef) {
   const hullColorLight = new THREE.Color('#6b4526');
   const deckColor = new THREE.Color('#a3814f');
   const trim = new THREE.Color(COUNTRY_COLORS[shipDef.country] || '#888888');
+  const gp = GALLEY_PRESETS[shipDef.id] || DEFAULT_GALLEY_PRESET;
+  const gildMat = new THREE.MeshStandardMaterial({ color: '#e6c15a', roughness: 0.35, metalness: 0.4 });
 
   // 갤리는 실제로 선체가 가늘고 매우 길다(길이:폭 비가 다른 선종보다 훨씬 큼) + 건현이 낮다
-  // (노잡이가 수면 가까이 앉음) — 이 두 특징이 실루엣의 핵심이다.
+  // (노잡이가 수면 가까이 앉음) — 이 두 특징이 실루엣의 핵심이다. beamMul로 배 이름별 날렵함/
+  // 육중함을 더 준다("소틸레"=가늘게, "레알"/"갈레아짜"=더 당당하게).
   const hullLen = 10 * sz * 1.35;
-  const hullWid = 3.4 * sx * 0.48;
+  const hullWid = 3.4 * sx * 0.48 * gp.beamMul;
   const hullHei = 2.2 * sy * 0.42;
   const deckY = hullHei * 0.62;
   const railH = hullHei * 0.16; // 아주 낮은 뱃전 — 돛대 배 특유의 "깊은 웰 데크"가 없다
@@ -971,11 +989,21 @@ function buildGalleyMesh(shipDef) {
   const hullMesh = new THREE.Mesh(hullGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
   group.add(hullMesh);
 
-  // 이물 충각(ram) — 갤리 특유의 수면 위로 길게 뻗은 뾰족한 뱃머리 장식
-  const ram = new THREE.Mesh(new THREE.ConeGeometry(hw * 0.12, hullLen * 0.22, 5), new THREE.MeshStandardMaterial({ color: '#2e2013', roughness: 0.8 }));
+  // 이물 충각(ram) — 갤리 특유의 수면 위로 길게 뻗은 뾰족한 뱃머리 장식. ramMul로 배마다
+  // 충각 크기를 달리해(레알/갈레아짜는 더 길고 당당하게) 이물에서부터 정체성이 드러나게 한다.
+  const ramLen = hullLen * 0.22 * gp.ramMul;
+  const ram = new THREE.Mesh(new THREE.ConeGeometry(hw * 0.12 * gp.ramMul, ramLen, 5), new THREE.MeshStandardMaterial({ color: '#2e2013', roughness: 0.8 }));
   ram.rotation.x = Math.PI / 2;
   ram.position.set(0, deckY * 0.35, hl + hullLen * 0.09);
   group.add(ram);
+  // 장식 등급(ornament) 2 이상은 충각 밑동에 금박 장식구를 둘러 기함다운 위엄을 더한다
+  // (레알/레알레처럼 실제로 조각·금박을 두른 기함급 갤리를 흉내낸 것).
+  if (gp.ornament >= 2) {
+    const ramCollar = new THREE.Mesh(new THREE.TorusGeometry(hw * 0.14 * gp.ramMul, hw * 0.03, 6, 10), gildMat);
+    ramCollar.rotation.y = Math.PI / 2;
+    ramCollar.position.set(0, deckY * 0.35, hl + 0.05);
+    group.add(ramCollar);
+  }
 
   // 낮은 뱃전 트림(전체 실루엣을 얇게 두르는 밝은 몰딩) — 깊은 웰 데크 구조 없이 얇은 테두리만
   const railGeo = new THREE.ExtrudeGeometry(hullShape, { depth: railH, bevelEnabled: false });
@@ -1007,20 +1035,43 @@ function buildGalleyMesh(shipDef) {
     }
   }
 
-  // 선미 소지휘대 — 다른 선종의 웅장한 선미루 대신, 아주 낮고 작은 지휘용 발판 + 차양
+  // 선미 소지휘대 — 다른 선종의 웅장한 선미루 대신, 아주 낮고 작은 지휘용 발판 + 차양.
+  // canopyMul로 배마다 이 지휘대/차양 크기를 달리한다("소틸레"는 작고 실용적으로,
+  // "레알"은 기함답게 훨씬 크고 화려하게).
   const aftH = hullHei * 0.55;
-  const aftPlatform = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.5, aftH, hullLen * 0.1), new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.85 }));
+  const aftPlatform = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.5 * gp.canopyMul, aftH, hullLen * 0.1 * gp.canopyMul), new THREE.MeshStandardMaterial({ color: hullColorLight, roughness: 0.85 }));
   aftPlatform.position.set(0, railTopY + aftH / 2, -hl * 0.82);
   group.add(aftPlatform);
   const canopyPostMat = new THREE.MeshStandardMaterial({ color: '#2e2013' });
   for (const side of [-1, 1]) {
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, hullHei * 0.5, 5), canopyPostMat);
-    post.position.set(side * hullWid * 0.2, railTopY + aftH + hullHei * 0.25, -hl * 0.82);
+    post.position.set(side * hullWid * 0.2 * gp.canopyMul, railTopY + aftH + hullHei * 0.25, -hl * 0.82);
     group.add(post);
   }
-  const canopy = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.55, hullHei * 0.04, hullLen * 0.13), new THREE.MeshStandardMaterial({ color: trim, roughness: 0.7 }));
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.55 * gp.canopyMul, hullHei * 0.04, hullLen * 0.13 * gp.canopyMul), new THREE.MeshStandardMaterial({ color: trim, roughness: 0.7 }));
   canopy.position.set(0, railTopY + aftH + hullHei * 0.5, -hl * 0.82);
   group.add(canopy);
+  // 장식 등급 1 이상: 차양 테두리를 금박 몰딩으로 두른다. 3(레알 전용)은 지휘대 가장자리에
+  // 조각 발코니처럼 작은 난간 기둥을 촘촘히 세워, 실제 레판토 해전의 기함 갈레라 레알이
+  // 온통 금박 조각으로 뒤덮여 있었던 것을 흉내낸다.
+  if (gp.ornament >= 1) {
+    const gildEdge = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.58 * gp.canopyMul, hullHei * 0.03, hullLen * 0.135 * gp.canopyMul), gildMat);
+    gildEdge.position.set(0, railTopY + aftH + hullHei * 0.5 + hullHei * 0.03, -hl * 0.82);
+    group.add(gildEdge);
+  }
+  if (gp.ornament >= 3) {
+    const balustradeCount = 8;
+    const bw = hullWid * 0.5 * gp.canopyMul, bl = hullLen * 0.1 * gp.canopyMul;
+    for (let i = 0; i < balustradeCount; i++) {
+      const t = (i + 0.5) / balustradeCount - 0.5;
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, aftH * 0.9, 5), gildMat);
+      post.position.set(bw / 2 + 0.02, railTopY + aftH * 0.45, -hl * 0.82 + t * bl);
+      group.add(post);
+      const post2 = post.clone();
+      post2.position.x = -bw / 2 - 0.02;
+      group.add(post2);
+    }
+  }
 
   // 방향타 + 닻(다른 선종과 동일한 방식)
   const rudder = new THREE.Mesh(new THREE.BoxGeometry(hullWid * 0.08, hullHei * 0.7, hullLen * 0.08), new THREE.MeshStandardMaterial({ color: '#2e2013', roughness: 0.9 }));
@@ -1083,6 +1134,23 @@ function buildGalleyMesh(shipDef) {
   const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.2 * sx, 0.75 * sy), new THREE.MeshStandardMaterial({ color: trim, side: THREE.DoubleSide }));
   flag.position.set(0, mastBaseY + mastHeight + 0.4, mastZ);
   group.add(flag);
+
+  // 추가 예기(pennants) — 기함급일수록(레알/갈레아짜) 활대·이물에 작은 삼각기를 더 매달아
+  // 훨씬 화려하고 위엄있게 보이도록 한다. 소틸레처럼 실용적인 정찰 갤리는 국기 하나뿐.
+  const pennantMat = new THREE.MeshStandardMaterial({ color: trim, side: THREE.DoubleSide });
+  function addPennant(x, y, z, w, h) {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, h / 2);
+    shape.lineTo(w, 0);
+    shape.lineTo(0, -h / 2);
+    shape.lineTo(0, h / 2);
+    const pennant = new THREE.Mesh(new THREE.ShapeGeometry(shape), pennantMat);
+    pennant.rotation.y = Math.PI / 2;
+    pennant.position.set(x, y, z);
+    group.add(pennant);
+  }
+  if (gp.pennants >= 2) addPennant(0, mastBaseY + mastHeight * 0.7, mastZ, hullWid * 0.5, hullHei * 0.35);
+  if (gp.pennants >= 3) addPennant(0, deckY * 0.35 + hullHei * 0.4, hl + hullLen * 0.03, hullWid * 0.4, hullHei * 0.3);
 
   group.userData.hullHeight = hullHei;
   group.userData.length = hullLen;

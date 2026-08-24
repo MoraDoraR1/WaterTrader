@@ -22,7 +22,10 @@ export const SHIP_ROLES = {
 // 선종별 고증 — 시대/주요 건조국/등장 가능한 크기 등급을 실제 조선사에 맞춰 제한한다.
 // (모든 선종에 소~초대형을 다 채우지 않는다 — 예: 캐러벨/갤리는 초대형이 존재한 적이 없다.)
 export const SHIP_TYPES = {
-  caravel: { label: '캐러벨', era: '1440~1520s', nations: ['PT', 'ES'], sizes: ['small', 'medium'] },
+  // 대형은 "카라벨라 마이오르" — 실제로 존재했던 후기(16세기) 대형 무장/원양 캐러벨을
+  // 근거로 한다. 다만 캐러벨은 애초에 날렵함이 정체성이라 초대형까지는 넣지 않는다
+  // (그 크기가 되면 사실상 나오/카락으로 갈아탄 것이 역사적 실제 흐름이었다).
+  caravel: { label: '캐러벨', era: '1440~1520s', nations: ['PT', 'ES'], sizes: ['small', 'medium', 'large'] },
   carrack: { label: '카락(나오)', era: '1450~1600s', nations: ['PT', 'ES', 'HAN'], sizes: ['medium', 'large'] },
   galleon: { label: '갈레온', era: '1520~1650s', nations: ['ES', 'PT', 'EN', 'NL', 'IT'], sizes: ['medium', 'large', 'xlarge'] },
   fullrig: { label: '범선(대형 상선)', era: '1600~1750s', nations: ['NL', 'EN', 'FR', 'SE'], sizes: ['medium', 'large'] },
@@ -31,7 +34,10 @@ export const SHIP_TYPES = {
   // 레판토 해전(1571)·스페인 무적함대(1588)에 실전 투입된 실존 함종이다.
   galley: { label: '갤리', era: '고대~1600s', nations: ['IT', 'ES'], sizes: ['small', 'medium', 'large', 'xlarge'] },
   schooner: { label: '스쿠너', era: '1770s~1850s', nations: ['EN', 'NL'], sizes: ['small', 'medium'] },
-  clipper: { label: '클리퍼', era: '1845~1870s', nations: ['EN'], sizes: ['medium', 'large'] },
+  // 소형은 1830~40년대 아편 클리퍼(밀무역용 초쾌속 소형선), 초대형은 소브라온급
+  // (1860년대 대형 이민/양모 클리퍼) — 클리퍼는 시기가 늦을수록 극단으로 커진 실제 사례가
+  // 많아 소~초대형 전체 범위를 채울 근거가 충분하다.
+  clipper: { label: '클리퍼', era: '1830~1870s', nations: ['EN'], sizes: ['small', 'medium', 'large', 'xlarge'] },
 };
 
 export const SHIPS = [
@@ -109,14 +115,23 @@ export const SHIPS = [
   { id: 'galeone_veneziano', name: '갈레오네 (Galeone Veneziano)', class: 'large', role: 'adventure', type: 'galleon',
     country: 'IT', era: '1560s', speed: 9, turnRate: 34, hp: 1350, cargo: 420, cannons: 34, crew: 88, price: 6600,
     desc: '지중해 전역을 누비며 교역과 탐험을 겸한 다목적 베네치아 대형 갈레온.' },
+  { id: 'caravela_maior', name: '카라벨라 마이오르 (Caravela Maior)', class: 'large', role: 'trade', type: 'caravel',
+    country: 'PT', era: '1500s', speed: 10, turnRate: 44, hp: 900, cargo: 320, cannons: 14, crew: 60, price: 4200,
+    desc: '인도 항로의 장기 원양 항해를 위해 특별히 키운 대형 캐러벨. 캐러벨 특유의 날렵한 삼각돛 실루엣은 유지한 채 적재량만 크게 늘렸다.' },
 
-  // ── 클리퍼 (19세기 중반, 극도로 날렵한 쾌속 범선) ──
+  // ── 클리퍼 (19세기 초~중반, 극도로 날렵한 쾌속 범선) ──
+  { id: 'opium_clipper', name: '오피움 클리퍼 (Opium Clipper)', class: 'small', role: 'adventure', type: 'clipper',
+    country: 'EN', era: '1830s', speed: 16, turnRate: 52, hp: 380, cargo: 90, cannons: 4, crew: 18, price: 3400,
+    desc: '중국과의 밀무역에 쓰인 초쾌속 소형 클리퍼. 훗날 티 클리퍼의 원형이 된 극단적으로 날렵한 선형.' },
   { id: 'tea_clipper', name: '티 클리퍼 (Tea Clipper)', class: 'medium', role: 'trade', type: 'clipper',
     country: 'EN', era: '1850s', speed: 18, turnRate: 40, hp: 900, cargo: 260, cannons: 6, crew: 34, price: 8200,
     desc: '중국 차(茶) 무역 경쟁에서 태어난 극쾌속 상선. 동급 최고 속도.' },
   { id: 'clipper_thermopylae', name: '클리퍼 테르모필레 (Thermopylae)', class: 'large', role: 'adventure', type: 'clipper',
     country: 'EN', era: '1868', speed: 19, turnRate: 34, hp: 1100, cargo: 300, cannons: 8, crew: 40, price: 9500,
     desc: '역사상 가장 빠른 범선 중 하나로 꼽히는 대형 클리퍼.' },
+  { id: 'sobraon', name: '소브라온 (Sobraon)', class: 'xlarge', role: 'trade', type: 'clipper',
+    country: 'EN', era: '1866', speed: 17, turnRate: 26, hp: 1500, cargo: 480, cannons: 6, crew: 45, price: 12500,
+    desc: '역대 최대급 복합선체 클리퍼. 이민·양모 수송에 쓰인 초대형 쾌속 상선으로, 클리퍼 중에서도 압도적인 크기를 자랑한다.' },
 
   // ── 초대형선 (기함급 전열함) ──
   { id: 'henry_grace_a_dieu', name: '헨리 그레이스 어 듀 (Henry Grace à Dieu)', class: 'xlarge', role: 'combat', type: 'shipline',
