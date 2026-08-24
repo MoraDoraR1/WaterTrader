@@ -73,6 +73,11 @@ export const hud = {
     const deg = (headingRad * 180) / Math.PI;
     $('compass-needle').style.transform = `rotate(${deg}deg)`;
   },
+  setWind(towardDirRad, label) {
+    const deg = (towardDirRad * 180) / Math.PI;
+    $('wind-needle').style.transform = `rotate(${deg}deg)`;
+    $('wind-label').textContent = label;
+  },
   setShipHp(ratio) { $('ship-hp-fill').style.width = `${Math.max(0, ratio * 100)}%`; },
 
   setShipRoleBadge(label, color) {

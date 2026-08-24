@@ -4,6 +4,7 @@ import { buildShipMesh, ShipController } from '../entities/ship.js';
 import { NpcShip } from '../entities/pirate.js';
 import { CannonballPool } from '../entities/cannon.js';
 import { WakeTrail, BowWave } from '../entities/wake.js';
+import { Wind } from '../entities/wind.js';
 import { makeLabelSprite } from '../entities/label.js';
 import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
@@ -78,6 +79,7 @@ export class SeaScene {
     this.wakeTrail = new WakeTrail(this.scene);
     this.bowWave = new BowWave(this.scene);
     this._wakeTimer = 0;
+    this.wind = new Wind();
 
     this.scene.updateMatrixWorld(true);
     hud.initThrottle(-3, 5);
@@ -594,6 +596,7 @@ export class SeaScene {
 
   update(delta, elapsed, camera, pointerControls) {
     this.t = elapsed;
+    this.wind.update(delta);
 
     // 백병전 중에는 양쪽 배 모두 그 자리에 붙들려 있다(조작/이동/포격 모두 정지) —
     // 결판이 나면 자동으로 재개된다.
@@ -606,7 +609,7 @@ export class SeaScene {
       // heading 증가 방향은 반시계(좌현) 회전이므로, D(우현 회전)는 heading을 감소시켜야 한다.
       // 배의 방향은 오직 A/D 키로만 바뀐다 — 마우스는 시점 회전만 담당한다.
       this.ship.turnInput = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
-      this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z));
+      this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
     }
     this.ocean.update(elapsed, camera);
     this._updateWake(delta, elapsed);
@@ -678,6 +681,10 @@ export class SeaScene {
     hud.setCompass(this.ship.heading);
     hud.setShipHp(state.shipHp / this.ship.shipDef.hp);
     hud.setGold(state.gold);
+
+    const windPct = Math.round((this.ship.windMul - 1) * 100);
+    const windLabel = windPct > 3 ? `순풍 +${windPct}%` : windPct < -3 ? `역풍 ${windPct}%` : `무풍 ${windPct >= 0 ? '+' : ''}${windPct}%`;
+    hud.setWind(this.wind.towardDirection, windLabel);
 
     const regionName = seaRegionAt(this.ship.pos.x, this.ship.pos.y);
     const nearest = this._findNearestCityMarker();

@@ -1400,6 +1400,9 @@ export class ShipController {
     this.turnAccel = TURN_ACCEL_BASE / inertia;
     // 장착 부품(돛 등)의 속도 배율 — 조선소 부품 시스템에서만 1이 아닌 값이 들어온다.
     this.speedMul = shipDef.speedMul || 1;
+    // 갤리(노 젓는 배)는 바람에 거의 좌우되지 않는다 — 돛배 대비 영향을 1/4로 낮춘다.
+    this.windSensitivity = shipDef.type === 'galley' ? 0.25 : 1;
+    this.windMul = 1; // 매 update()마다 갱신 — HUD 등 바깥에서도 참조한다.
   }
 
   throttleUp() { this.notch = Math.min(MAX_FWD, this.notch + 1); }
@@ -1407,11 +1410,23 @@ export class ShipController {
 
   get speedMs() { return this.curSpeed; }
   get speedRatio() { return this.notch >= 0 ? this.notch / MAX_FWD : this.notch / Math.abs(MAX_REV); }
-  get maxSpeedMs() { return NOTCH_SPEED * MAX_FWD * this.speedMul; }
+  get maxSpeedMs() { return NOTCH_SPEED * MAX_FWD * this.speedMul * this.windMul; }
 
-  update(delta, t, isBlocked) {
+  update(delta, t, isBlocked, wind) {
+    // 바람과 진행 방향이 얼마나 맞는지(1=순풍, -1=역풍)에 따라 최고 속도가 최대 ±25~35%
+    // 오르내린다. heading은 이번 프레임 갱신 전 값을 쓴다(오차는 한 프레임 이내로 무시 가능).
+    if (wind) {
+      let diff = this.heading - wind.towardDirection;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      const align = Math.cos(diff);
+      const bonus = (align >= 0 ? align * 0.25 : align * 0.35) * wind.strength * this.windSensitivity;
+      this.windMul = 1 + bonus;
+    } else {
+      this.windMul = 1;
+    }
+
     const turnRateBase = THREE.MathUtils.degToRad(this.shipDef.turnRate);
-    const maxSpeed = NOTCH_SPEED * MAX_FWD * this.speedMul;
+    const maxSpeed = NOTCH_SPEED * MAX_FWD * this.speedMul * this.windMul;
     // 실제 속도가 붙은 만큼만 타가 듣는다(정지 상태에서는 선회 반응이 둔하다) — curSpeed 기준으로 계산해
     // 가속 중에는 선회 감도도 함께 서서히 올라온다.
     const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.curSpeed) / maxSpeed);
@@ -1421,7 +1436,7 @@ export class ShipController {
     this.curTurnRate += Math.max(-maxTurnStep, Math.min(maxTurnStep, targetTurnRate - this.curTurnRate));
     this.heading += this.curTurnRate * delta;
 
-    const targetSpeed = this.notch * NOTCH_SPEED * this.speedMul;
+    const targetSpeed = this.notch * NOTCH_SPEED * this.speedMul * this.windMul;
     const maxSpeedStep = this.accel * delta;
     this.curSpeed += Math.max(-maxSpeedStep, Math.min(maxSpeedStep, targetSpeed - this.curSpeed));
 
