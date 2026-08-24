@@ -1407,6 +1407,7 @@ export class ShipController {
 
   get speedMs() { return this.curSpeed; }
   get speedRatio() { return this.notch >= 0 ? this.notch / MAX_FWD : this.notch / Math.abs(MAX_REV); }
+  get maxSpeedMs() { return NOTCH_SPEED * MAX_FWD * this.speedMul; }
 
   update(delta, t, isBlocked) {
     const turnRateBase = THREE.MathUtils.degToRad(this.shipDef.turnRate);

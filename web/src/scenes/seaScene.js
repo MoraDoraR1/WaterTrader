@@ -3,6 +3,7 @@ import { createOcean } from '../entities/ocean.js';
 import { buildShipMesh, ShipController } from '../entities/ship.js';
 import { NpcShip } from '../entities/pirate.js';
 import { CannonballPool } from '../entities/cannon.js';
+import { WakeTrail, BowWave } from '../entities/wake.js';
 import { makeLabelSprite } from '../entities/label.js';
 import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
@@ -74,6 +75,9 @@ export class SeaScene {
     this.raycaster = new THREE.Raycaster();
     this.collisionTimers = new Map(); // npc.owner -> 남은 충돌 쿨다운(초)
     this.meleeState = null; // { npc, timer } — 백병전 중일 때만 존재
+    this.wakeTrail = new WakeTrail(this.scene);
+    this.bowWave = new BowWave(this.scene);
+    this._wakeTimer = 0;
 
     this.scene.updateMatrixWorld(true);
     hud.initThrottle(-3, 5);
@@ -535,6 +539,33 @@ export class SeaScene {
     }
   }
 
+  // 배가 물살을 가르는 느낌 — 이물 양옆으로 갈라지는 파도(BowWave, 매 프레임 재계산되는
+  // 동적 지오메트리)와 고물 뒤로 남는 거품 항적(WakeTrail, 주기적으로 뿌리는 원판들) 두 가지로 구성.
+  // 속도가 붙을수록 더 자주/크게 뿜어져 정지 시엔 자연스럽게 잦아든다.
+  _updateWake(delta, elapsed) {
+    const hl = (this.playerMesh.userData.length || 20) / 2;
+    const hw = (this.playerMesh.userData.width || 6) / 2;
+    const speedRatio = this.meleeState ? 0 : Math.min(1, Math.abs(this.ship.curSpeed) / this.ship.maxSpeedMs);
+    // 후진 중엔 물을 가르는 쪽이 고물이므로, 이동 방향에 따라 파도가 뜨는 지점도 바뀐다.
+    const dir = this.ship.curSpeed < 0 ? -1 : 1;
+    const leadX = this.ship.pos.x + Math.sin(this.ship.heading) * dir * hl;
+    const leadZ = this.ship.pos.y + Math.cos(this.ship.heading) * dir * hl;
+    const bowWaveY = this.ocean.heightAt(leadX, leadZ, elapsed) + 0.08;
+    this.bowWave.update(this.ship.pos, this.ship.heading, hw, hl, speedRatio, bowWaveY, dir);
+
+    if (!this.meleeState && speedRatio > 0.12) {
+      this._wakeTimer -= delta;
+      if (this._wakeTimer <= 0) {
+        this._wakeTimer = THREE.MathUtils.lerp(0.32, 0.09, speedRatio);
+        const sternX = this.ship.pos.x - Math.sin(this.ship.heading) * dir * hl * 0.95;
+        const sternZ = this.ship.pos.y - Math.cos(this.ship.heading) * dir * hl * 0.95;
+        const sternY = this.ocean.heightAt(sternX, sternZ, elapsed) + 0.05;
+        this.wakeTrail.spawn(sternX, sternY, sternZ, hw * (0.7 + speedRatio * 0.6), 2.2 + speedRatio * 1.2);
+      }
+    }
+    this.wakeTrail.update(delta, elapsed, this.ocean.heightAt);
+  }
+
   fireCannon() {
     if (this.meleeState) { hud.toast('백병전 중에는 포격할 수 없습니다.'); return; }
     if (this.fireTimer > 0) return;
@@ -578,6 +609,7 @@ export class SeaScene {
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z));
     }
     this.ocean.update(elapsed, camera);
+    this._updateWake(delta, elapsed);
 
     const hostileNear = this.npcShips.some((n) => !n.dead && n.def.hostile && n.state === 'attack');
     if (hostileNear !== state.inCombat) {
