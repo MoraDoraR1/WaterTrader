@@ -1,11 +1,12 @@
-// 조선소 NPC 상호작용의 실제 비즈니스 로직(구매/수리/부품 장착) — state를 직접 변경하고
-// UI(hud/cityScene)에는 결과({ok, reason})만 돌려준다. 화면 렌더링은 이 모듈이 관여하지 않는다.
+// 조선소 NPC 상호작용의 실제 비즈니스 로직(구매/수리/부품 장착/함대 편성) — state를 직접
+// 변경하고 UI(hud/cityScene)에는 결과({ok, reason})만 돌려준다. 화면 렌더링은 관여하지 않는다.
 import { state, notify, initShipHp } from '../state.js';
 import { getShip } from '../data/ships.js';
 import { getPart, getEffectiveShipDef } from '../data/shipParts.js';
 
 const TRADE_IN_RATE = 0.4; // 기존 배를 넘길 때 받는 가치 비율(조선비 대비)
 const REPAIR_RATE = 0.6; // 완전 파손 상태에서 전액 수리할 때 드는 비용 = 조선비 * 이 비율
+export const FLEET_CAP = 4; // 기함(현재 조종 중인 배) 포함 최대 보유 척수
 
 export function getCurrentEffectiveShipDef() {
   return getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
@@ -16,20 +17,54 @@ export function tradeInValue() {
   return shipDef ? Math.round(shipDef.price * TRADE_IN_RATE) : 0;
 }
 
+function makeUid() {
+  return `fleet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// 함대가 가득 차지 않았다면 새 배를 "구매해서 바로 갈아탐"이 아니라 예비 함대에
+// 추가한다 — 지금 조종 중인 배는 그대로 유지되고, 함대 탭에서 원할 때 교체한다.
 export function buyShip(shipId) {
-  if (shipId === state.currentShipId) return { ok: false, reason: '이미 보유한 배입니다.' };
   const target = getShip(shipId);
   if (!target) return { ok: false, reason: '존재하지 않는 배입니다.' };
-  const netCost = Math.max(0, target.price - tradeInValue());
-  if (state.gold < netCost) return { ok: false, reason: '골드가 부족합니다.' };
-  const hadParts = Object.values(state.shipParts || {}).some(Boolean);
+  if (state.fleet.length + 1 >= FLEET_CAP) return { ok: false, reason: `함대가 가득 찼습니다 (최대 ${FLEET_CAP}척).` };
+  if (state.gold < target.price) return { ok: false, reason: '골드가 부족합니다.' };
 
-  state.gold -= netCost;
-  state.currentShipId = shipId;
-  state.shipParts = {};
-  initShipHp();
-  notify({ shipChanged: true });
-  return { ok: true, hadParts };
+  state.gold -= target.price;
+  state.fleet = [...state.fleet, { uid: makeUid(), shipId, shipHp: target.hp, shipParts: {}, name: null }];
+  notify({ fleetChanged: true });
+  return { ok: true };
+}
+
+// 예비 함대의 배를 지금 조종 중인 기함과 맞바꾼다(비용 없음, 즉시 전환).
+export function setActiveShip(uid) {
+  const idx = state.fleet.findIndex((f) => f.uid === uid);
+  if (idx < 0) return { ok: false, reason: '함대에 없는 배입니다.' };
+  const incoming = state.fleet[idx];
+  const outgoing = { uid: makeUid(), shipId: state.currentShipId, shipHp: state.shipHp, shipParts: state.shipParts, name: null };
+
+  const nextFleet = state.fleet.filter((f) => f.uid !== uid);
+  nextFleet.push(outgoing);
+  state.fleet = nextFleet;
+
+  state.currentShipId = incoming.shipId;
+  state.shipParts = incoming.shipParts || {};
+  state.shipHp = incoming.shipHp;
+  notify({ shipChanged: true, fleetChanged: true });
+  return { ok: true };
+}
+
+// 예비 함대의 배(현재 조종 중인 기함은 대상이 아님 — 먼저 함대 탭에서 교체해야 함)를 판다.
+export function sellFleetShip(uid) {
+  const idx = state.fleet.findIndex((f) => f.uid === uid);
+  if (idx < 0) return { ok: false, reason: '함대에 없는 배입니다.' };
+  const entry = state.fleet[idx];
+  const def = getShip(entry.shipId);
+  const credit = def ? Math.round(def.price * TRADE_IN_RATE) : 0;
+
+  state.gold += credit;
+  state.fleet = state.fleet.filter((f) => f.uid !== uid);
+  notify({ fleetChanged: true });
+  return { ok: true, credit };
 }
 
 export function repairCost() {

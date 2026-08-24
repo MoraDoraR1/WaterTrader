@@ -4,7 +4,10 @@ import { state } from '../state.js';
 import { hud } from './hud.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_NAMES, getShip } from '../data/ships.js';
 import { PART_SLOTS, partsBySlot, getPart } from '../data/shipParts.js';
-import { buyShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef } from '../systems/shipyard.js';
+import {
+  buyShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
+  setActiveShip, sellFleetShip, FLEET_CAP,
+} from '../systems/shipyard.js';
 
 function fmt(n) { return n.toLocaleString('ko-KR'); }
 
@@ -20,25 +23,25 @@ function effectSummary(part) {
 }
 
 function renderBuyTab() {
-  const currentId = state.currentShipId;
-  const credit = tradeInValue();
+  const owned = new Set([state.currentShipId, ...state.fleet.map((f) => f.shipId)]);
+  const fleetFull = state.fleet.length + 1 >= FLEET_CAP;
   const rows = [...SHIPS].sort((a, b) => a.price - b.price).map((s) => {
-    const isCurrent = s.id === currentId;
-    const netCost = Math.max(0, s.price - credit);
+    const isOwned = owned.has(s.id);
     const role = SHIP_ROLES[s.role];
     const cls = SHIP_CLASSES[s.class];
+    const disabled = isOwned || fleetFull;
     return {
       name: s.name,
       badge: role.label, badgeColor: role.color,
       sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 화력 ${s.cannons} · 적재 ${s.cargo}t`,
-      priceLabel: isCurrent ? '보유 중' : `${fmt(netCost)} 두캇`,
-      actionLabel: isCurrent ? '현재 배' : '구매',
-      disabled: isCurrent,
-      highlight: isCurrent,
-      onAction: isCurrent ? null : () => {
+      priceLabel: isOwned ? '보유 중' : `${fmt(s.price)} 두캇`,
+      actionLabel: isOwned ? '보유 중' : fleetFull ? '함대 만석' : '구매',
+      disabled,
+      highlight: isOwned,
+      onAction: disabled ? null : () => {
         const res = buyShip(s.id);
         if (res.ok) {
-          hud.toast(`${s.name}을(를) 인수했습니다.${res.hadParts ? ' 기존에 장착했던 부품은 새 배로 옮겨지지 않았습니다.' : ''}`);
+          hud.toast(`${s.name}을(를) 함대에 편입했습니다. '함대' 탭에서 기함으로 교체할 수 있습니다.`);
           renderBuyTab();
         } else {
           hud.toast(res.reason);
@@ -46,7 +49,46 @@ function renderBuyTab() {
       },
     };
   });
-  hud.renderShipyard({ title: `조선소 — 배 구매 (하선가 ${fmt(credit)} 두캇 인정)`, gold: state.gold, rows });
+  hud.renderShipyard({ title: `조선소 — 배 구매 (구매한 배는 함대에 예비로 편입됩니다, 최대 ${FLEET_CAP}척)`, gold: state.gold, rows });
+}
+
+function renderFleetTab() {
+  const currentDef = getShip(state.currentShipId);
+  const rows = [{
+    name: `⚑ ${currentDef.name} (기함)`,
+    badge: '조종 중', badgeColor: '#f3d98a',
+    sub: `내구 ${Math.round(state.shipHp)} / ${getCurrentEffectiveShipDef().hp}`,
+    actionLabel: '조종 중',
+    disabled: true,
+    highlight: true,
+  }];
+  for (const f of state.fleet) {
+    const def = getShip(f.shipId);
+    const credit = Math.round(def.price * 0.4);
+    rows.push({
+      name: def.name,
+      badge: '예비', badgeColor: '#8fa8b8',
+      sub: `내구 ${Math.round(f.shipHp)} / ${def.hp} · 항구에 정박 중`,
+      priceLabel: `판매가 ${fmt(credit)} 두캇`,
+      actionLabel: '기함으로 교체',
+      onAction: () => {
+        const res = setActiveShip(f.uid);
+        if (res.ok) { hud.toast(`${def.name}(으)로 갈아탔습니다.`); renderFleetTab(); }
+        else hud.toast(res.reason);
+      },
+      secondaryLabel: '판매',
+      onSecondary: () => {
+        const res = sellFleetShip(f.uid);
+        if (res.ok) { hud.toast(`${def.name}을(를) ${fmt(res.credit)} 두캇에 팔았습니다.`); renderFleetTab(); }
+        else hud.toast(res.reason);
+      },
+    });
+  }
+  hud.renderShipyard({
+    title: `조선소 — 함대 편성 (${state.fleet.length + 1} / ${FLEET_CAP}척)`,
+    gold: state.gold,
+    rows,
+  });
 }
 
 function renderRepairTab() {
@@ -118,7 +160,7 @@ function renderPartsSlot(slot) {
   hud.renderShipyard({ title: `조선소 — 부품 · ${meta.label}`, gold: state.gold, rows });
 }
 
-const TAB_RENDERERS = { buy: renderBuyTab, repair: renderRepairTab, parts: renderPartsOverview };
+const TAB_RENDERERS = { buy: renderBuyTab, fleet: renderFleetTab, repair: renderRepairTab, parts: renderPartsOverview };
 
 export function openShipyard(tab) {
   hud.setShipyardActiveTab(tab);

@@ -26,6 +26,8 @@ export const state = {
   reputation: {}, // 국가코드 -> 우호도(시장 가격에 반영)
   pirateBounty: 0, // 완료한 해적 토벌 의뢰 수
   crewMorale: 100, // 0~100 — 백병전 전투력에 반영
+  fleet: [], // 예비 함대 — { uid, shipId, shipHp, shipParts, name } — 항구에 정박해 있는(현재 조종 중이 아닌) 배들
+  captureCount: 0, // 나포 성공 횟수(랭크 산정에 반영)
 };
 
 export function initShipHp() {

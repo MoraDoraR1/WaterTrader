@@ -210,8 +210,10 @@
     padding: 0.35rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; white-space: nowrap; }
   .sy-btn:hover:not(:disabled) { background: rgba(230,193,90,0.32); }
   .sy-btn:disabled { opacity: 0.55; cursor: default; }
+  .sy-btn-secondary { background: rgba(224,100,90,0.12); border-color: rgba(224,100,90,0.45); }
+  .sy-btn-secondary:hover:not(:disabled) { background: rgba(224,100,90,0.28); }
   #shipyard-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
-  .sy-row-side-actions { flex-direction: row; }
+  .sy-row-side-actions { display: flex; flex-direction: row; gap: 5px; }
 
   /* ---- 의뢰 게시판 ---- */
   #quest-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
@@ -353,6 +355,7 @@
       </div>
       <div id="shipyard-tabs">
         <button class="sy-tab" data-tab="buy">배 구매</button>
+        <button class="sy-tab" data-tab="fleet">함대</button>
         <button class="sy-tab" data-tab="repair">수리</button>
         <button class="sy-tab" data-tab="parts">부품</button>
       </div>

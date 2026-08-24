@@ -128,6 +128,7 @@ wireShipyardTabs();
 // seaScene이 없으므로(첫 SeaScene 생성 시 이미 최신 상태를 읽어가므로) 별도 처리가 필요없다.
 subscribe((patch) => {
   if (patch.shipChanged) seaScene?.rebuildShip();
+  if (patch.fleetChanged) seaScene?.rebuildEscorts();
 });
 
 // ---- 선박 정보 카드: T키로 토글, 현재 탑승 중인 배의 능력치를 참고 지표(동급 최대치) 대비 막대로 표시 ----

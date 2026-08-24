@@ -40,12 +40,25 @@ function renderRowList(bodyEl, rows) {
       price.textContent = r.priceLabel;
       side.appendChild(price);
     }
-    const btn = document.createElement('button');
-    btn.className = 'sy-btn';
-    btn.textContent = r.actionLabel;
-    btn.disabled = !!r.disabled;
-    if (r.onAction) btn.onclick = r.onAction;
-    side.appendChild(btn);
+    const btnRow = document.createElement('div');
+    btnRow.className = 'sy-row-side-actions';
+    if (r.actionLabel) {
+      const btn = document.createElement('button');
+      btn.className = 'sy-btn';
+      btn.textContent = r.actionLabel;
+      btn.disabled = !!r.disabled;
+      if (r.onAction) btn.onclick = r.onAction;
+      btnRow.appendChild(btn);
+    }
+    if (r.secondaryLabel) {
+      const btn2 = document.createElement('button');
+      btn2.className = 'sy-btn sy-btn-secondary';
+      btn2.textContent = r.secondaryLabel;
+      btn2.disabled = !!r.secondaryDisabled;
+      if (r.onSecondary) btn2.onclick = r.onSecondary;
+      btnRow.appendChild(btn2);
+    }
+    side.appendChild(btnRow);
     row.appendChild(side);
     list.appendChild(row);
   }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createOcean } from '../entities/ocean.js';
 import { buildShipMesh, ShipController } from '../entities/ship.js';
 import { NpcShip } from '../entities/pirate.js';
+import { EscortShip } from '../entities/escort.js';
 import { CannonballPool } from '../entities/cannon.js';
 import { WakeTrail, BowWave } from '../entities/wake.js';
 import { Wind } from '../entities/wind.js';
@@ -18,6 +19,7 @@ import { state, initShipHp, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { checkBountyKill } from '../systems/quests.js';
 import { loseMoraleFromCombat, getMoralePowerMul } from '../systems/crew.js';
+import { FLEET_CAP } from '../systems/shipyard.js';
 
 const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
@@ -69,6 +71,8 @@ export class SeaScene {
 
     this.cannonPool = new CannonballPool(this.scene);
     this.npcShips = SEA_NPC_SHIPS.map((d) => new NpcShip(this.scene, d));
+    this.escorts = [];
+    this.rebuildEscorts();
 
     this.fireTimer = 0;
     this.hoveredCity = null;
@@ -78,6 +82,7 @@ export class SeaScene {
     this.raycaster = new THREE.Raycaster();
     this.collisionTimers = new Map(); // npc.owner -> 남은 충돌 쿨다운(초)
     this.meleeState = null; // { npc, timer } — 백병전 중일 때만 존재
+    this.pendingCapture = null; // 백병전 승리 후 격침/나포를 고르는 동안 npc를 잡아둠(그동안 시뮬레이션 정지)
     this.wakeTrail = new WakeTrail(this.scene);
     this.bowWave = new BowWave(this.scene);
     this._wakeTimer = 0;
@@ -99,6 +104,12 @@ export class SeaScene {
 
   setOnDock(fn) { this.onDock = fn; }
 
+  // 함대 구성(구매/판매/기함 교체)이 바뀌면 예비 함대의 호위선 메시를 다시 만든다.
+  rebuildEscorts() {
+    for (const e of this.escorts) e.dispose(this.scene);
+    this.escorts = state.fleet.map((f, i) => new EscortShip(this.scene, getShip(f.shipId), i));
+  }
+
   // 조선소에서 배를 구매하거나 부품을 장착/해제하면(state.currentShipId, state.shipParts 변경)
   // 이미 떠 있는 배 메시/컨트롤러를 새 스탯 기준으로 다시 만든다. 위치/방향/스로틀은 유지한다.
   rebuildShip() {
@@ -118,6 +129,7 @@ export class SeaScene {
   }
 
   handleLeftClick() {
+    if (this.pendingCapture) return; // 격침/나포 선택 대기 중에는 클릭으로 포격/정박할 수 없다
     if (state.inCombat) {
       this.fireCannon();
     } else if (this.hoveredCity && this.onDock) {
@@ -539,12 +551,20 @@ export class SeaScene {
     this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
 
     if (playerPower >= npcPower) {
-      const loot = Math.round(80 + Math.random() * 160);
-      state.gold += loot;
-      npc.takeDamage(npc.maxHp);
-      hud.toast(`백병전 승리! 적선을 제압하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`);
-      const bounty = checkBountyKill(npc.owner);
-      if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+      const fleetHasRoom = state.fleet.length + 1 < FLEET_CAP;
+      if (fleetHasRoom && npc.shipDef) {
+        this.pendingCapture = npc;
+        hud.showDialogue(
+          npc.def.name,
+          '백병전에서 승리했습니다! 이 배를 격침하시겠습니까, 나포해 함대에 편입하시겠습니까?',
+          [
+            { label: '나포', onClick: () => this._confirmCapture(npc) },
+            { label: '격침', onClick: () => this._confirmSink(npc) },
+          ]
+        );
+      } else {
+        this._confirmSink(npc, fleetHasRoom ? null : '함대가 가득 차 나포할 수 없었습니다. ');
+      }
     } else {
       const dmg = Math.round(50 + Math.random() * 70);
       state.shipHp = Math.max(0, state.shipHp - dmg);
@@ -553,13 +573,38 @@ export class SeaScene {
     }
   }
 
+  _confirmSink(npc, prefix = '') {
+    this.pendingCapture = null;
+    hud.hideDialogue();
+    const loot = Math.round(80 + Math.random() * 160);
+    state.gold += loot;
+    npc.takeDamage(npc.maxHp);
+    hud.toast(`${prefix}백병전 승리! 적선을 격침하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`);
+    const bounty = checkBountyKill(npc.owner);
+    if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+  }
+
+  _confirmCapture(npc) {
+    this.pendingCapture = null;
+    hud.hideDialogue();
+    // 격전 끝에 나포한 배라 만신창이 상태로 함대에 들어온다 — 항구에서 수리해야 온전히 쓸 수 있다.
+    const capturedHp = Math.round(npc.shipDef.hp * (0.3 + Math.random() * 0.25));
+    state.fleet = [...state.fleet, { uid: `fleet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, shipId: npc.shipDef.id, shipHp: capturedHp, shipParts: {}, name: null }];
+    state.captureCount = (state.captureCount || 0) + 1;
+    npc.takeDamage(npc.maxHp); // 나포된 배는 바다에서 사라진다(예인되어 함대로 편입)
+    notify({ fleetChanged: true });
+    hud.toast(`나포 성공! ${npc.def.name}을(를) 함대에 편입했습니다 (손상 상태 — 조선소에서 수리 필요).`);
+    const bounty = checkBountyKill(npc.owner);
+    if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+  }
+
   // 배가 물살을 가르는 느낌 — 이물 양옆으로 갈라지는 파도(BowWave, 매 프레임 재계산되는
   // 동적 지오메트리)와 고물 뒤로 남는 거품 항적(WakeTrail, 주기적으로 뿌리는 원판들) 두 가지로 구성.
   // 속도가 붙을수록 더 자주/크게 뿜어져 정지 시엔 자연스럽게 잦아든다.
   _updateWake(delta, elapsed) {
     const hl = (this.playerMesh.userData.length || 20) / 2;
     const hw = (this.playerMesh.userData.width || 6) / 2;
-    const speedRatio = this.meleeState ? 0 : Math.min(1, Math.abs(this.ship.curSpeed) / this.ship.maxSpeedMs);
+    const speedRatio = (this.meleeState || this.pendingCapture) ? 0 : Math.min(1, Math.abs(this.ship.curSpeed) / this.ship.maxSpeedMs);
     // 후진 중엔 물을 가르는 쪽이 고물이므로, 이동 방향에 따라 파도가 뜨는 지점도 바뀐다.
     const dir = this.ship.curSpeed < 0 ? -1 : 1;
     const leadX = this.ship.pos.x + Math.sin(this.ship.heading) * dir * hl;
@@ -610,11 +655,13 @@ export class SeaScene {
     this.t = elapsed;
     this.wind.update(delta);
 
-    // 백병전 중에는 양쪽 배 모두 그 자리에 붙들려 있다(조작/이동/포격 모두 정지) —
-    // 결판이 나면 자동으로 재개된다.
+    // 백병전 중이거나(양쪽 배 모두 그 자리에 붙들림) 격침/나포 선택을 기다리는 동안에는
+    // 조작/이동/포격이 모두 정지된다 — 결판/선택이 나면 자동으로 재개된다.
     if (this.meleeState) {
       this.meleeState.timer -= delta;
       if (this.meleeState.timer <= 0) this._resolveMelee();
+    } else if (this.pendingCapture) {
+      // 대기 — 플레이어가 격침/나포 다이얼로그에서 선택할 때까지 시뮬레이션을 멈춘다.
     } else {
       if (consumeJustPressed('KeyW')) this.ship.throttleUp();
       if (consumeJustPressed('KeyS')) this.ship.throttleDown();
@@ -625,6 +672,7 @@ export class SeaScene {
     }
     this.ocean.update(elapsed, camera);
     this._updateWake(delta, elapsed);
+    for (const escort of this.escorts) escort.update(delta, elapsed, this.ship, this.ocean.heightAt);
 
     const hostileNear = this.npcShips.some((n) => !n.dead && n.def.hostile && n.state === 'attack');
     if (hostileNear !== state.inCombat) {
@@ -633,7 +681,7 @@ export class SeaScene {
       if (hostileNear) hud.toast('전투 시작! 좌클릭/스페이스바로 포격하세요.');
     }
 
-    if (!this.meleeState) {
+    if (!this.meleeState && !this.pendingCapture) {
       for (const npc of this.npcShips) {
         npc.update(delta, elapsed, this.ship.pos, this.ocean.heightAt, this.cannonPool);
       }
@@ -641,7 +689,7 @@ export class SeaScene {
     }
 
     this.fireTimer = Math.max(0, this.fireTimer - delta);
-    if (state.inCombat && isDown('Space') && this.fireTimer <= 0) {
+    if (state.inCombat && isDown('Space') && this.fireTimer <= 0 && !this.pendingCapture) {
       this.fireCannon();
     }
 
