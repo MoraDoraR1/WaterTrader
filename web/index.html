@@ -75,6 +75,11 @@
     padding: 0.5rem 1rem; font-size: 1.05rem; letter-spacing: 0.08rem; backdrop-filter: blur(3px); }
   #location-banner .sub { display: block; font-size: 0.72rem; color: #9fb8c9; margin-top: 2px; }
 
+  #weather-badge { position: fixed; bottom: 14px; left: 190px; z-index: 15; pointer-events: none;
+    background: rgba(8,18,26,0.6); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
+    padding: 0.5rem 0.9rem; font-size: 0.85rem; letter-spacing: 0.03rem; backdrop-filter: blur(3px); color: #e6ede8; }
+  #weather-badge.storm { border-color: rgba(160,180,200,0.55); color: #cfe0ea; }
+
   /* ---- 우하단: 나침반 + 속도게이지 + 미니맵 ---- */
   #nav-panel { position: fixed; bottom: 14px; right: 14px; z-index: 15; pointer-events: none;
     display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -270,6 +275,7 @@
   </div>
 
   <div id="location-banner" class="hidden">망망대해<span class="sub" id="location-sub">&nbsp;</span></div>
+  <div id="weather-badge" class="hidden">☀ 맑음</div>
 
   <div id="ship-hp-box" class="hidden">
     <div id="ship-hp-top"><span>선체 내구도</span><span id="ship-role-badge" class="role-badge"></span></div>

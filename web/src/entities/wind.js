@@ -15,19 +15,25 @@ export class Wind {
     this._targetDir = this.direction;
     this._targetStr = this.strength;
     this._timer = 6 + Math.random() * 10; // 시작하고 얼마 안 지나 첫 변화가 오도록
+    this.stormActive = false; // WeatherSystem이 폭풍일 때 켜준다 — 풍향이 자주/거세게 요동친다
   }
 
   update(delta) {
     this._timer -= delta;
+    const retargetMin = this.stormActive ? 6 : RETARGET_MIN;
+    const retargetMax = this.stormActive ? 14 : RETARGET_MAX;
     if (this._timer <= 0) {
-      this._timer = RETARGET_MIN + Math.random() * (RETARGET_MAX - RETARGET_MIN);
-      this._targetDir = this.direction + (Math.random() - 0.5) * Math.PI * 1.1;
-      this._targetStr = THREE.MathUtils.clamp(this.strength + (Math.random() - 0.5) * 0.7, 0.1, 1);
+      this._timer = retargetMin + Math.random() * (retargetMax - retargetMin);
+      this._targetDir = this.direction + (Math.random() - 0.5) * Math.PI * (this.stormActive ? 1.7 : 1.1);
+      this._targetStr = this.stormActive
+        ? THREE.MathUtils.clamp(0.75 + (Math.random() - 0.5) * 0.4, 0.55, 1)
+        : THREE.MathUtils.clamp(this.strength + (Math.random() - 0.5) * 0.7, 0.1, 1);
     }
     let diff = this._targetDir - this.direction;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    this.direction += diff * Math.min(1, delta * DIR_DRIFT);
-    this.strength += (this._targetStr - this.strength) * Math.min(1, delta * STR_DRIFT);
+    const drift = this.stormActive ? 2.2 : 1;
+    this.direction += diff * Math.min(1, delta * DIR_DRIFT * drift);
+    this.strength += (this._targetStr - this.strength) * Math.min(1, delta * STR_DRIFT * drift);
   }
 
   // 바람이 불어가는(=배를 밀어주는) 절대 방향

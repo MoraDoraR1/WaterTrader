@@ -6,6 +6,7 @@ import { EscortShip } from '../entities/escort.js';
 import { CannonballPool } from '../entities/cannon.js';
 import { WakeTrail, BowWave } from '../entities/wake.js';
 import { Wind } from '../entities/wind.js';
+import { WeatherSystem, RainEffect } from '../entities/weather.js';
 import { makeLabelSprite } from '../entities/label.js';
 import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
@@ -48,9 +49,14 @@ export class SeaScene {
 
     const hemi = new THREE.HemisphereLight('#dff0ff', '#1a3a2a', 0.9);
     this.scene.add(hemi);
+    this.hemi = hemi;
     const sun = new THREE.DirectionalLight('#fff3d6', 1.2);
     sun.position.set(400, 600, 200);
     this.scene.add(sun);
+    this.sun = sun;
+    this.weather = new WeatherSystem();
+    this.rain = new RainEffect();
+    this.scene.add(this.rain.points);
 
     this.ocean = createOcean();
     this.scene.add(this.ocean.mesh);
@@ -103,6 +109,21 @@ export class SeaScene {
   }
 
   setOnDock(fn) { this.onDock = fn; }
+
+  // WeatherSystem이 매 프레임 계산해둔 낮/밤·폭풍 색상/조명값을 실제 씬(하늘/안개/조명)에 반영한다.
+  _applyWeatherVisuals() {
+    const w = this.weather;
+    this.scene.background.copy(w.skyColor);
+    this.scene.fog.color.copy(w.fogColor);
+    this.scene.fog.near = w.fogNear;
+    this.scene.fog.far = w.fogFar;
+    this.sun.color.copy(w.sunColor);
+    this.sun.intensity = w.sunIntensity;
+    this.sun.position.copy(w.sunDir).multiplyScalar(600);
+    this.hemi.color.copy(w.hemiSky);
+    this.hemi.groundColor.copy(w.hemiGround);
+    this.hemi.intensity = w.hemiIntensity;
+  }
 
   // 함대 구성(구매/판매/기함 교체)이 바뀌면 예비 함대의 호위선 메시를 다시 만든다.
   rebuildEscorts() {
@@ -653,7 +674,10 @@ export class SeaScene {
 
   update(delta, elapsed, camera, pointerControls) {
     this.t = elapsed;
+    this.weather.update(delta);
+    this.wind.stormActive = this.weather.stormActive;
     this.wind.update(delta);
+    this._applyWeatherVisuals();
 
     // 백병전 중이거나(양쪽 배 모두 그 자리에 붙들림) 격침/나포 선택을 기다리는 동안에는
     // 조작/이동/포격이 모두 정지된다 — 결판/선택이 나면 자동으로 재개된다.
@@ -670,9 +694,11 @@ export class SeaScene {
       this.ship.turnInput = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
     }
-    this.ocean.update(elapsed, camera);
+    this.ocean.update(elapsed, camera, this.weather.sunDir, THREE.MathUtils.clamp(this.weather.sunIntensity / 1.25, 0.24, 1));
     this._updateWake(delta, elapsed);
     for (const escort of this.escorts) escort.update(delta, elapsed, this.ship, this.ocean.heightAt);
+    this.rain.update(delta, this.weather.stormIntensity, new THREE.Vector3(this.ship.pos.x, 0, this.ship.pos.y));
+    hud.setWeather(this.weather.label, this.weather.stormIntensity > 0.1);
 
     const hostileNear = this.npcShips.some((n) => !n.dead && n.def.hostile && n.state === 'attack');
     if (hostileNear !== state.inCombat) {

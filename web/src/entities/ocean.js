@@ -38,6 +38,7 @@ const VERT = /* glsl */ `
 const FRAG = /* glsl */ `
   uniform vec3 uCameraPos;
   uniform vec3 uSunDir;
+  uniform float uLightMul;
   varying vec3 vWorldPos;
   varying vec3 vNormal;
 
@@ -51,10 +52,10 @@ const FRAG = /* glsl */ `
     vec3 base = mix(deep, shallow, diff * 0.6 + 0.25);
 
     vec3 halfV = normalize(uSunDir + viewDir);
-    float spec = pow(clamp(dot(vNormal, halfV), 0.0, 1.0), 60.0);
+    float spec = pow(clamp(dot(vNormal, halfV), 0.0, 1.0), 60.0) * clamp(uSunDir.y, 0.0, 1.0);
 
     vec3 skyTint = vec3(0.55, 0.72, 0.82);
-    vec3 color = mix(base, skyTint, fresnel * 0.55) + spec * 0.9;
+    vec3 color = (mix(base, skyTint, fresnel * 0.55) + spec * 0.9) * uLightMul;
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -67,6 +68,7 @@ export function createOcean(size = 6000, segments = 220) {
     uTime: { value: 0 },
     uCameraPos: { value: new THREE.Vector3() },
     uSunDir: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() },
+    uLightMul: { value: 1 },
   };
 
   const mat = new THREE.ShaderMaterial({
@@ -79,9 +81,11 @@ export function createOcean(size = 6000, segments = 220) {
   mesh.matrixAutoUpdate = false;
   mesh.updateMatrix();
 
-  function update(t, camera) {
+  function update(t, camera, sunDir, lightMul) {
     uniforms.uTime.value = t;
     uniforms.uCameraPos.value.copy(camera.position);
+    if (sunDir) uniforms.uSunDir.value.copy(sunDir).normalize();
+    if (lightMul != null) uniforms.uLightMul.value = lightMul;
   }
 
   // CPU측 파고 샘플링(배 흔들림/부표 계산용) — 셰이더와 동일한 함수(진폭도 동일하게 낮춤)

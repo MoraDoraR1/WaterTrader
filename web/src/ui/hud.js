@@ -74,6 +74,12 @@ export const hud = {
   showSeaHud(v) {
     $('ship-hp-box').classList.toggle('hidden', !v);
     $('nav-panel').classList.toggle('hidden', !v);
+    $('weather-badge').classList.toggle('hidden', !v);
+  },
+  setWeather(label, isStorm) {
+    const el = $('weather-badge');
+    el.textContent = label;
+    el.classList.toggle('storm', !!isStorm);
   },
   showCombatBanner(v) { $('combat-banner').classList.toggle('hidden', !v); },
   setCombatBannerText(text) { $('combat-banner').textContent = text; },
