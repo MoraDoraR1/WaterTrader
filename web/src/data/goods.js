@@ -1,4 +1,4 @@
-// 교역품 데이터 — 대항해시대 실제 무역로를 참고한 두 항구(리스본/세비야) 간 시세차익 구조.
+// 교역품 데이터 — 대항해시대 실제 무역로를 참고한 8개 항구 간 시세차익 구조.
 // basePrice: 품목 자체의 기준가(참고용, 실제 매매가는 도시별 CITY_MARKET 항목이 우선한다).
 export const GOODS = [
   { id: 'pepper', name: '후추', category: 'spice', basePrice: 45 },
@@ -9,10 +9,15 @@ export const GOODS = [
   { id: 'silver', name: '은괴', category: 'goods', basePrice: 55 },
   { id: 'sugar', name: '설탕', category: 'goods', basePrice: 30 },
   { id: 'fur', name: '모피', category: 'goods', basePrice: 40 },
-  // 아직 어느 항구도 싼값에 파는 곳이 없는 품목 — 아시아 무역항(암스테르담/런던 등)이
-  // 추가되면 그쪽에서 수출품으로 등장할 예정. 지금은 카탈로그에만 존재.
+  // 암스테르담(VOC)·제노바·베네치아가 각각 다른 무역로(아시아 항로/이탈리아 견직업/
+  // 지중해 옛 향신료길)로 들여오는 명품 — 산지가 여럿이라 값도 도시마다 갈린다.
   { id: 'silk', name: '비단', category: 'luxury', basePrice: 130 },
   { id: 'porcelain', name: '도자기', category: 'luxury', basePrice: 70 },
+  { id: 'wool', name: '모직물', category: 'goods', basePrice: 25 },
+  { id: 'tin', name: '주석', category: 'goods', basePrice: 48 },
+  { id: 'amber', name: '호박', category: 'luxury', basePrice: 85 },
+  { id: 'glass', name: '유리공예품', category: 'luxury', basePrice: 95 },
+  { id: 'olive_oil', name: '올리브유', category: 'goods', basePrice: 22 },
 ];
 
 // 도시별 매입가(buy = 상인에게 살 때 지불)/매도가(sell = 상인에게 팔 때 받음).
@@ -39,6 +44,57 @@ export const CITY_MARKET = {
     clove: { buy: 117, sell: 103 },
     nutmeg: { buy: 143, sell: 126 },
     wine: { buy: 23, sell: 20 },
+  },
+  // 런던(EN): 모직물·주석이 자국 산물이라 싸다. 아시아산 명품·포도주·설탕은 수입 의존.
+  london: {
+    wool: { buy: 16, sell: 12 },
+    tin: { buy: 31, sell: 23 },
+    silk: { buy: 169, sell: 149 },
+    porcelain: { buy: 91, sell: 80 },
+    wine: { buy: 23, sell: 20 },
+    sugar: { buy: 39, sell: 34 },
+  },
+  // 암스테르담(NL): VOC 아시아 항로 덕에 비단·도자기가 유럽에서 가장 싸다.
+  // 대신 원자재(모직물·모피·호박)는 직접 생산이 없어 비싸게 사들인다.
+  amsterdam: {
+    silk: { buy: 85, sell: 64 },
+    porcelain: { buy: 46, sell: 35 },
+    wool: { buy: 33, sell: 29 },
+    fur: { buy: 52, sell: 46 },
+    amber: { buy: 111, sell: 98 },
+  },
+  // 함부르크(HAN): 한자동맹 발트해 교역로 산물인 호박·모피가 싸다. 남유럽 명품·포도주·설탕은 수입.
+  hamburg: {
+    amber: { buy: 55, sell: 41 },
+    fur: { buy: 26, sell: 20 },
+    wine: { buy: 23, sell: 20 },
+    silk: { buy: 169, sell: 149 },
+    porcelain: { buy: 91, sell: 80 },
+    sugar: { buy: 39, sell: 34 },
+  },
+  // 마르세유(FR): 프로방스 올리브유가 특산품. 지중해 관문답게 향신료·명품 수요가 높다.
+  marseille: {
+    olive_oil: { buy: 14, sell: 11 },
+    pepper: { buy: 59, sell: 52 },
+    silk: { buy: 169, sell: 149 },
+    porcelain: { buy: 91, sell: 80 },
+  },
+  // 제노바(IT): 이탈리아 견직업 전통으로 비단이 싸다(암스테르담과는 다른 산지 — 시세도 다르게 움직인다).
+  // 향신료·포도주·주석은 자체 생산이 없어 비싼 편.
+  genova: {
+    silk: { buy: 85, sell: 64 },
+    pepper: { buy: 59, sell: 52 },
+    cinnamon: { buy: 78, sell: 69 },
+    wine: { buy: 23, sell: 20 },
+  },
+  // 베네치아(IT): 무라노 유리공예품이 세계 최고 명물. 옛 향신료길의 종착지라 도자기도 취급.
+  // 북방 원자재(모직물·주석·모피)는 직접 조달할 수 없어 비싸게 사들인다.
+  venezia: {
+    glass: { buy: 62, sell: 47 },
+    porcelain: { buy: 46, sell: 35 },
+    wool: { buy: 33, sell: 29 },
+    tin: { buy: 62, sell: 55 },
+    fur: { buy: 52, sell: 46 },
   },
 };
 
