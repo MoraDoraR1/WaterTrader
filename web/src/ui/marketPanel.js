@@ -10,9 +10,10 @@ const STEP = 10;
 
 function renderMarket(cityId) {
   const city = getCity(cityId);
-  const rows = getMarketRows(cityId).map(({ good, price, heldQty }) => ({
+  const trendLabel = { up: ' ▲시세상승', down: ' ▼시세하락', flat: '' };
+  const rows = getMarketRows(cityId).map(({ good, price, heldQty, trend }) => ({
     name: good.name,
-    sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t`,
+    sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${trendLabel[trend] || ''}`,
     actions: [
       {
         label: `${STEP}t 구매`,
