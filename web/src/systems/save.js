@@ -26,6 +26,10 @@ export function saveGame() {
     shipPos: state.shipPos,
     shipHeading: state.shipHeading,
     inventory: state.inventory,
+    quests: state.quests,
+    reputation: state.reputation,
+    pirateBounty: state.pirateBounty,
+    crewMorale: state.crewMorale,
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -55,6 +59,10 @@ export function applySave(data) {
   if (Array.isArray(data.shipPos)) state.shipPos = data.shipPos;
   if (typeof data.shipHeading === 'number') state.shipHeading = data.shipHeading;
   if (Array.isArray(data.inventory)) state.inventory = data.inventory;
+  state.quests = data.quests || {};
+  state.reputation = data.reputation || {};
+  if (typeof data.pirateBounty === 'number') state.pirateBounty = data.pirateBounty;
+  if (typeof data.crewMorale === 'number') state.crewMorale = data.crewMorale;
 }
 
 export function deleteSave() {

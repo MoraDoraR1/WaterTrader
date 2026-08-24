@@ -16,6 +16,8 @@ import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
+import { checkBountyKill } from '../systems/quests.js';
+import { loseMoraleFromCombat, getMoralePowerMul } from '../systems/crew.js';
 
 const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
@@ -502,9 +504,15 @@ export class SeaScene {
       if (this.collisionTimers.has(npc.owner)) continue;
       this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
       state.shipHp = Math.max(0, state.shipHp - COLLISION_DAMAGE);
+      loseMoraleFromCombat();
       npc.takeDamage(COLLISION_DAMAGE);
       hud.toast('충돌! 양측 선체가 손상되었습니다.');
-      if (npc.dead) { hud.toast(`${npc.def.name}을(를) 격침했습니다!`); continue; }
+      if (npc.dead) {
+        hud.toast(`${npc.def.name}을(를) 격침했습니다!`);
+        const bounty = checkBountyKill(npc.owner);
+        if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+        continue;
+      }
       if (Math.random() < MELEE_CHANCE) this._startMelee(npc);
       break; // 한 프레임에 하나의 충돌만 처리
     }
@@ -524,7 +532,8 @@ export class SeaScene {
 
     const playerCrew = this.ship.shipDef.crew || 20;
     const npcCrew = npc.shipDef.crew || 20;
-    const playerPower = playerCrew * (0.75 + Math.random() * 0.5);
+    // 사기가 낮으면(급여를 못 받았거나 전투를 오래 겪었으면) 백병전 전투력도 함께 떨어진다.
+    const playerPower = playerCrew * (0.75 + Math.random() * 0.5) * getMoralePowerMul();
     const npcPower = npcCrew * (0.75 + Math.random() * 0.5);
     // 충돌 쿨다운을 새로 걸어 백병전 직후 곧바로 다시 충돌 피해가 겹치지 않게 한다.
     this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
@@ -534,9 +543,12 @@ export class SeaScene {
       state.gold += loot;
       npc.takeDamage(npc.maxHp);
       hud.toast(`백병전 승리! 적선을 제압하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`);
+      const bounty = checkBountyKill(npc.owner);
+      if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
     } else {
       const dmg = Math.round(50 + Math.random() * 70);
       state.shipHp = Math.max(0, state.shipHp - dmg);
+      loseMoraleFromCombat();
       hud.toast(`백병전에서 밀렸습니다! 선체 내구도 ${dmg} 손실.`);
     }
   }
@@ -640,9 +652,14 @@ export class SeaScene {
     this.cannonPool.update(delta, targets, (target, ball) => {
       if (target.ref === 'player') {
         state.shipHp = Math.max(0, state.shipHp - 18);
+        loseMoraleFromCombat();
       } else {
         target.ref.takeDamage(22);
-        if (target.ref.dead) hud.toast(`${target.ref.def.name}을(를) 격침했습니다!`);
+        if (target.ref.dead) {
+          hud.toast(`${target.ref.def.name}을(를) 격침했습니다!`);
+          const bounty = checkBountyKill(target.ref.owner);
+          if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+        }
       }
     });
 
@@ -681,6 +698,7 @@ export class SeaScene {
     hud.setCompass(this.ship.heading);
     hud.setShipHp(state.shipHp / this.ship.shipDef.hp);
     hud.setGold(state.gold);
+    hud.setCrewMorale(state.crewMorale ?? 100);
 
     const windPct = Math.round((this.ship.windMul - 1) * 100);
     const windLabel = windPct > 3 ? `순풍 +${windPct}%` : windPct < -3 ? `역풍 ${windPct}%` : `무풍 ${windPct >= 0 ? '+' : ''}${windPct}%`;

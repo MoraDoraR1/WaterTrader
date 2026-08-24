@@ -22,6 +22,10 @@ export const state = {
     { id: 'pepper', name: '후추', qty: 10 },
     { id: 'wine', name: '포도주', qty: 6 },
   ],
+  quests: {}, // questId -> 'accepted' | 'completed' (없으면 'available'로 취급)
+  reputation: {}, // 국가코드 -> 우호도(시장 가격에 반영)
+  pirateBounty: 0, // 완료한 해적 토벌 의뢰 수
+  crewMorale: 100, // 0~100 — 백병전 전투력에 반영
 };
 
 export function initShipHp() {

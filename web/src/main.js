@@ -13,6 +13,7 @@ import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip
 import { getEffectiveShipDef, PART_SLOTS, getPart } from './data/shipParts.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
+import { payWagesOnDock } from './systems/crew.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -64,7 +65,14 @@ function goToCity(cityId) {
   citySceneObj = new CityScene(cityId, () => goToSea(cityId));
   setScreen('city');
   hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도', 'T 선박정보']);
-  hud.toast(`${citySceneObj.city.name}에 정박했습니다.`);
+
+  const { wage, paid } = payWagesOnDock();
+  hud.setGold(state.gold);
+  hud.setCrewMorale(state.crewMorale ?? 100);
+  const wageNote = wage <= 0 ? '' : paid
+    ? ` (승무원 급여 ${wage.toLocaleString('ko-KR')} 두캇 지급)`
+    : ' (급여를 지급하지 못해 사기가 크게 떨어졌습니다!)';
+  hud.toast(`${citySceneObj.city.name}에 정박했습니다.${wageNote}`);
 }
 
 // ---- 전체 지도(월드맵): M키로 토글, 화살표로 해역 페이지 전환 ----
@@ -212,7 +220,7 @@ function animate(now) {
   const elapsed = now / 1000;
 
   if (state.screen !== 'title') {
-    const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen();
+    const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen();
     if (consumeJustPressed('KeyM') && !anyBigPanelOpen) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
     }
@@ -220,13 +228,13 @@ function animate(now) {
       if (consumeJustPressed('ArrowLeft')) cycleWorldMap(-1);
       if (consumeJustPressed('ArrowRight')) cycleWorldMap(1);
     }
-    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen()) {
+    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
       hud.isShipInfoOpen() ? closeShipInfo() : openShipInfo();
     }
     if (consumeJustPressed('KeyF')) {
       if (state.screen === 'city') citySceneObj?.handleInteract(camera);
     }
-    if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen()) {
+    if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
       hud.toggleInventory(state.inventory);
     }
     if (consumeJustPressed('Escape')) {
@@ -236,11 +244,12 @@ function animate(now) {
       closeShipInfo();
       hud.hideShipyard();
       hud.hideMarket();
+      hud.hideQuestBoard();
     }
   }
 
-  // 월드맵/선박정보/조선소/시장 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
-  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen()) {
+  // 월드맵/선박정보/조선소/시장/의뢰 게시판 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
+  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
     if (state.screen === 'sea' && seaScene) {
       seaScene.update(delta, elapsed, camera, pointerControls);
       renderer.render(seaScene.scene, camera);

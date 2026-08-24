@@ -18,6 +18,40 @@ function wmToPx(x, z, w, h, bounds) {
   ];
 }
 
+// 조선소/의뢰 게시판처럼 "행마다 이름·설명·가격표·버튼 하나"인 목록 패널의 공용 렌더러.
+// rows: [{ name, sub, badge?, badgeColor?, priceLabel?, actionLabel, disabled?, highlight?, onAction? }]
+function renderRowList(bodyEl, rows) {
+  bodyEl.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'sy-list';
+  for (const r of rows) {
+    const row = document.createElement('div');
+    row.className = 'sy-row' + (r.highlight ? ' highlight' : '');
+    const main = document.createElement('div');
+    main.className = 'sy-row-main';
+    const badge = r.badge ? `<span class="role-badge" style="background:${r.badgeColor || '#888'}">${r.badge}</span>` : '';
+    main.innerHTML = `<div class="sy-row-name">${r.name} ${badge}</div><div class="sy-row-sub">${r.sub || ''}</div>`;
+    row.appendChild(main);
+    const side = document.createElement('div');
+    side.className = 'sy-row-side';
+    if (r.priceLabel != null) {
+      const price = document.createElement('div');
+      price.className = 'sy-price';
+      price.textContent = r.priceLabel;
+      side.appendChild(price);
+    }
+    const btn = document.createElement('button');
+    btn.className = 'sy-btn';
+    btn.textContent = r.actionLabel;
+    btn.disabled = !!r.disabled;
+    if (r.onAction) btn.onclick = r.onAction;
+    side.appendChild(btn);
+    row.appendChild(side);
+    list.appendChild(row);
+  }
+  bodyEl.appendChild(list);
+}
+
 export const hud = {
   showLoading(v) { $('loading').classList.toggle('hidden', !v); },
   showTitle(v) { $('title-screen').classList.toggle('hidden', !v); },
@@ -47,6 +81,11 @@ export const hud = {
     $('location-sub').textContent = sub;
   },
   setGold(v) { $('gold-amount').textContent = v.toLocaleString('ko-KR'); },
+  setCrewMorale(v) {
+    $('morale-amount').textContent = Math.round(v);
+    const el = $('morale-box');
+    el.classList.toggle('morale-low', v < 40);
+  },
 
   initThrottle(min, max) {
     const row = $('notch-row');
@@ -129,36 +168,34 @@ export const hud = {
   renderShipyard({ title, gold, rows }) {
     $('shipyard-title').textContent = title;
     $('shipyard-gold-amount').textContent = gold.toLocaleString('ko-KR');
-    const body = $('shipyard-body');
+    renderRowList($('shipyard-body'), rows);
+  },
+
+  showQuestBoard(v) { $('quest-panel').classList.toggle('hidden', !v); },
+  hideQuestBoard() { $('quest-panel').classList.add('hidden'); },
+  isQuestBoardOpen() { return !$('quest-panel').classList.contains('hidden'); },
+
+  // sections: [{ heading, rows, empty? }] — 섹션마다 소제목 하나 + 행 목록(또는 empty 안내문)
+  renderQuestBoard({ title, sections }) {
+    $('quest-header-title').textContent = title;
+    const body = $('quest-body');
     body.innerHTML = '';
-    const list = document.createElement('div');
-    list.className = 'sy-list';
-    for (const r of rows) {
-      const row = document.createElement('div');
-      row.className = 'sy-row' + (r.highlight ? ' highlight' : '');
-      const main = document.createElement('div');
-      main.className = 'sy-row-main';
-      const badge = r.badge ? `<span class="role-badge" style="background:${r.badgeColor || '#888'}">${r.badge}</span>` : '';
-      main.innerHTML = `<div class="sy-row-name">${r.name} ${badge}</div><div class="sy-row-sub">${r.sub || ''}</div>`;
-      row.appendChild(main);
-      const side = document.createElement('div');
-      side.className = 'sy-row-side';
-      if (r.priceLabel != null) {
-        const price = document.createElement('div');
-        price.className = 'sy-price';
-        price.textContent = r.priceLabel;
-        side.appendChild(price);
+    for (const sec of sections) {
+      const heading = document.createElement('div');
+      heading.className = 'quest-section-title';
+      heading.textContent = sec.heading;
+      body.appendChild(heading);
+      if (!sec.rows.length) {
+        const empty = document.createElement('div');
+        empty.className = 'quest-empty';
+        empty.textContent = sec.empty || '해당 사항 없음';
+        body.appendChild(empty);
+        continue;
       }
-      const btn = document.createElement('button');
-      btn.className = 'sy-btn';
-      btn.textContent = r.actionLabel;
-      btn.disabled = !!r.disabled;
-      if (r.onAction) btn.onclick = r.onAction;
-      side.appendChild(btn);
-      row.appendChild(side);
-      list.appendChild(row);
+      const listWrap = document.createElement('div');
+      renderRowList(listWrap, sec.rows);
+      body.appendChild(listWrap.firstChild);
     }
-    body.appendChild(list);
   },
 
   showMarket(v) { $('market-panel').classList.toggle('hidden', !v); },

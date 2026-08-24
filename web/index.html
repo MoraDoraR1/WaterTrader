@@ -44,9 +44,13 @@
     border-radius: 50%; background: rgba(240,230,210,0.85); box-shadow: 0 0 4px rgba(0,0,0,0.6); z-index: 20; pointer-events: none; }
 
   /* ---- Top bars ---- */
-  #top-bar { position: fixed; top: 14px; right: 14px; z-index: 15; pointer-events: none; }
+  #top-bar { position: fixed; top: 14px; right: 14px; z-index: 15; pointer-events: none;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
   #gold-box { background: rgba(8,18,26,0.6); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
     padding: 0.5rem 1rem; font-size: 1rem; }
+  #morale-box { background: rgba(8,18,26,0.6); border: 1px solid rgba(140,180,200,0.35); border-radius: 8px;
+    padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #cfe0ea; }
+  #morale-box.morale-low { border-color: rgba(224,100,90,0.6); color: #e0645a; }
 
   /* ---- 좌상단: 선체 내구도 ---- */
   #ship-hp-box { position: fixed; top: 14px; left: 14px; z-index: 15; pointer-events: none;
@@ -209,6 +213,18 @@
   #shipyard-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
   .sy-row-side-actions { flex-direction: row; }
 
+  /* ---- 의뢰 게시판 ---- */
+  #quest-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
+  #quest-card { width: 560px; max-width: 92vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
+    border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+  #quest-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; margin-bottom: 0.7rem; }
+  #quest-body { max-height: 58vh; overflow-y: auto; }
+  .quest-section-title { font-size: 0.82rem; color: #9fb8c9; margin: 1rem 0 0.6rem; letter-spacing: 0.03rem; }
+  .quest-section-title:first-child { margin-top: 0; }
+  .quest-empty { font-size: 0.78rem; color: #6b7c86; padding: 0.4rem 0 1rem; }
+  #quest-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
+
   /* ---- 시장 ---- */
   #market-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
     background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
@@ -248,6 +264,7 @@
 
   <div id="top-bar" class="hidden">
     <div id="gold-box">💰 <span id="gold-amount">0</span> 두캇</div>
+    <div id="morale-box">⚓ 사기 <span id="morale-amount">100</span>%</div>
   </div>
 
   <div id="location-banner" class="hidden">망망대해<span class="sub" id="location-sub">&nbsp;</span></div>
@@ -354,6 +371,14 @@
       <div id="market-cargo-row">적재 <span id="market-cargo">0/0t</span></div>
       <div id="market-title"></div>
       <div id="market-body"></div>
+      <div class="close-hint">ESC 로 닫기</div>
+    </div>
+  </div>
+
+  <div id="quest-panel" class="hidden">
+    <div id="quest-card">
+      <div id="quest-header-title">📜 의뢰 게시판</div>
+      <div id="quest-body"></div>
       <div class="close-hint">ESC 로 닫기</div>
     </div>
   </div>

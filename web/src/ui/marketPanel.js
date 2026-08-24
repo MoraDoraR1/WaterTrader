@@ -2,7 +2,9 @@
 import { state } from '../state.js';
 import { hud } from './hud.js';
 import { getCity } from '../data/cities.js';
+import { COUNTRY_NAMES } from '../data/ships.js';
 import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed } from '../systems/market.js';
+import { getReputation } from '../systems/quests.js';
 
 const STEP = 10;
 
@@ -31,8 +33,9 @@ function renderMarket(cityId) {
       },
     ],
   }));
+  const rep = getReputation(city.country);
   hud.renderMarket({
-    title: `${city.name} 시장`,
+    title: `${city.name} 시장 · ${COUNTRY_NAMES[city.country] || city.country} 우호도 ${rep >= 0 ? '+' : ''}${rep}`,
     gold: state.gold,
     cargo: `${getCargoUsed()} / ${getCargoCapacity()} t`,
     rows,
