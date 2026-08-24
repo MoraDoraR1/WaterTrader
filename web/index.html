@@ -160,10 +160,11 @@
   #inventory-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 420px; z-index: 35;
     background: rgba(10,18,24,0.92); border: 1px solid rgba(200,180,120,0.4); border-radius: 12px; padding: 1.2rem; }
   #inventory-panel h3 { margin: 0 0 0.8rem; letter-spacing: 0.15rem; color: #e6c15a; }
-  #inventory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; }
-  .inv-slot { aspect-ratio: 1; border: 1px solid rgba(200,180,120,0.3); border-radius: 8px; background: rgba(255,255,255,0.03);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; text-align: center; padding: 4px; }
+  #inventory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+  .inv-slot { min-height: 78px; border: 1px solid rgba(200,180,120,0.3); border-radius: 8px; background: rgba(255,255,255,0.03);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.7rem; text-align: center; padding: 6px; }
   .inv-slot .qty { color: #a9c4d6; font-size: 0.65rem; margin-top: 2px; }
+  .inv-slot .inv-price { color: #e6c15a; font-size: 0.6rem; margin-top: 3px; line-height: 1.35; }
   #inventory-panel .close-hint { text-align: center; margin-top: 0.9rem; font-size: 0.72rem; color: #8fa6b4; }
 
   /* ---- Toast ---- */
@@ -228,6 +229,11 @@
   .sy-tab.active { background: rgba(230,193,90,0.32); border-color: #f3d98a; color: #f3d98a; }
   #shipyard-body { max-height: 46vh; overflow-y: auto; }
   #shipyard-title { font-size: 0.82rem; color: #9fb8c9; margin-bottom: 0.6rem; letter-spacing: 0.03rem; }
+  #buy-filter-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.7rem; }
+  .buy-filter-chip { background: rgba(230,193,90,0.1); border: 1px solid rgba(230,193,90,0.35); color: #cfe0ea;
+    border-radius: 999px; padding: 0.3rem 0.8rem; font-size: 0.72rem; cursor: pointer; }
+  .buy-filter-chip:hover { background: rgba(230,193,90,0.22); }
+  .buy-filter-chip.active { background: rgba(230,193,90,0.34); border-color: #f3d98a; color: #f3d98a; }
   .sy-list { display: flex; flex-direction: column; gap: 0.5rem; }
   .sy-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;
     border: 1px solid rgba(200,180,120,0.25); border-radius: 8px; padding: 0.6rem 0.8rem; background: rgba(255,255,255,0.02); }
@@ -403,6 +409,7 @@
         <button class="sy-tab" data-tab="repair">수리</button>
         <button class="sy-tab" data-tab="parts">부품</button>
       </div>
+      <div id="buy-filter-row" class="hidden"></div>
       <div id="shipyard-title"></div>
       <div id="shipyard-body"></div>
       <div class="close-hint">ESC 로 닫기</div>

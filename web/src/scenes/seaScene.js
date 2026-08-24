@@ -90,6 +90,7 @@ export class SeaScene {
     this.collisionTimers = new Map(); // npc.owner -> 남은 충돌 쿨다운(초)
     this.meleeState = null; // { npc, timer } — 백병전 중일 때만 존재
     this.pendingCapture = null; // 백병전 승리 후 격침/나포를 고르는 동안 npc를 잡아둠(그동안 시뮬레이션 정지)
+    this.shakeTrauma = 0; // 0~1 — 피격/충돌 시 올라가고 시간이 지나며 감쇠, 카메라 흔들림 세기에 쓰인다
     this.wakeTrail = new WakeTrail(this.scene);
     this.bowWave = new BowWave(this.scene);
     this._wakeTimer = 0;
@@ -110,6 +111,8 @@ export class SeaScene {
   }
 
   setOnDock(fn) { this.onDock = fn; }
+
+  addShake(amount) { this.shakeTrauma = Math.min(1, this.shakeTrauma + amount); }
 
   // WeatherSystem이 매 프레임 계산해둔 낮/밤·폭풍 색상/조명값을 실제 씬(하늘/안개/조명)에 반영한다.
   _applyWeatherVisuals() {
@@ -541,6 +544,7 @@ export class SeaScene {
       loseMoraleFromCombat();
       npc.takeDamage(COLLISION_DAMAGE);
       audio.playHit();
+      this.addShake(0.6);
       hud.toast('충돌! 양측 선체가 손상되었습니다.');
       if (npc.dead) {
         hud.toast(`${npc.def.name}을(를) 격침했습니다!`);
@@ -735,7 +739,9 @@ export class SeaScene {
       if (target.ref === 'player') {
         state.shipHp = Math.max(0, state.shipHp - 18);
         loseMoraleFromCombat();
+        this.addShake(0.45);
       } else {
+        this.addShake(0.18);
         target.ref.takeDamage(22);
         if (target.ref.dead) {
           hud.toast(`${target.ref.def.name}을(를) 격침했습니다!`);
@@ -772,6 +778,17 @@ export class SeaScene {
 
     const desired = new THREE.Vector3(camX, camY, camZ);
     const resolved = resolveCameraCollision(this.raycaster, this.cameraColliders, anchor, desired);
+
+    // 피격/충돌 카메라 흔들림 — trauma(0~1)를 제곱해 큰 충격일수록 훨씬 더 거칠게 반응하고,
+    // 시간이 지나며 조용히 가라앉는다(전형적인 trauma 기반 셰이크).
+    this.shakeTrauma = Math.max(0, this.shakeTrauma - delta * 1.6);
+    const shakeAmt = this.shakeTrauma * this.shakeTrauma;
+    if (shakeAmt > 0.001) {
+      const mag = shakeAmt * 1.4;
+      resolved.x += (Math.random() * 2 - 1) * mag;
+      resolved.y += (Math.random() * 2 - 1) * mag * 0.6;
+      resolved.z += (Math.random() * 2 - 1) * mag;
+    }
     camera.position.copy(resolved);
     camera.lookAt(anchor);
 
@@ -798,7 +815,8 @@ export class SeaScene {
     hud.updateMinimap(
       { x: this.ship.pos.x, z: this.ship.pos.y, heading: this.ship.heading },
       this.minimapCities,
-      this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.def.hostile }))
+      this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.def.hostile })),
+      this.wind.towardDirection
     );
     if (nearest.marker && nearest.dist < DOCK_RANGE) {
       const city = CITIES.find((c) => c.id === nearest.marker.userData.cityId);

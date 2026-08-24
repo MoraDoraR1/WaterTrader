@@ -16,6 +16,7 @@ import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './system
 import { payWagesOnDock } from './systems/crew.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
+import { getMarketRows } from './systems/market.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -285,7 +286,10 @@ function animate(now) {
       if (state.screen === 'city') citySceneObj?.handleInteract(camera);
     }
     if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
-      hud.toggleInventory(state.inventory);
+      const priceMap = state.screen === 'city' && citySceneObj
+        ? Object.fromEntries(getMarketRows(citySceneObj.city.id).map((r) => [r.good.id, r.price]))
+        : null;
+      hud.toggleInventory(state.inventory, priceMap);
     }
     if (consumeJustPressed('Escape')) {
       hud.hideDialogue();

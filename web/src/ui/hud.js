@@ -282,7 +282,7 @@ export const hud = {
     }
   },
 
-  updateMinimap(ship, cities, npcShips) {
+  updateMinimap(ship, cities, npcShips, windTowardDir) {
     if (!mmBgCanvas) return;
     const canvas = $('minimap-canvas');
     const ctx = canvas.getContext('2d');
@@ -316,6 +316,28 @@ export const hud = {
     ctx.moveTo(tip[0], tip[1]); ctx.lineTo(bl[0], bl[1]); ctx.lineTo(br[0], br[1]);
     ctx.closePath(); ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 0.7; ctx.stroke();
+
+    // 미니맵 좌상단 구석에 바람이 불어가는 방향(순풍이 되는 방향)을 작은 화살표로 표시
+    if (windTowardDir != null) {
+      const cx = 14, cy = 14, r = 8;
+      const wf = [Math.sin(windTowardDir), Math.cos(windTowardDir)];
+      ctx.strokeStyle = 'rgba(207,224,234,0.55)';
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#cfe0ea'; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx - wf[0] * r * 0.8, cy - wf[1] * r * 0.8);
+      ctx.lineTo(cx + wf[0] * r * 0.8, cy + wf[1] * r * 0.8);
+      ctx.stroke();
+      const tipX = cx + wf[0] * r * 0.8, tipY = cy + wf[1] * r * 0.8;
+      const backX = cx + wf[0] * r * 0.35, backY = cy + wf[1] * r * 0.35;
+      const perp = [wf[1], -wf[0]];
+      ctx.fillStyle = '#cfe0ea';
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(backX + perp[0] * 2.4, backY + perp[1] * 2.4);
+      ctx.lineTo(backX - perp[0] * 2.4, backY - perp[1] * 2.4);
+      ctx.closePath(); ctx.fill();
+    }
   },
   setTargetHp(name, ratio) {
     $('target-name').textContent = name;
@@ -337,12 +359,16 @@ export const hud = {
   },
   hideDialogue() { $('dialogue-box').classList.add('hidden'); },
 
-  toggleInventory(items) {
+  toggleInventory(items, priceMap) {
     const panel = $('inventory-panel');
     const willShow = panel.classList.contains('hidden');
     if (willShow) {
       const grid = $('inventory-grid');
-      grid.innerHTML = items.map((it) => `<div class="inv-slot">${it.name}<span class="qty">x${it.qty}</span></div>`).join('');
+      grid.innerHTML = items.map((it) => {
+        const price = priceMap && priceMap[it.id];
+        const priceLine = price ? `<span class="inv-price">매도가 ${price.sell}/t · 총액 ${(price.sell * it.qty).toLocaleString('ko-KR')}</span>` : '';
+        return `<div class="inv-slot">${it.name}<span class="qty">x${it.qty}</span>${priceLine}</div>`;
+      }).join('');
     }
     panel.classList.toggle('hidden', !willShow);
     return willShow;

@@ -22,10 +22,39 @@ function effectSummary(part) {
   return bits.join(' · ');
 }
 
+let buyRoleFilter = 'all';
+let buySortMode = 'price_asc';
+const SORT_MODES = {
+  price_asc: { label: '가격↑', cmp: (a, b) => a.price - b.price },
+  price_desc: { label: '가격↓', cmp: (a, b) => b.price - a.price },
+  hp_desc: { label: '내구↓', cmp: (a, b) => b.hp - a.hp },
+  cargo_desc: { label: '적재↓', cmp: (a, b) => b.cargo - a.cargo },
+};
+
+function renderBuyFilterRow() {
+  const row = document.getElementById('buy-filter-row');
+  row.classList.remove('hidden');
+  const roleChip = (id, label) => `<button class="buy-filter-chip${buyRoleFilter === id ? ' active' : ''}" data-role="${id}">${label}</button>`;
+  const sortChip = (id) => `<button class="buy-filter-chip${buySortMode === id ? ' active' : ''}" data-sort="${id}">${SORT_MODES[id].label}</button>`;
+  row.innerHTML = [
+    roleChip('all', '전체'),
+    ...Object.entries(SHIP_ROLES).map(([id, r]) => roleChip(id, r.label)),
+    ...Object.keys(SORT_MODES).map(sortChip),
+  ].join('');
+  row.querySelectorAll('[data-role]').forEach((btn) => {
+    btn.onclick = () => { buyRoleFilter = btn.dataset.role; renderBuyTab(); };
+  });
+  row.querySelectorAll('[data-sort]').forEach((btn) => {
+    btn.onclick = () => { buySortMode = btn.dataset.sort; renderBuyTab(); };
+  });
+}
+
 function renderBuyTab() {
+  renderBuyFilterRow();
   const owned = new Set([state.currentShipId, ...state.fleet.map((f) => f.shipId)]);
   const fleetFull = state.fleet.length + 1 >= FLEET_CAP;
-  const rows = [...SHIPS].sort((a, b) => a.price - b.price).map((s) => {
+  const filtered = buyRoleFilter === 'all' ? SHIPS : SHIPS.filter((s) => s.role === buyRoleFilter);
+  const rows = [...filtered].sort(SORT_MODES[buySortMode].cmp).map((s) => {
     const isOwned = owned.has(s.id);
     const role = SHIP_ROLES[s.role];
     const cls = SHIP_CLASSES[s.class];
@@ -164,6 +193,7 @@ const TAB_RENDERERS = { buy: renderBuyTab, fleet: renderFleetTab, repair: render
 
 export function openShipyard(tab) {
   hud.setShipyardActiveTab(tab);
+  if (tab !== 'buy') document.getElementById('buy-filter-row').classList.add('hidden');
   (TAB_RENDERERS[tab] || renderBuyTab)();
   hud.showShipyard(true);
 }
