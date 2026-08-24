@@ -105,6 +105,14 @@ export const hud = {
     const el = $('morale-box');
     el.classList.toggle('morale-low', v < 40);
   },
+  setRank(label) { $('rank-label').textContent = label; },
+
+  showEnding(stats) {
+    const grid = $('ending-stats');
+    grid.innerHTML = stats.map((s) => `<div><span class="stat-val">${s.val}</span><span class="stat-label">${s.label}</span></div>`).join('');
+    $('ending-screen').classList.remove('hidden');
+  },
+  hideEnding() { $('ending-screen').classList.add('hidden'); },
 
   initThrottle(min, max) {
     const row = $('notch-row');

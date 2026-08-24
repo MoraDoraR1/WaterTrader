@@ -30,6 +30,7 @@ export const state = {
   captureCount: 0, // 나포 성공 횟수(랭크 산정에 반영)
   marketState: {}, // cityId -> goodId -> { mul, updatedAt } — 플레이어 매매로 흔들린 뒤 시간이 지나며 되돌아오는 시세 배율
   audioMuted: false,
+  endingShown: false, // 최고 랭크(바다의 제독) 도달 엔딩 화면을 이미 본 적 있는지
 };
 
 export function initShipHp() {

@@ -15,6 +15,7 @@ import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 import { payWagesOnDock } from './systems/crew.js';
 import { audio } from './systems/audio.js';
+import { getRankInfo } from './systems/rank.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -145,6 +146,27 @@ subscribe((patch) => {
   if (patch.fleetChanged) seaScene?.rebuildEscorts();
 });
 
+// ---- 랭크/엔딩: 상태가 바뀔 때마다(재산/함대/의뢰/우호도 등) 명성 점수를 재계산해
+// HUD 배지를 갱신하고, 최고 랭크(바다의 제독)에 처음 도달하면 엔딩(결산) 화면을 띄운다.
+function refreshRank() {
+  if (state.screen === 'title') return;
+  const info = getRankInfo();
+  hud.setRank(info.rank.label);
+  if (info.isMax && !state.endingShown) {
+    state.endingShown = true;
+    audio.playCaptureFanfare();
+    const completedQuests = Object.values(state.quests || {}).filter((v) => v === 'completed').length;
+    hud.showEnding([
+      { val: `${state.gold.toLocaleString('ko-KR')} 두캇`, label: '재산' },
+      { val: `${state.fleet.length + 1}척`, label: '함대 규모' },
+      { val: `${state.captureCount || 0}회`, label: '나포 성공' },
+      { val: `${completedQuests}건`, label: '완료한 의뢰' },
+    ]);
+  }
+}
+subscribe(refreshRank);
+document.getElementById('ending-close-btn').addEventListener('click', () => hud.hideEnding());
+
 // ---- 선박 정보 카드: T키로 토글, 현재 탑승 중인 배의 능력치를 참고 지표(동급 최대치) 대비 막대로 표시 ----
 const STAT_MAX = {
   hp: Math.max(...SHIPS.map((s) => s.hp)),
@@ -208,6 +230,7 @@ function enterGame() {
   audio.resume();
   audio.setMuted(!!state.audioMuted);
   goToSea();
+  refreshRank();
 }
 
 // ---- 타이틀 화면: 저장 데이터가 있으면 "이어하기" 버튼과 요약을 보여준다 ----
@@ -292,4 +315,4 @@ function animate(now) {
 hud.showLoading(false);
 requestAnimationFrame(animate);
 
-window.__debug = { get seaScene() { return seaScene; }, get citySceneObj() { return citySceneObj; }, camera, state };
+window.__debug = { get seaScene() { return seaScene; }, get citySceneObj() { return citySceneObj; }, camera, state, notify };
