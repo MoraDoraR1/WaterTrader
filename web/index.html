@@ -30,6 +30,13 @@
     background: linear-gradient(180deg, #f3d98a, #c9a24a); color: #241a05; font-weight: 700; cursor: pointer;
     box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
   #start-btn:hover { filter: brightness(1.08); }
+  .title-actions { display: flex; align-items: center; gap: 1rem; }
+  #continue-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+  #continue-wrap.hidden { display: none; }
+  #continue-btn { padding: 0.85rem 2rem; font-size: 1.02rem; letter-spacing: 0.2rem; border-radius: 8px;
+    border: 2px solid #f3d98a; background: rgba(243,217,138,0.08); color: #f3d98a; font-weight: 700; cursor: pointer; }
+  #continue-btn:hover { background: rgba(243,217,138,0.2); }
+  #continue-summary { font-size: 0.72rem; color: #8fa6b4; }
   #title-hint { margin-top: 1.6rem; font-size: 0.8rem; color: #7f9aac; }
 
   /* ---- Crosshair ---- */
@@ -162,6 +169,13 @@
   .si-label { width: 42px; font-size: 0.72rem; color: #cfe0ea; flex-shrink: 0; }
   .si-stat-row .bar-track { flex: 1; height: 8px; margin-top: 0; }
   .si-val { width: 42px; text-align: right; font-size: 0.72rem; color: #f0e6d2; flex-shrink: 0; }
+  #ship-info-parts { margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid rgba(200,180,120,0.25); }
+  #ship-info-parts .si-parts-title { font-size: 0.68rem; color: #8fa6b4; letter-spacing: 0.1rem; margin-bottom: 0.5rem; }
+  .si-part-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.76rem; padding: 2px 0; }
+  .si-part-row .si-part-icon { width: 16px; text-align: center; flex-shrink: 0; }
+  .si-part-row .si-part-label { width: 64px; color: #9fb8c9; flex-shrink: 0; }
+  .si-part-row .si-part-name { color: #f0e6d2; }
+  .si-part-row.si-part-empty .si-part-name { color: #6b7c86; }
   #ship-info-panel .close-hint { text-align: center; margin-top: 0.7rem; font-size: 0.72rem; color: #8fa6b4; }
 
   /* ---- 조선소 ---- */
@@ -222,7 +236,13 @@
       <button class="gender-btn active" data-gender="male"><span class="gender-emblem">⚓</span>남 항해사</button>
       <button class="gender-btn" data-gender="female"><span class="gender-emblem">⚓</span>여 항해사</button>
     </div>
-    <button id="start-btn">항해를 시작한다</button>
+    <div class="title-actions">
+      <div id="continue-wrap" class="hidden">
+        <button id="continue-btn">이어하기</button>
+        <span id="continue-summary"></span>
+      </div>
+      <button id="start-btn">항해를 시작한다</button>
+    </div>
     <p id="title-hint">화면을 드래그하면 시점이 회전합니다 · 클릭은 상호작용/포격</p>
   </div>
 
@@ -303,6 +323,7 @@
       <div class="si-stat-row"><span class="si-label">화력</span><div class="bar-track"><div class="bar-fill si-cannon" id="si-bar-cannons"></div></div><span class="si-val" id="si-val-cannons"></span></div>
       <div class="si-stat-row"><span class="si-label">선회</span><div class="bar-track"><div class="bar-fill si-turn" id="si-bar-turn"></div></div><span class="si-val" id="si-val-turn"></span></div>
       <div class="si-stat-row"><span class="si-label">속도</span><div class="bar-track"><div class="bar-fill si-speed" id="si-bar-speed"></div></div><span class="si-val" id="si-val-speed"></span></div>
+      <div id="ship-info-parts"><div class="si-parts-title">장착 부품</div><div id="ship-info-parts-list"></div></div>
       <div class="close-hint">T 또는 ESC 로 닫기</div>
     </div>
   </div>

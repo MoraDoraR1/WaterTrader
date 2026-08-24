@@ -107,6 +107,14 @@ export const hud = {
       $(barId).style.width = `${Math.max(2, Math.min(100, ratio * 100))}%`;
       $(valId).textContent = val;
     }
+    if (info.parts) {
+      $('ship-info-parts-list').innerHTML = info.parts.map((p) => `
+        <div class="si-part-row${p.name ? '' : ' si-part-empty'}">
+          <span class="si-part-icon">${p.icon}</span>
+          <span class="si-part-label">${p.label}</span>
+          <span class="si-part-name">${p.name || '미장착'}</span>
+        </div>`).join('');
+    }
   },
 
   showShipyard(v) { $('shipyard-panel').classList.toggle('hidden', !v); },

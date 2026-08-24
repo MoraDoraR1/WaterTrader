@@ -10,8 +10,9 @@ import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, MAINLAND_POLY, BRITAIN_POLY } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
-import { getEffectiveShipDef } from './data/shipParts.js';
+import { getEffectiveShipDef, PART_SLOTS, getPart } from './data/shipParts.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
+import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -141,6 +142,10 @@ function openShipInfo() {
     cannonsRatio: shipDef.cannons / STAT_MAX.cannons, cannonsVal: `${shipDef.cannons}문`,
     turnRatio: shipDef.turnRate / STAT_MAX.turnRate, turnVal: `${shipDef.turnRate}°/s`,
     speedRatio: shipDef.speed / STAT_MAX.speed, speedVal: `${shipDef.speed}`,
+    parts: Object.entries(PART_SLOTS).map(([slot, meta]) => {
+      const part = state.shipParts[slot] ? getPart(state.shipParts[slot]) : null;
+      return { icon: meta.icon, label: meta.label, name: part?.name };
+    }),
   });
   hud.showShipInfo(true);
 }
@@ -154,14 +159,50 @@ document.querySelectorAll('.gender-btn').forEach((btn) => {
   });
 });
 
-document.getElementById('start-btn').addEventListener('click', () => {
+function timeAgo(ts) {
+  const sec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (sec < 60) return '방금 전';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  return `${Math.floor(hr / 24)}일 전`;
+}
+
+function enterGame() {
   hud.showTitle(false);
   hud.showTopBar(true);
   hud.showLocationBanner(true);
   hud.showCrosshair(true);
-  initShipHp();
+  if (state.shipHp == null) initShipHp();
   goToSea();
+}
+
+// ---- 타이틀 화면: 저장 데이터가 있으면 "이어하기" 버튼과 요약을 보여준다 ----
+const savedGame = hasSave() ? loadSaveData() : null;
+if (savedGame) {
+  document.getElementById('continue-wrap').classList.remove('hidden');
+  const shipName = getShip(savedGame.currentShipId)?.name || savedGame.currentShipId;
+  document.getElementById('continue-summary').textContent =
+    `${(savedGame.gold ?? 0).toLocaleString('ko-KR')} 두캇 · ${shipName} · ${timeAgo(savedGame.savedAt)} 저장됨`;
+}
+
+document.getElementById('continue-btn').addEventListener('click', () => {
+  applySave(savedGame);
+  document.querySelectorAll('.gender-btn').forEach((b) => b.classList.toggle('active', b.dataset.gender === state.gender));
+  enterGame();
 });
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  if (hasSave() && !confirm('새로 시작하면 기존 저장 데이터가 사라집니다. 계속할까요?')) return;
+  deleteSave();
+  enterGame();
+});
+
+// ---- 자동 저장: 조선소/시장 등 의미 있는 변화가 생길 때(notify) + 주기적으로(항해 중 위치/골드/내구도 변화 포착) ----
+subscribe(() => { if (state.screen !== 'title') saveGame(); });
+setInterval(() => { if (state.screen !== 'title') saveGame(); }, 15000);
+window.addEventListener('beforeunload', () => { if (state.screen !== 'title') saveGame(); });
 
 let lastTime = performance.now();
 function animate(now) {
