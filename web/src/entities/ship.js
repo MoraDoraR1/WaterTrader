@@ -1393,6 +1393,8 @@ export class ShipController {
     const inertia = 1 + (csx * csz - 1) * 0.35;
     this.accel = ACCEL_BASE / inertia;
     this.turnAccel = TURN_ACCEL_BASE / inertia;
+    // 장착 부품(돛 등)의 속도 배율 — 조선소 부품 시스템에서만 1이 아닌 값이 들어온다.
+    this.speedMul = shipDef.speedMul || 1;
   }
 
   throttleUp() { this.notch = Math.min(MAX_FWD, this.notch + 1); }
@@ -1403,7 +1405,7 @@ export class ShipController {
 
   update(delta, t, isBlocked) {
     const turnRateBase = THREE.MathUtils.degToRad(this.shipDef.turnRate);
-    const maxSpeed = NOTCH_SPEED * MAX_FWD;
+    const maxSpeed = NOTCH_SPEED * MAX_FWD * this.speedMul;
     // 실제 속도가 붙은 만큼만 타가 듣는다(정지 상태에서는 선회 반응이 둔하다) — curSpeed 기준으로 계산해
     // 가속 중에는 선회 감도도 함께 서서히 올라온다.
     const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.curSpeed) / maxSpeed);
@@ -1413,7 +1415,7 @@ export class ShipController {
     this.curTurnRate += Math.max(-maxTurnStep, Math.min(maxTurnStep, targetTurnRate - this.curTurnRate));
     this.heading += this.curTurnRate * delta;
 
-    const targetSpeed = this.notch * NOTCH_SPEED;
+    const targetSpeed = this.notch * NOTCH_SPEED * this.speedMul;
     const maxSpeedStep = this.accel * delta;
     this.curSpeed += Math.max(-maxSpeedStep, Math.min(maxSpeedStep, targetSpeed - this.curSpeed));
 

@@ -103,6 +103,50 @@ export const hud = {
     }
   },
 
+  showShipyard(v) { $('shipyard-panel').classList.toggle('hidden', !v); },
+  hideShipyard() { $('shipyard-panel').classList.add('hidden'); },
+  isShipyardOpen() { return !$('shipyard-panel').classList.contains('hidden'); },
+
+  setShipyardActiveTab(tab) {
+    document.querySelectorAll('#shipyard-tabs .sy-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  },
+
+  // rows: [{ name, sub, badge?, badgeColor?, priceLabel?, actionLabel, disabled?, highlight?, onAction? }]
+  renderShipyard({ title, gold, rows }) {
+    $('shipyard-title').textContent = title;
+    $('shipyard-gold-amount').textContent = gold.toLocaleString('ko-KR');
+    const body = $('shipyard-body');
+    body.innerHTML = '';
+    const list = document.createElement('div');
+    list.className = 'sy-list';
+    for (const r of rows) {
+      const row = document.createElement('div');
+      row.className = 'sy-row' + (r.highlight ? ' highlight' : '');
+      const main = document.createElement('div');
+      main.className = 'sy-row-main';
+      const badge = r.badge ? `<span class="role-badge" style="background:${r.badgeColor || '#888'}">${r.badge}</span>` : '';
+      main.innerHTML = `<div class="sy-row-name">${r.name} ${badge}</div><div class="sy-row-sub">${r.sub || ''}</div>`;
+      row.appendChild(main);
+      const side = document.createElement('div');
+      side.className = 'sy-row-side';
+      if (r.priceLabel != null) {
+        const price = document.createElement('div');
+        price.className = 'sy-price';
+        price.textContent = r.priceLabel;
+        side.appendChild(price);
+      }
+      const btn = document.createElement('button');
+      btn.className = 'sy-btn';
+      btn.textContent = r.actionLabel;
+      btn.disabled = !!r.disabled;
+      if (r.onAction) btn.onclick = r.onAction;
+      side.appendChild(btn);
+      row.appendChild(side);
+      list.appendChild(row);
+    }
+    body.appendChild(list);
+  },
+
   initMinimap(landPolygons, bounds) {
     mmBounds = bounds;
     const canvas = $('minimap-canvas');

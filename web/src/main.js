@@ -3,12 +3,14 @@ import { PointerLookControls } from './controls/pointerLook.js';
 import { consumeJustPressed, clearFrame } from './controls/keys.js';
 import { SeaScene } from './scenes/seaScene.js';
 import { CityScene } from './scenes/cityScene.js';
-import { state, setScreen, initShipHp } from './state.js';
+import { state, setScreen, initShipHp, subscribe } from './state.js';
 import { hud } from './ui/hud.js';
+import { wireShipyardTabs } from './ui/shipyardPanel.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, MAINLAND_POLY, BRITAIN_POLY } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
+import { getEffectiveShipDef } from './data/shipParts.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 
 const wrap = document.getElementById('canvas-wrap');
@@ -106,6 +108,14 @@ function cycleWorldMap(dir) {
 document.getElementById('world-map-prev').addEventListener('click', () => cycleWorldMap(-1));
 document.getElementById('world-map-next').addEventListener('click', () => cycleWorldMap(1));
 
+wireShipyardTabs();
+// 조선소에서 배를 구매하거나 부품을 장착/해제하면(state.currentShipId, state.shipParts 변경)
+// 이미 떠 있는 바다 씬의 배 메시/스탯을 새로 반영해야 한다. 아직 바다에 나간 적이 없다면
+// seaScene이 없으므로(첫 SeaScene 생성 시 이미 최신 상태를 읽어가므로) 별도 처리가 필요없다.
+subscribe((patch) => {
+  if (patch.shipChanged) seaScene?.rebuildShip();
+});
+
 // ---- 선박 정보 카드: T키로 토글, 현재 탑승 중인 배의 능력치를 참고 지표(동급 최대치) 대비 막대로 표시 ----
 const STAT_MAX = {
   hp: Math.max(...SHIPS.map((s) => s.hp)),
@@ -116,7 +126,7 @@ const STAT_MAX = {
 };
 
 function openShipInfo() {
-  const shipDef = getShip(state.currentShipId);
+  const shipDef = getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
   if (!shipDef) return;
   const role = SHIP_ROLES[shipDef.role] || SHIP_ROLES.trade;
   const cls = SHIP_CLASSES[shipDef.class];
@@ -161,14 +171,14 @@ function animate(now) {
   const elapsed = now / 1000;
 
   if (state.screen !== 'title') {
-    if (consumeJustPressed('KeyM') && !hud.isShipInfoOpen()) {
+    if (consumeJustPressed('KeyM') && !hud.isShipInfoOpen() && !hud.isShipyardOpen()) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
     }
     if (hud.isWorldMapOpen()) {
       if (consumeJustPressed('ArrowLeft')) cycleWorldMap(-1);
       if (consumeJustPressed('ArrowRight')) cycleWorldMap(1);
     }
-    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen()) {
+    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen() && !hud.isShipyardOpen()) {
       hud.isShipInfoOpen() ? closeShipInfo() : openShipInfo();
     }
     if (consumeJustPressed('KeyF')) {
@@ -182,11 +192,12 @@ function animate(now) {
       hud.closeInventory();
       closeWorldMap();
       closeShipInfo();
+      hud.hideShipyard();
     }
   }
 
-  // 월드맵/선박정보 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
-  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen()) {
+  // 월드맵/선박정보/조선소 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
+  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen()) {
     if (state.screen === 'sea' && seaScene) {
       seaScene.update(delta, elapsed, camera, pointerControls);
       renderer.render(seaScene.scene, camera);

@@ -1,4 +1,5 @@
-import { SHIPS } from './data/ships.js';
+import { SHIPS, getShip } from './data/ships.js';
+import { getEffectiveShipDef } from './data/shipParts.js';
 
 const listeners = new Set();
 
@@ -9,6 +10,7 @@ export const state = {
   gold: 1500,
   currentShipId: 'caravela_lateen',
   shipHp: null,
+  shipParts: {}, // { cannon, armor, sail, hull } — 슬롯별 장착 부품 id (조선소에서 구매/장착)
   shipPos: [-560, 300],
   shipHeading: 0,
   dockedCityId: null,
@@ -22,8 +24,8 @@ export const state = {
 };
 
 export function initShipHp() {
-  const ship = SHIPS.find((s) => s.id === state.currentShipId);
-  state.shipHp = ship ? ship.hp : 500;
+  const shipDef = getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
+  state.shipHp = shipDef ? shipDef.hp : 500;
 }
 
 export function subscribe(fn) {

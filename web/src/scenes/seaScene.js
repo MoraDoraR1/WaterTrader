@@ -6,6 +6,7 @@ import { CannonballPool } from '../entities/cannon.js';
 import { makeLabelSprite } from '../entities/label.js';
 import { resolveCameraCollision } from '../controls/cameraCollision.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
+import { getEffectiveShipDef } from '../data/shipParts.js';
 import { CITIES } from '../data/cities.js';
 import { MAINLAND_POLY, BRITAIN_POLY, LAND_POLYGONS, pointOnAnyLand, distanceToPolygonEdge, pointInPolygon } from '../data/coastline.js';
 import { seaRegionAt } from '../data/seaRegions.js';
@@ -51,7 +52,7 @@ export class SeaScene {
     this.moundColliders = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], r: 30 }));
 
     if (!state.shipHp) initShipHp();
-    const shipDef = getShip(state.currentShipId);
+    const shipDef = getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
     this.playerMesh = buildShipMesh(shipDef);
     this.scene.add(this.playerMesh);
     this.ship = new ShipController(this.playerMesh, shipDef, this.ocean.heightAt);
@@ -83,6 +84,24 @@ export class SeaScene {
   }
 
   setOnDock(fn) { this.onDock = fn; }
+
+  // 조선소에서 배를 구매하거나 부품을 장착/해제하면(state.currentShipId, state.shipParts 변경)
+  // 이미 떠 있는 배 메시/컨트롤러를 새 스탯 기준으로 다시 만든다. 위치/방향/스로틀은 유지한다.
+  rebuildShip() {
+    const shipDef = getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
+    const prevPos = this.ship.pos.clone();
+    const prevHeading = this.ship.heading;
+    const prevNotch = this.ship.notch;
+
+    this.scene.remove(this.playerMesh);
+    this.playerMesh = buildShipMesh(shipDef);
+    this.scene.add(this.playerMesh);
+
+    this.ship = new ShipController(this.playerMesh, shipDef, this.ocean.heightAt);
+    this.ship.pos.copy(prevPos);
+    this.ship.heading = prevHeading;
+    this.ship.notch = prevNotch;
+  }
 
   handleLeftClick() {
     if (state.inCombat) {
@@ -455,9 +474,14 @@ export class SeaScene {
     const side = Math.sin(relAngle) >= 0 ? 1 : -1;
     const sideDir = new THREE.Vector3(Math.cos(this.ship.heading) * side, 0, -Math.sin(this.ship.heading) * side);
     const origin = new THREE.Vector3(this.ship.pos.x, 3.4, this.ship.pos.y).addScaledVector(sideDir, this.playerMesh.userData.width * 0.5);
-    for (let i = -1; i <= 1; i++) {
+    // 한 번의 포격에서 나가는 포탄 수는 배(+부품)의 실효 화력에 비례한다 — 대포 부품을
+    // 달수록 일제사격이 두꺼워진다(기본 4~6문급 배는 3발, 데미캐논까지 단 배는 그 이상).
+    const shotCount = THREE.MathUtils.clamp(Math.round(this.ship.shipDef.cannons / 4), 2, 9);
+    const spread = 0.06;
+    for (let i = 0; i < shotCount; i++) {
+      const t = shotCount === 1 ? 0 : i / (shotCount - 1) - 0.5;
       const dir3 = new THREE.Vector3(toTarget.x, 0.22, toTarget.y).normalize();
-      dir3.applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.06);
+      dir3.applyAxisAngle(new THREE.Vector3(0, 1, 0), t * spread * (shotCount - 1));
       this.cannonPool.fire(origin, dir3, 40, 'player');
     }
   }
@@ -535,7 +559,7 @@ export class SeaScene {
     // HUD
     hud.setThrottle(this.ship.notch, -3, 5);
     hud.setCompass(this.ship.heading);
-    hud.setShipHp(state.shipHp / getShip(state.currentShipId).hp);
+    hud.setShipHp(state.shipHp / this.ship.shipDef.hp);
     hud.setGold(state.gold);
 
     const regionName = seaRegionAt(this.ship.pos.x, this.ship.pos.y);
