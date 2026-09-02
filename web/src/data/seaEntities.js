@@ -22,7 +22,7 @@ export const SEA_NPC_SHIPS = [
     hp: 550, hostile: true, patrolRadius: 35 },
   { id: 'merchant_amsterdam', type: 'merchant', name: '동인도회사 무역선 바타비아호', pos: project(3.19, 53.64), shipId: 'east_indiaman',
     hp: 1000, hostile: false, patrolRadius: 50 },
-  { id: 'merchant_hamburg', type: 'merchant', name: '한자동맹 코게선 그라이프호', pos: project(9.94, 51.42), shipId: 'cog',
+  { id: 'merchant_hamburg', type: 'merchant', name: '한자동맹 코게선 그라이프호', pos: project(8.445, 53.42), shipId: 'cog',
     hp: 600, hostile: false, patrolRadius: 40 },
 
   // ── 지중해(마르세유·제노바·베네치아 인근) ──
@@ -30,13 +30,13 @@ export const SEA_NPC_SHIPS = [
     hp: 2900, hostile: false, patrolRadius: 0 },
   { id: 'adventurer_genova', type: 'adventurer', name: '항해가 콜롬보의 배', pos: project(7.66, 42.69), shipId: 'caravel_pinnace',
     hp: 450, hostile: false, patrolRadius: 30 },
-  { id: 'merchant_venezia', type: 'merchant', name: '베네치아 갈레온 레온도로호', pos: project(13.06, 43.44), shipId: 'galeone_veneziano',
+  { id: 'merchant_venezia', type: 'merchant', name: '베네치아 갈레온 레온도로호', pos: project(13.32, 43.44), shipId: 'galeone_veneziano',
     hp: 1100, hostile: false, patrolRadius: 45 },
   { id: 'pirate_med', type: 'pirate', name: '바르바리 해적선 붉은수염호', pos: project(7.12, 41.98), shipId: 'baltimore_schooner',
     hp: 380, hostile: true, patrolRadius: 35 },
 
   // ── 전세계 항로 확장 — 대서양·인도양 신규 항구 인근 순찰선 ──
-  { id: 'pirate_caribbean', type: 'pirate', name: '해적선 카리브의 유령호', pos: project(-76.0, 21.0), shipId: 'baltimore_schooner',
+  { id: 'pirate_caribbean', type: 'pirate', name: '해적선 카리브의 유령호', pos: project(-75.87, 21.0), shipId: 'baltimore_schooner',
     hp: 480, hostile: true, patrolRadius: 40 },
   { id: 'merchant_havana', type: 'merchant', name: '은 함대 산타클라라호', pos: project(-79.5, 19.0), shipId: 'fluyt',
     hp: 800, hostile: false, patrolRadius: 40 },

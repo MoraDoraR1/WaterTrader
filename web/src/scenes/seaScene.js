@@ -13,7 +13,7 @@ import { WeatherSystem, RainEffect } from '../entities/weather.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { getEffectiveShipDef } from '../data/shipParts.js';
 import { CITIES } from '../data/cities.js';
-import { LAND_POLYGONS, pointOnAnyLand } from '../data/coastline.js';
+import { LAND_POLYGONS, pointOnAnyLand, project } from '../data/coastline.js';
 import { seaRegionAt } from '../data/seaRegions.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
@@ -35,6 +35,7 @@ const BASE_PX_PER_UNIT = 3.2; // 줌 1배 기준, 월드 1단위당 논리 픽�
 const MINIMAP_RADIUS = 260; // 미니맵이 배 주위로 항상 보여주는 반경(월드 단위)
 const WAYPOINT_ARRIVE_DIST = 12;
 const CRUISE_NOTCH = 4;
+const SAFE_FALLBACK_POS = project(-11.0, 38.5); // 리스본 서쪽 대서양 공해 — 저장 데이터가 무효할 때의 안전 지점
 
 const WATER_DEEP = '#0d4256';
 const WATER_LIGHT = '#155a78';
@@ -58,7 +59,15 @@ export class SeaScene {
     if (!state.shipHp) initShipHp();
     const shipDef = getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
     this.ship = new ShipController(shipDef);
-    this.ship.pos.set(state.shipPos[0], state.shipPos[1]);
+    // 저장 데이터의 shipPos가 예전 지도 축척(또는 이후 지형 변경) 기준이라 지금은 뭍/마운드에
+    // 파묻혀 있을 수 있다 — 그대로 두면 배가 한 발짝도 움직이지 못하니, 안전한 근해로 되돌린다.
+    let [sx, sz] = state.shipPos;
+    if (this._isBlocked(sx, sz)) {
+      [sx, sz] = SAFE_FALLBACK_POS;
+      state.shipPos = [sx, sz];
+      hud.toast('저장된 정박 위치가 유효하지 않아 안전한 해역으로 이동했습니다.');
+    }
+    this.ship.pos.set(sx, sz);
     this.ship.heading = state.shipHeading || 0;
     this.camera.snapTo(this.ship.pos.x, this.ship.pos.y);
 
