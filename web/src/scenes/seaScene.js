@@ -1,6 +1,7 @@
 import { Vec2, clamp, lerp } from '../util/math2d.js';
 import { Camera2D, IsoProjection } from '../render/canvas2d.js';
-import { shipSprite, shipSpriteSize, cityIconSprite } from '../render/pixelSprites.js';
+import { cityIconSprite } from '../render/pixelSprites.js';
+import { drawShipIso } from '../render/shipIso.js';
 import { ShipController } from '../entities/shipController.js';
 import { worldSizeFor } from '../entities/shipSize.js';
 import { NpcShip } from '../entities/pirate.js';
@@ -552,17 +553,8 @@ export class SeaScene {
   }
 
   _drawShip(ctx, w, h, pos, heading, shipDef, variant, alpha) {
-    const p = this.iso.toScreen(this.camera, pos.x, pos.y, w, h);
-    if (p.x < -40 || p.x > w + 40 || p.y < -40 || p.y > h + 40) return;
-    const sprite = shipSprite(shipDef, variant === 'player' ? 'n' : variant === 'friendly' ? 'n' : variant);
-    const scale = this.camera.zoom * 1.15;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.translate(p.x, p.y);
-    ctx.rotate(this.iso.facingAngle(heading));
-    ctx.scale(scale, scale);
-    ctx.drawImage(sprite, -sprite.width / 2, -sprite.height / 2);
-    ctx.restore();
+    const v = variant === 'player' ? 'n' : variant === 'friendly' ? 'n' : variant;
+    drawShipIso(ctx, this.iso, this.camera, w, h, pos, heading, shipDef, v, alpha);
   }
 
   _drawCannonballs(ctx, w, h) {
