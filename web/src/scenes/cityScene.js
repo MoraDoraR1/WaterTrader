@@ -1,9 +1,9 @@
-import * as THREE from 'three';
-import { buildCharacterMesh, CharacterController } from '../entities/character.js';
-import { makeLabelSprite } from '../entities/label.js';
-import { resolveCameraCollision } from '../controls/cameraCollision.js';
+import { Vec2, clamp } from '../util/math2d.js';
+import { Camera2D, worldToScreen } from '../render/canvas2d.js';
+import { characterSprite } from '../render/pixelSprites.js';
+import { CharacterController } from '../entities/characterController.js';
 import { getCity, NPC_ROLE_COLORS, NPC_ROLE_LABELS } from '../data/cities.js';
-import { COUNTRY_COLORS, COUNTRY_NAMES } from '../data/ships.js';
+import { COUNTRY_NAMES } from '../data/ships.js';
 import { isDown } from '../controls/keys.js';
 import { state } from '../state.js';
 import { hud } from '../ui/hud.js';
@@ -12,7 +12,8 @@ import { openMarket } from '../ui/marketPanel.js';
 import { openQuestBoard } from '../ui/questPanel.js';
 
 const BOUNDS = { minX: -85, maxX: 85, minZ: -85, maxZ: 85 };
-const INTERACT_RANGE = 6.5;
+const INTERACT_RANGE = 7.5;
+const PX_PER_UNIT = 2.55;
 
 function defaultNpcs() {
   return [
@@ -22,215 +23,83 @@ function defaultNpcs() {
 }
 
 export class CityScene {
-  constructor(cityId, onExit) {
+  constructor(cityId, onExit, logicalW, logicalH) {
     const city = getCity(cityId);
     this.city = { ...city, npcs: city.npcs && city.npcs.length ? city.npcs : defaultNpcs() };
     this.onExit = onExit;
-    this.scene = new THREE.Scene();
-    const tint = new THREE.Color(COUNTRY_COLORS[this.city.country] || '#888');
-    this.scene.background = new THREE.Color('#cfe3ea');
-    this.scene.fog = new THREE.Fog('#cfe3ea', 90, 420);
-
-    const hemi = new THREE.HemisphereLight('#fff3d6', '#5a4a34', 1.0);
-    this.scene.add(hemi);
-    const sun = new THREE.DirectionalLight('#fff3d6', 1.15);
-    sun.position.set(80, 140, 60);
-    sun.castShadow = false;
-    this.scene.add(sun);
-
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(240, 240),
-      new THREE.MeshStandardMaterial({ color: '#c9b896', roughness: 1 })
-    );
-    ground.rotation.x = -Math.PI / 2;
-    this.scene.add(ground);
-    this.ground = ground;
+    this.logicalW = logicalW;
+    this.logicalH = logicalH;
+    this.camera = new Camera2D();
 
     this.buildingColliders = [];
-    this._buildPlaza(tint);
-    this._buildBuildings(tint);
-    this._buildDock();
+    this._buildings = this._layoutBuildings();
+    this.npcObjects = this._layoutNpcs();
+    this.exitPos = new Vec2(0, 92);
 
-    this.npcObjects = [];
-    this._buildNpcs();
-
-    this.gender = state.gender;
-    this.characterMesh = buildCharacterMesh(this.gender);
-    this.scene.add(this.characterMesh);
-    this.character = new CharacterController(this.characterMesh);
-
-    // 입항하면 광장 한복판이 아니라 항구관리인 바로 앞에서 시작한다 — 원형 배치의 중심(0,-10)
-    // 쪽으로 몇 걸음 다가선 지점에 세우고, spawnFacing에 그 관리인을 바라보는 각도를 저장해
-    // main.js가 카메라 시점(yaw)도 같이 맞추게 한다.
-    const harbormaster = this.npcObjects.find((o) => o.userData.npc.role === 'harbormaster');
+    this.character = new CharacterController();
+    const harbormaster = this.npcObjects.find((o) => o.npc.role === 'harbormaster');
     if (harbormaster) {
       const centerX = 0, centerZ = -10;
-      const hx = harbormaster.position.x, hz = harbormaster.position.z;
+      const hx = harbormaster.pos.x, hz = harbormaster.pos.y;
       let dx = centerX - hx, dz = centerZ - hz;
       const len = Math.hypot(dx, dz) || 1;
       dx /= len; dz /= len;
       const spawnX = hx + dx * 3.5, spawnZ = hz + dz * 3.5;
       this.character.setPosition(spawnX, spawnZ);
-      this.spawnFacing = Math.atan2(hx - spawnX, hz - spawnZ);
+      this.character.facing = Math.atan2(hx - spawnX, hz - spawnZ);
     } else {
       this.character.setPosition(0, 40);
-      this.spawnFacing = Math.PI;
+      this.character.facing = Math.PI;
     }
-
-    this.raycaster = new THREE.Raycaster();
-    this.activeDialogueTarget = null;
-    this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    this.scene.updateMatrixWorld(true);
-    this.buildingBoxes = this.buildingColliders.map((mesh) => new THREE.Box3().setFromObject(mesh));
+    this.camera.snapTo(this.character.pos.x, this.character.pos.y);
   }
 
-  _buildPlaza(tint) {
-    const plaza = new THREE.Mesh(
-      new THREE.CylinderGeometry(30, 30, 0.3, 24),
-      new THREE.MeshStandardMaterial({ color: '#d8cba3' })
-    );
-    plaza.position.y = 0.15;
-    this.scene.add(plaza);
-
-    const fountain = new THREE.Mesh(
-      new THREE.CylinderGeometry(4, 4.4, 1.4, 16),
-      new THREE.MeshStandardMaterial({ color: '#9aa5a0' })
-    );
-    fountain.position.y = 0.7;
-    this.scene.add(fountain);
-
-    const banner = makeLabelSprite(`${this.city.name} (${COUNTRY_NAMES[this.city.country]})`, { scale: 1.3 });
-    banner.position.set(0, 14, 0);
-    this.scene.add(banner);
-  }
-
-  _buildBuildings(tint) {
+  _layoutBuildings() {
     const positions = [
-      [-46, -20, 0], [46, -20, Math.PI], [-46, 20, 0], [46, 20, Math.PI],
-      [0, -55, 0], [-60, -55, 0.3], [60, -55, -0.3],
+      [-46, -20], [46, -20], [-46, 20], [46, 20],
+      [0, -55], [-60, -55], [60, -55],
     ];
-    const wallMat = new THREE.MeshStandardMaterial({ color: '#e4dcc3', roughness: 0.95 });
-    const roofMat = new THREE.MeshStandardMaterial({ color: tint.clone().lerp(new THREE.Color('#2a2016'), 0.35) });
-
-    for (const [x, z, ry] of positions) {
-      const g = new THREE.Group();
-      const w = 16 + Math.random() * 6, d = 14 + Math.random() * 5, h = 10 + Math.random() * 4;
-      const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-      body.position.y = h / 2;
-      g.add(body);
-      this.buildingColliders.push(body);
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.72, 6, 4), roofMat);
-      roof.rotation.y = Math.PI / 4;
-      roof.position.y = h + 3;
-      g.add(roof);
-      g.position.set(x, 0, z);
-      g.rotation.y = ry;
-      this.scene.add(g);
+    const buildings = [];
+    for (const [x, z] of positions) {
+      const w = 16 + Math.random() * 6, d = 14 + Math.random() * 5;
+      const box = { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 };
+      buildings.push({ x, z, w, d });
+      this.buildingColliders.push(box);
     }
-
-    // 플라자 경계 파티션(느낌만) — 담장
-    const wallRing = new THREE.Mesh(
-      new THREE.TorusGeometry(88, 1.2, 6, 32),
-      new THREE.MeshStandardMaterial({ color: '#a99a78' })
-    );
-    wallRing.rotation.x = Math.PI / 2;
-    wallRing.position.y = 0.6;
-    this.scene.add(wallRing);
+    return buildings;
   }
 
-  _buildDock() {
-    const dock = new THREE.Mesh(
-      new THREE.BoxGeometry(14, 0.6, 40),
-      new THREE.MeshStandardMaterial({ color: '#5a4326' })
-    );
-    dock.position.set(0, 0.3, 78);
-    this.scene.add(dock);
-
-    const water = new THREE.Mesh(
-      new THREE.PlaneGeometry(240, 90),
-      new THREE.MeshStandardMaterial({ color: '#0f4a63' })
-    );
-    water.rotation.x = -Math.PI / 2;
-    water.position.set(0, 0.05, 130);
-    this.scene.add(water);
-
-    const marker = new THREE.Mesh(
-      new THREE.ConeGeometry(2.2, 5, 8),
-      new THREE.MeshStandardMaterial({ color: '#e6c15a', emissive: '#3a2e10' })
-    );
-    marker.position.set(0, 2.5, 92);
-    marker.userData.exitMarker = true;
-    this.scene.add(marker);
-
-    const label = makeLabelSprite('배로 돌아가기', { scale: 0.8 });
-    label.position.set(0, 7, 92);
-    this.scene.add(label);
-
-    this.exitMarker = marker;
-    this.exitPos = new THREE.Vector3(0, 0, 92);
-  }
-
-  _buildNpcs() {
+  _layoutNpcs() {
     const angleStep = (Math.PI * 2) / Math.max(1, this.city.npcs.length);
-    this.city.npcs.forEach((npc, i) => {
-      const gender = npc.role === 'merchant' && i % 2 === 0 ? 'female' : 'male';
-      const mesh = buildCharacterMesh(gender);
-      const color = new THREE.Color(NPC_ROLE_COLORS[npc.role] || '#999');
-      mesh.traverse((o) => { if (o.isMesh && o.geometry.type === 'CapsuleGeometry') o.material = o.material.clone(); });
-
-      const marker = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.4, 20), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
-      marker.rotation.x = -Math.PI / 2;
-      marker.position.y = 0.05;
-      mesh.add(marker);
-
+    return this.city.npcs.map((npc, i) => {
       const angle = angleStep * i - Math.PI / 2;
       const r = 18;
-      mesh.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r - 10);
-      mesh.rotation.y = angle + Math.PI;
-      this.scene.add(mesh);
-
-      const tag = makeLabelSprite(`${NPC_ROLE_LABELS[npc.role]}`, { scale: 0.55, bg: 'rgba(30,20,10,0.7)' });
-      tag.position.set(0, mesh.userData.height + 0.6, 0);
-      mesh.add(tag);
-
-      mesh.userData.npc = npc;
-      this.npcObjects.push(mesh);
+      const pos = new Vec2(Math.cos(angle) * r, Math.sin(angle) * r - 10);
+      return { npc, pos, facing: angle + Math.PI, gender: npc.role === 'merchant' && i % 2 === 0 ? 'female' : 'male' };
     });
   }
 
-  _raycastFromCenter(camera, objects) {
-    // update()의 카메라 충돌 처리(resolveCameraCollision)가 같은 raycaster의
-    // near/far를 임시로 좁혀 쓰고 복원하지 않으므로, 상호작용 판정 전에 항상 원상복구한다.
-    this.raycaster.near = 0;
-    this.raycaster.far = Infinity;
-    this.raycaster.setFromCamera({ x: 0, y: 0 }, camera);
-    return this.raycaster.intersectObjects(objects, true);
+  onWheelZoom(deltaY) { this.camera.zoom = clamp(this.camera.zoom - deltaY * 0.0011, 0.6, 2); }
+
+  _findInteractable() {
+    let best = null, bestD = Infinity;
+    for (const o of this.npcObjects) {
+      const d = this.character.pos.distanceTo(o.pos);
+      if (d < bestD) { bestD = d; best = { kind: 'npc', obj: o, dist: d }; }
+    }
+    const exitD = this.character.pos.distanceTo(this.exitPos);
+    if (exitD < bestD) best = { kind: 'exit', dist: exitD };
+    if (!best || best.dist > INTERACT_RANGE) return null;
+    return best;
   }
 
-  _findInteractable(camera) {
-    const objs = [...this.npcObjects, this.exitMarker];
-    const hits = this._raycastFromCenter(camera, objs);
-    if (!hits.length) return null;
-    let obj = hits[0].object;
-    while (obj && !obj.userData.npc && !obj.userData.exitMarker) obj = obj.parent;
-    if (!obj) return null;
-    const dist = obj.userData.exitMarker
-      ? this.character.pos.distanceTo(this.exitPos)
-      : this.character.pos.distanceTo(obj.position);
-    if (dist > INTERACT_RANGE + 3) return null;
-    return obj;
-  }
-
-  handleInteract(camera) {
+  handleInteract() {
     if (hud.isInventoryOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen()) return;
-    const target = this._findInteractable(camera);
+    const target = this._findInteractable();
     if (!target) { hud.toast('상호작용할 대상이 없습니다.'); return; }
 
-    if (target.userData.exitMarker) {
-      this.onExit();
-      return;
-    }
-    const npc = target.userData.npc;
+    if (target.kind === 'exit') { this.onExit(); return; }
+    const npc = target.obj.npc;
     if (npc.role === 'shipwright') {
       hud.showDialogue(npc.name, npc.line, [
         { label: '배 구매', onClick: () => { hud.hideDialogue(); openShipyard('buy'); } },
@@ -255,49 +124,112 @@ export class CityScene {
       ]);
       return;
     }
-    hud.showDialogue(npc.name, npc.line, [
-      { label: '닫기', onClick: () => hud.hideDialogue() },
-    ]);
+    hud.showDialogue(npc.name, npc.line, [{ label: '닫기', onClick: () => hud.hideDialogue() }]);
   }
 
-  handleRightClick(camera) {
-    this.raycaster.setFromCamera({ x: 0, y: 0 }, camera);
-    const point = new THREE.Vector3();
-    if (this.raycaster.ray.intersectPlane(this.groundPlane, point)) {
-      this.character.moveTo(
-        THREE.MathUtils.clamp(point.x, BOUNDS.minX, BOUNDS.maxX),
-        THREE.MathUtils.clamp(point.z, BOUNDS.minZ, BOUNDS.maxZ)
-      );
-    }
+  // 화면 좌표(캔버스 기준, 논리 해상도 스케일)를 월드 좌표로 되돌려 이동 목표로 삼는다.
+  handleRightClickAt(screenX, screenY) {
+    const px = PX_PER_UNIT * this.camera.zoom;
+    const wx = (screenX - this.logicalW / 2) / px + this.camera.x;
+    const wz = (screenY - this.logicalH / 2) / px + this.camera.y;
+    this.character.moveTo(clamp(wx, BOUNDS.minX, BOUNDS.maxX), clamp(wz, BOUNDS.minZ, BOUNDS.maxZ));
   }
 
-  update(delta, elapsed, camera, pointerControls) {
+  update(delta) {
     const forward = (isDown('KeyW') ? 1 : 0) - (isDown('KeyS') ? 1 : 0);
     const strafe = (isDown('KeyD') ? 1 : 0) - (isDown('KeyA') ? 1 : 0);
-    const inputVec = new THREE.Vector2(strafe, forward);
+    this.character.update(delta, { x: strafe, y: forward }, BOUNDS, this.buildingColliders);
+    this.camera.follow(this.character.pos.x, this.character.pos.y, delta, 7);
 
-    this.character.update(delta, inputVec, pointerControls.yaw, BOUNDS, this.buildingBoxes);
-
-    const camDist = 9.5 * pointerControls.zoom, baseLift = 1.8;
-    const anchor = new THREE.Vector3(this.character.pos.x, 1.5, this.character.pos.z);
-    const horizDist = camDist * Math.cos(pointerControls.pitch);
-    const camX = anchor.x - Math.sin(pointerControls.yaw) * horizDist;
-    const camZ = anchor.z - Math.cos(pointerControls.yaw) * horizDist;
-    const camY = Math.max(0.6, anchor.y + baseLift + Math.sin(pointerControls.pitch) * camDist);
-    const desired = new THREE.Vector3(camX, camY, camZ);
-    const resolved = resolveCameraCollision(this.raycaster, this.buildingColliders, anchor, desired);
-    resolved.y = Math.max(0.6, resolved.y);
-    camera.position.copy(resolved);
-    camera.lookAt(anchor);
-
-    const interactable = this._findInteractable(camera);
+    const interactable = this._findInteractable();
     if (interactable) {
-      const name = interactable.userData.exitMarker ? '배로 돌아가기' : interactable.userData.npc.name;
+      const name = interactable.kind === 'exit' ? '배로 돌아가기' : interactable.obj.npc.name;
       hud.showInteractPrompt(true, `[F 또는 좌클릭] ${name}과 상호작용`);
     } else {
       hud.showInteractPrompt(false);
     }
 
     hud.setLocation(this.city.name, `${COUNTRY_NAMES[this.city.country]} 항구도시`);
+  }
+
+  render(ctx) {
+    const w = this.logicalW, h = this.logicalH;
+    const px = PX_PER_UNIT * this.camera.zoom;
+    const toScreen = (wx, wz) => worldToScreen(this.camera, px, wx, wz, w, h);
+
+    ctx.fillStyle = '#c9b896';
+    ctx.fillRect(0, 0, w, h);
+
+    // 광장
+    const plazaC = toScreen(0, 0);
+    ctx.fillStyle = '#d8cba3';
+    ctx.beginPath(); ctx.arc(plazaC.x, plazaC.y, 30 * px, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#9aa5a0';
+    ctx.beginPath(); ctx.arc(plazaC.x, plazaC.y, 2.3 * px, 0, Math.PI * 2); ctx.fill();
+
+    // 부두/바다(화면 하단, 도시 남쪽)
+    const dockTop = toScreen(-70, 60);
+    ctx.fillStyle = '#0f4a63';
+    ctx.fillRect(0, dockTop.y, w, h - dockTop.y);
+    const pierC = toScreen(0, 78);
+    ctx.fillStyle = '#5a4326';
+    ctx.fillRect(pierC.x - 7 * px, pierC.y - 20 * px, 14 * px, 40 * px);
+
+    // 건물
+    for (const b of this._buildings) {
+      const c = toScreen(b.x, b.z);
+      const bw = b.w * px, bd = b.d * px;
+      ctx.fillStyle = '#e4dcc3';
+      ctx.fillRect(c.x - bw / 2, c.y - bd / 2, bw, bd);
+      ctx.strokeStyle = '#8a7658';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(c.x - bw / 2, c.y - bd / 2, bw, bd);
+      ctx.fillStyle = '#a8492f';
+      ctx.beginPath();
+      ctx.moveTo(c.x - bw * 0.4, c.y - bd * 0.15);
+      ctx.lineTo(c.x, c.y - bd * 0.55);
+      ctx.lineTo(c.x + bw * 0.4, c.y - bd * 0.15);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // 출항 마커
+    const exitP = toScreen(this.exitPos.x, this.exitPos.y);
+    ctx.fillStyle = '#e6c15a';
+    ctx.beginPath();
+    ctx.moveTo(exitP.x, exitP.y - 10);
+    ctx.lineTo(exitP.x - 5, exitP.y + 4);
+    ctx.lineTo(exitP.x + 5, exitP.y + 4);
+    ctx.closePath(); ctx.fill();
+
+    // NPC
+    for (const o of this.npcObjects) {
+      const p = toScreen(o.pos.x, o.pos.y);
+      const roleColor = NPC_ROLE_COLORS[o.npc.role] || '#999';
+      ctx.fillStyle = roleColor;
+      ctx.globalAlpha = 0.35;
+      ctx.beginPath(); ctx.arc(p.x, p.y + 4, 4.4, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      const sprite = characterSprite(o.gender, roleColor);
+      const scale = px / PX_PER_UNIT * 1.3;
+      ctx.drawImage(sprite, p.x - (sprite.width * scale) / 2, p.y - sprite.height * scale + 4, sprite.width * scale, sprite.height * scale);
+      ctx.fillStyle = 'rgba(20,14,8,0.75)';
+      ctx.font = '7px sans-serif';
+      ctx.textAlign = 'center';
+      const label = NPC_ROLE_LABELS[o.npc.role] || o.npc.name;
+      const tw = ctx.measureText(label).width;
+      ctx.fillRect(p.x - tw / 2 - 2, p.y - sprite.height * scale - 6, tw + 4, 9);
+      ctx.fillStyle = '#f0e6d2';
+      ctx.fillText(label, p.x, p.y - sprite.height * scale + 1);
+    }
+
+    // 플레이어 캐릭터
+    const cp = toScreen(this.character.pos.x, this.character.pos.y);
+    const sprite = characterSprite(state.gender, null);
+    const scale = px / PX_PER_UNIT * 1.3;
+    ctx.save();
+    ctx.translate(cp.x, cp.y - sprite.height * scale / 2 + 3);
+    ctx.rotate(-this.character.facing);
+    ctx.drawImage(sprite, -sprite.width * scale / 2, -sprite.height * scale / 2, sprite.width * scale, sprite.height * scale);
+    ctx.restore();
   }
 }

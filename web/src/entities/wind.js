@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { clamp } from '../util/math2d.js';
 
 // 세계 전역에 적용되는 바람 — 방향(rad, ship.heading과 동일한 관례)과 세기(0..1)를
 // 목표치를 향해 아주 천천히 수렴시켜(급변 없이) 시간이 지나며 자연스럽게 바뀌게 한다.
@@ -26,8 +26,8 @@ export class Wind {
       this._timer = retargetMin + Math.random() * (retargetMax - retargetMin);
       this._targetDir = this.direction + (Math.random() - 0.5) * Math.PI * (this.stormActive ? 1.7 : 1.1);
       this._targetStr = this.stormActive
-        ? THREE.MathUtils.clamp(0.75 + (Math.random() - 0.5) * 0.4, 0.55, 1)
-        : THREE.MathUtils.clamp(this.strength + (Math.random() - 0.5) * 0.7, 0.1, 1);
+        ? clamp(0.75 + (Math.random() - 0.5) * 0.4, 0.55, 1)
+        : clamp(this.strength + (Math.random() - 0.5) * 0.7, 0.1, 1);
     }
     let diff = this._targetDir - this.direction;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));

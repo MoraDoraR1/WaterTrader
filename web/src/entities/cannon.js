@@ -1,41 +1,34 @@
-import * as THREE from 'three';
-
-const GRAVITY = -9.8;
-
+// 포탄 풀 — 2D 탑뷰라 포물선(중력) 대신 등속 직선 이동 + 사거리(life)로 근사한다.
+// 렌더링은 하지 않는다(순수 시뮬레이션); seaScene의 그리기 패스가 this.balls를 순회해 점으로 그린다.
 export class CannonballPool {
-  constructor(scene, maxBalls = 40) {
-    this.scene = scene;
+  constructor(maxBalls = 60) {
+    this.maxBalls = maxBalls;
     this.balls = [];
-    this.geo = new THREE.SphereGeometry(0.5, 8, 8);
-    this.mat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5, metalness: 0.4 });
   }
 
-  fire(originVec3, dirVec3, speed, owner) {
-    const mesh = new THREE.Mesh(this.geo, this.mat);
-    mesh.position.copy(originVec3);
-    this.scene.add(mesh);
+  // origin/dir: {x,y} — dir은 정규화되어 있어야 한다.
+  fire(origin, dir, speed, owner) {
+    if (this.balls.length >= this.maxBalls) this.balls.shift();
     this.balls.push({
-      mesh,
-      vel: dirVec3.clone().multiplyScalar(speed),
-      life: 4,
+      x: origin.x, y: origin.y,
+      vx: dir.x * speed, vy: dir.y * speed,
+      life: 1.6,
       owner,
-      hit: false,
     });
   }
 
   update(delta, targets, onHit) {
     for (let i = this.balls.length - 1; i >= 0; i--) {
       const b = this.balls[i];
-      b.vel.y += GRAVITY * delta;
-      b.mesh.position.addScaledVector(b.vel, delta);
+      b.x += b.vx * delta;
+      b.y += b.vy * delta;
       b.life -= delta;
 
-      let dead = b.life <= 0 || b.mesh.position.y < -2;
-
+      let dead = b.life <= 0;
       if (!dead) {
         for (const target of targets) {
           if (target.owner === b.owner || target.dead) continue;
-          const d = target.position.distanceTo(b.mesh.position);
+          const d = Math.hypot(target.position.x - b.x, target.position.y - b.y);
           if (d < target.radius) {
             onHit(target, b);
             dead = true;
@@ -43,11 +36,7 @@ export class CannonballPool {
           }
         }
       }
-
-      if (dead) {
-        this.scene.remove(b.mesh);
-        this.balls.splice(i, 1);
-      }
+      if (dead) this.balls.splice(i, 1);
     }
   }
 }

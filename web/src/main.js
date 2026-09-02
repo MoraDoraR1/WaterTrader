@@ -1,5 +1,4 @@
-import * as THREE from 'three';
-import { PointerLookControls } from './controls/pointerLook.js';
+import { LOGICAL_W, LOGICAL_H, PixelSurface } from './render/canvas2d.js';
 import { consumeJustPressed, clearFrame } from './controls/keys.js';
 import { SeaScene } from './scenes/seaScene.js';
 import { CityScene } from './scenes/cityScene.js';
@@ -19,40 +18,66 @@ import { getRankInfo } from './systems/rank.js';
 import { getMarketRows } from './systems/market.js';
 
 const wrap = document.getElementById('canvas-wrap');
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-wrap.appendChild(renderer.domElement);
+const displayCanvas = document.createElement('canvas');
+displayCanvas.id = 'game-canvas';
+wrap.appendChild(displayCanvas);
+const displayCtx = displayCanvas.getContext('2d');
+const surface = new PixelSurface(LOGICAL_W, LOGICAL_H);
 
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 4000);
+function resizeCanvas() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  displayCanvas.width = Math.round(window.innerWidth * dpr);
+  displayCanvas.height = Math.round(window.innerHeight * dpr);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-const pointerControls = new PointerLookControls(renderer.domElement);
-pointerControls.onLeftClick = () => {
-  if (state.screen === 'sea') seaScene?.handleLeftClick();
-  else if (state.screen === 'city') citySceneObj?.handleInteract(camera);
-};
-pointerControls.onRightClick = () => {
-  if (state.screen === 'city') citySceneObj?.handleRightClick(camera);
-};
+// 논리 해상도 좌표(480x270 기준)로 변환한 클릭 좌표 — 씬의 화면 클릭 판정에 쓴다.
+function toLogicalXY(clientX, clientY) {
+  const rect = displayCanvas.getBoundingClientRect();
+  return {
+    x: ((clientX - rect.left) / rect.width) * LOGICAL_W,
+    y: ((clientY - rect.top) / rect.height) * LOGICAL_H,
+  };
+}
 
 let seaScene = null;
 let citySceneObj = null;
 
+// 짧은 클릭(드래그 아님)만 상호작용/이동으로 처리 — 화면을 눌러 살짝 드래그하는 것과 구분한다.
+const CLICK_THRESHOLD = 6;
+let downX = 0, downY = 0, moved = 0, dragging = false;
+displayCanvas.addEventListener('mousedown', (e) => {
+  dragging = true; moved = 0; downX = e.clientX; downY = e.clientY;
+});
+window.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  moved += Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY);
+  downX = e.clientX; downY = e.clientY;
+});
+window.addEventListener('mouseup', (e) => {
+  if (!dragging) return;
+  dragging = false;
+  if (moved >= CLICK_THRESHOLD) return;
+  const { x, y } = toLogicalXY(e.clientX, e.clientY);
+  if (e.button === 0) {
+    if (state.screen === 'sea') seaScene?.handleLeftClick();
+    else if (state.screen === 'city') citySceneObj?.handleInteract();
+  } else if (e.button === 2) {
+    if (state.screen === 'city') citySceneObj?.handleRightClickAt(x, y);
+  }
+});
+displayCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
+displayCanvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (state.screen === 'sea') seaScene?.onWheelZoom(e.deltaY);
+  else if (state.screen === 'city') citySceneObj?.onWheelZoom(e.deltaY);
+}, { passive: false });
+
 function goToSea(fromCityId) {
   hud.hideDialogue();
   hud.closeInventory();
-  if (!seaScene) { seaScene = new SeaScene(); seaScene.setOnDock(goToCity); }
-  if (fromCityId) {
-    // 도시에서 나올 때는 정박했던 위치 그대로 유지
-  }
-  // 배 진행 방향 기준으로 "뒤에서 바라보는" 기본 시점으로 초기화(yaw == heading일 때 배 후방)
-  pointerControls.yaw = seaScene.ship.heading;
+  if (!seaScene) { seaScene = new SeaScene(LOGICAL_W, LOGICAL_H); seaScene.setOnDock(goToCity); }
   citySceneObj = null;
   setScreen('sea');
   audio.startOcean();
@@ -60,23 +85,18 @@ function goToSea(fromCityId) {
   hud.showSeaHud(true);
   const role = SHIP_ROLES[seaScene.ship.shipDef.role] || SHIP_ROLES.trade;
   hud.setShipRoleBadge(role.label, role.color);
-  hud.showActionHints(true, ['드래그 시점회전', 'W/S 속도', 'A/D 선회', '좌클릭 정박/포격', '스페이스 포격', 'M 전체지도', 'T 선박정보']);
+  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '좌클릭 정박/포격', '스페이스 포격', 'M 전체지도', 'T 선박정보']);
 }
 
 function goToCity(cityId) {
   hud.showSeaHud(false);
   hud.showTargetHp(false);
   hud.showCombatBanner(false);
-  citySceneObj = new CityScene(cityId, () => goToSea(cityId));
-  // 항구관리인을 마주보는 상태로 입항하도록, 배 쪽에서 쓰던 "시점=진행방향" 관례와 동일하게
-  // 카메라 시점(yaw)도 스폰 시 그 방향으로 맞춘다. pitch도 눈높이 근처로 낮춰야
-  // 체이스캠 특유의 내려다보는 각도 때문에 화면 중앙 레이가 관리인 발밑 아래로 빗나가지 않는다.
-  pointerControls.yaw = citySceneObj.spawnFacing;
-  pointerControls.pitch = 0.05;
+  citySceneObj = new CityScene(cityId, () => goToSea(cityId), LOGICAL_W, LOGICAL_H);
   setScreen('city');
   audio.startHarbor();
   audio.stopOcean();
-  hud.showActionHints(true, ['드래그 시점회전', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도', 'T 선박정보']);
+  hud.showActionHints(true, ['휠 확대/축소', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도', 'T 선박정보']);
 
   const { wage, paid } = payWagesOnDock();
   hud.setGold(state.gold);
@@ -88,8 +108,6 @@ function goToCity(cityId) {
 }
 
 // ---- 전체 지도(월드맵): M키로 토글, 화살표로 해역 페이지 전환 ----
-// 열람 전용 기능이며 플레이어의 실제 이동/조작과는 무관하다. 열려있는 동안은
-// 게임 시뮬레이션 갱신을 멈춰(스냅샷처럼) 조작이 새지 않도록 한다.
 const worldMapAllPts = [...MAINLAND_POLY, ...BRITAIN_POLY, ...CITIES.map((c) => c.pos)];
 const wmXs = worldMapAllPts.map((p) => p[0]), wmZs = worldMapAllPts.map((p) => p[1]);
 const wmPad = 60;
@@ -116,11 +134,7 @@ function openWorldMap() {
   hud.showWorldMap(true);
   renderWorldMapPage();
 }
-
-function closeWorldMap() {
-  hud.showWorldMap(false);
-}
-
+function closeWorldMap() { hud.showWorldMap(false); }
 function cycleWorldMap(dir) {
   worldMapIndex = (worldMapIndex + dir + WORLD_REGIONS.length) % WORLD_REGIONS.length;
   renderWorldMapPage();
@@ -139,16 +153,11 @@ document.getElementById('world-map-prev').addEventListener('click', () => cycleW
 document.getElementById('world-map-next').addEventListener('click', () => cycleWorldMap(1));
 
 wireShipyardTabs();
-// 조선소에서 배를 구매하거나 부품을 장착/해제하면(state.currentShipId, state.shipParts 변경)
-// 이미 떠 있는 바다 씬의 배 메시/스탯을 새로 반영해야 한다. 아직 바다에 나간 적이 없다면
-// seaScene이 없으므로(첫 SeaScene 생성 시 이미 최신 상태를 읽어가므로) 별도 처리가 필요없다.
 subscribe((patch) => {
   if (patch.shipChanged) seaScene?.rebuildShip();
   if (patch.fleetChanged) seaScene?.rebuildEscorts();
 });
 
-// ---- 랭크/엔딩: 상태가 바뀔 때마다(재산/함대/의뢰/우호도 등) 명성 점수를 재계산해
-// HUD 배지를 갱신하고, 최고 랭크(바다의 제독)에 처음 도달하면 엔딩(결산) 화면을 띄운다.
 function refreshRank() {
   if (state.screen === 'title') return;
   const info = getRankInfo();
@@ -168,7 +177,7 @@ function refreshRank() {
 subscribe(refreshRank);
 document.getElementById('ending-close-btn').addEventListener('click', () => hud.hideEnding());
 
-// ---- 선박 정보 카드: T키로 토글, 현재 탑승 중인 배의 능력치를 참고 지표(동급 최대치) 대비 막대로 표시 ----
+// ---- 선박 정보 카드 ----
 const STAT_MAX = {
   hp: Math.max(...SHIPS.map((s) => s.hp)),
   cargo: Math.max(...SHIPS.map((s) => s.cargo)),
@@ -224,9 +233,7 @@ function enterGame() {
   hud.showTitle(false);
   hud.showTopBar(true);
   hud.showLocationBanner(true);
-  hud.showCrosshair(true);
   if (state.shipHp == null) initShipHp();
-  // 오디오는 반드시 사용자 제스처(이 클릭) 안에서 초기화해야 브라우저 자동재생 정책에 막히지 않는다.
   audio.ensureContext();
   audio.resume();
   audio.setMuted(!!state.audioMuted);
@@ -234,7 +241,6 @@ function enterGame() {
   refreshRank();
 }
 
-// ---- 타이틀 화면: 저장 데이터가 있으면 "이어하기" 버튼과 요약을 보여준다 ----
 const savedGame = hasSave() ? loadSaveData() : null;
 if (savedGame) {
   document.getElementById('continue-wrap').classList.remove('hidden');
@@ -258,7 +264,6 @@ document.getElementById('start-btn').addEventListener('click', () => {
   enterGame();
 });
 
-// ---- 자동 저장: 조선소/시장 등 의미 있는 변화가 생길 때(notify) + 주기적으로(항해 중 위치/골드/내구도 변화 포착) ----
 subscribe(() => { if (state.screen !== 'title') saveGame(); });
 setInterval(() => { if (state.screen !== 'title') saveGame(); }, 15000);
 window.addEventListener('beforeunload', () => { if (state.screen !== 'title') saveGame(); });
@@ -283,7 +288,7 @@ function animate(now) {
       hud.isShipInfoOpen() ? closeShipInfo() : openShipInfo();
     }
     if (consumeJustPressed('KeyF')) {
-      if (state.screen === 'city') citySceneObj?.handleInteract(camera);
+      if (state.screen === 'city') citySceneObj?.handleInteract();
     }
     if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
       const priceMap = state.screen === 'city' && citySceneObj
@@ -302,15 +307,17 @@ function animate(now) {
     }
   }
 
-  // 월드맵/선박정보/조선소/시장/의뢰 게시판 열람 중에는 시뮬레이션을 멈춰(스냅샷) 조작이 뒤에서 새지 않게 한다.
   if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
+    const ctx = surface.ctx;
+    ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
     if (state.screen === 'sea' && seaScene) {
-      seaScene.update(delta, elapsed, camera, pointerControls);
-      renderer.render(seaScene.scene, camera);
+      seaScene.update(delta, elapsed);
+      seaScene.render(ctx);
     } else if (state.screen === 'city' && citySceneObj) {
-      citySceneObj.update(delta, elapsed, camera, pointerControls);
-      renderer.render(citySceneObj.scene, camera);
+      citySceneObj.update(delta);
+      citySceneObj.render(ctx);
     }
+    surface.blitTo(displayCtx, displayCanvas.width, displayCanvas.height);
   }
 
   clearFrame();
@@ -319,4 +326,8 @@ function animate(now) {
 hud.showLoading(false);
 requestAnimationFrame(animate);
 
-window.__debug = { get seaScene() { return seaScene; }, get citySceneObj() { return citySceneObj; }, camera, state, notify };
+window.__debug = {
+  get seaScene() { return seaScene; },
+  get citySceneObj() { return citySceneObj; },
+  state, notify,
+};
