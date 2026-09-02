@@ -6,7 +6,7 @@ import { state, setScreen, initShipHp, subscribe, notify } from './state.js';
 import { hud } from './ui/hud.js';
 import { wireShipyardTabs } from './ui/shipyardPanel.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
-import { LAND_POLYGONS, MAINLAND_POLY, BRITAIN_POLY } from './data/coastline.js';
+import { LAND_POLYGONS, project } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
 import { getEffectiveShipDef, PART_SLOTS, getPart } from './data/shipParts.js';
@@ -65,6 +65,7 @@ window.addEventListener('mouseup', (e) => {
     else if (state.screen === 'city') citySceneObj?.handleInteract();
   } else if (e.button === 2) {
     if (state.screen === 'city') citySceneObj?.handleRightClickAt(x, y);
+    else if (state.screen === 'sea') seaScene?.setWaypointAt(x, y);
   }
 });
 displayCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -85,7 +86,7 @@ function goToSea(fromCityId) {
   hud.showSeaHud(true);
   const role = SHIP_ROLES[seaScene.ship.shipDef.role] || SHIP_ROLES.trade;
   hud.setShipRoleBadge(role.label, role.color);
-  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '좌클릭 정박/포격', '스페이스 포격', 'M 전체지도', 'T 선박정보']);
+  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', 'M 전체지도', 'T 선박정보']);
 }
 
 function goToCity(cityId) {
@@ -108,25 +109,22 @@ function goToCity(cityId) {
 }
 
 // ---- 전체 지도(월드맵): M키로 토글, 화살표로 해역 페이지 전환 ----
-const worldMapAllPts = [...MAINLAND_POLY, ...BRITAIN_POLY, ...CITIES.map((c) => c.pos)];
-const wmXs = worldMapAllPts.map((p) => p[0]), wmZs = worldMapAllPts.map((p) => p[1]);
-const wmPad = 60;
-const worldMapBounds = {
-  minX: Math.min(...wmXs) - wmPad, maxX: Math.max(...wmXs) + wmPad,
-  minZ: Math.min(...wmZs) - wmPad, maxZ: Math.max(...wmZs) + wmPad,
-};
+// 이제 모든 페이지가 전세계 대륙/도시 데이터를 공유하고, 페이지별 위경도 범위(bounds)만
+// 다르게 잡아 확대해 보여주는 "지도책" 방식이다(placeholder 페이지는 더 이상 없음).
 const worldMapCities = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], name: c.name, color: COUNTRY_COLORS[c.country] || '#e6c15a' }));
 let worldMapIndex = 0;
+
+function regionBoundsToWorld(b) {
+  const [x0, z0] = project(b.lonMin, b.latMin);
+  const [x1, z1] = project(b.lonMax, b.latMax);
+  return { minX: Math.min(x0, x1), maxX: Math.max(x0, x1), minZ: Math.min(z0, z1), maxZ: Math.max(z0, z1) };
+}
 
 function renderWorldMapPage() {
   const region = WORLD_REGIONS[worldMapIndex];
   hud.setWorldMapHeader(region.name, region.subtitle, worldMapIndex, WORLD_REGIONS.length);
-  if (region.kind === 'real') {
-    const ship = seaScene ? { x: seaScene.ship.pos.x, z: seaScene.ship.pos.y, heading: seaScene.ship.heading } : null;
-    hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: worldMapBounds, cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship });
-  } else {
-    hud.renderWorldMapPlaceholder();
-  }
+  const ship = seaScene ? { x: seaScene.ship.pos.x, z: seaScene.ship.pos.y, heading: seaScene.ship.heading } : null;
+  hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: regionBoundsToWorld(region.bounds), cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship });
 }
 
 function openWorldMap() {

@@ -1,5 +1,5 @@
-// 도시 씬 캐릭터 이동 로직 — 메시 결합 없는 순수 로직판. 탑뷰라 카메라 회전이 없으므로
-// WASD는 항상 월드 절대 방향(북/남/동/서)이다(예전처럼 카메라 yaw를 더하지 않는다).
+// 도시 씬 캐릭터 이동 로직 — 순수 물리/이동만 담당하며 입력 벡터의 좌표계에는 관여하지 않는다.
+// (화면/카메라 기준 방향 재매핑은 호출부인 cityScene.update()에서 처리한다.)
 import { Vec2, clamp, lerpAngle } from '../util/math2d.js';
 
 export class CharacterController {

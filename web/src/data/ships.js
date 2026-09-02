@@ -172,9 +172,11 @@ export function shipsByRole(role) {
 export const COUNTRY_COLORS = {
   PT: '#0f6e3e', ES: '#c8102e', EN: '#1e3a8a', NL: '#e8720c',
   HAN: '#6b4f3a', IT: '#7a1f3d', SE: '#0a4a9e', FR: '#274e9c',
+  OT: '#a8862a',
 };
 
 export const COUNTRY_NAMES = {
   PT: '포르투갈', ES: '스페인', EN: '잉글랜드', NL: '네덜란드',
   HAN: '한자동맹', IT: '베네치아', SE: '스웨덴', FR: '프랑스',
+  OT: '오스만',
 };

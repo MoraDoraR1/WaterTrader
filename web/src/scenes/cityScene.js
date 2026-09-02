@@ -137,7 +137,10 @@ export class CityScene {
   update(delta) {
     const forward = (isDown('KeyW') ? 1 : 0) - (isDown('KeyS') ? 1 : 0);
     const strafe = (isDown('KeyD') ? 1 : 0) - (isDown('KeyA') ? 1 : 0);
-    this.character.update(delta, { x: strafe, y: forward }, BOUNDS, this.buildingColliders);
+    // 대각선(아이소메트릭) 시점에 맞춰 WASD를 화면 방향 기준으로 재매핑한다
+    // (W=화면 위쪽, D=화면 오른쪽 …) — 월드 절대축 기준이면 시점과 어긋나 보인다.
+    const screenRelative = { x: strafe - forward, y: -(forward + strafe) };
+    this.character.update(delta, screenRelative, BOUNDS, this.buildingColliders);
     this.camera.follow(this.character.pos.x, this.character.pos.y, delta, 7);
 
     const interactable = this._findInteractable();

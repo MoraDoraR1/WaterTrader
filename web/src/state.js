@@ -1,5 +1,6 @@
 import { SHIPS, getShip } from './data/ships.js';
 import { getEffectiveShipDef } from './data/shipParts.js';
+import { project } from './data/coastline.js';
 
 const listeners = new Set();
 
@@ -11,7 +12,7 @@ export const state = {
   currentShipId: 'caravela_lateen',
   shipHp: null,
   shipParts: {}, // { cannon, armor, sail, hull } — 슬롯별 장착 부품 id (조선소에서 구매/장착)
-  shipPos: [-560, 300],
+  shipPos: project(-11.0, 38.5), // 리스본 서쪽 대서양 공해 — 실제 경위도 기반이라 지도 축척이 바뀌어도 항상 안전한 시작 위치
   shipHeading: 0,
   dockedCityId: null,
   inCombat: false,

@@ -2,7 +2,7 @@ const $ = (id) => document.getElementById(id);
 
 let toastTimer = null;
 let mmBounds = null;
-let mmBgCanvas = null;
+let mmLandPolygons = null;
 
 function mmToPx(x, z, w, h) {
   return [
@@ -11,11 +11,15 @@ function mmToPx(x, z, w, h) {
   ];
 }
 
-function wmToPx(x, z, w, h, bounds) {
-  return [
-    ((x - bounds.minX) / (bounds.maxX - bounds.minX)) * w,
-    ((z - bounds.minZ) / (bounds.maxZ - bounds.minZ)) * h,
-  ];
+// 가로세로 비율을 고정한 변환(종횡비가 크게 다른 전세계 지도에서 대륙이 찌그러지지 않도록).
+// bounds보다 짧은 축은 캔버스 중앙에 레터박스로 여백을 둔다.
+function wmTransform(bounds, w, h) {
+  const spanX = bounds.maxX - bounds.minX, spanZ = bounds.maxZ - bounds.minZ;
+  const scale = Math.min(w / spanX, h / spanZ);
+  return { scale, ox: (w - spanX * scale) / 2, oz: (h - spanZ * scale) / 2 };
+}
+function wmToPx(x, z, bounds, t) {
+  return [(x - bounds.minX) * t.scale + t.ox, (z - bounds.minZ) * t.scale + t.oz];
 }
 
 // 조선소/의뢰 게시판처럼 "행마다 이름·설명·가격표·버튼 하나"인 목록 패널의 공용 렌더러.
@@ -260,44 +264,47 @@ export const hud = {
     body.appendChild(list);
   },
 
-  initMinimap(landPolygons, bounds) {
-    mmBounds = bounds;
-    const canvas = $('minimap-canvas');
-    const w = canvas.width, h = canvas.height;
-    mmBgCanvas = document.createElement('canvas');
-    mmBgCanvas.width = w; mmBgCanvas.height = h;
-    const bctx = mmBgCanvas.getContext('2d');
-    bctx.fillStyle = '#12384a';
-    bctx.fillRect(0, 0, w, h);
-    bctx.fillStyle = '#5f7a52';
-    for (const poly of landPolygons) {
-      bctx.beginPath();
-      poly.forEach(([x, z], i) => {
-        const [px, py] = mmToPx(x, z, w, h);
-        if (i === 0) bctx.moveTo(px, py); else bctx.lineTo(px, py);
-      });
-      bctx.closePath();
-      bctx.fill();
-    }
+  // 미니맵은 이제 세계지도 축척과 별개로, 배 주변 일정 반경을 항상 따라다니며 보여주는
+  // "국지 항해도"다(전세계 축척으로 고정하면 배가 거의 안 움직이는 것처럼 보여 쓸모가 없다).
+  // landPolygons는 한 번만 저장해두고, 배경은 매 프레임 현재 bounds로 다시 그린다.
+  initMinimap(landPolygons) {
+    mmLandPolygons = landPolygons;
   },
 
-  updateMinimap(ship, cities, npcShips, windTowardDir) {
-    if (!mmBgCanvas) return;
+  updateMinimap(bounds, ship, cities, npcShips, windTowardDir) {
+    if (!mmLandPolygons) return;
+    mmBounds = bounds;
     const canvas = $('minimap-canvas');
     const ctx = canvas.getContext('2d');
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(mmBgCanvas, 0, 0);
+    ctx.fillStyle = '#12384a';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#5f7a52';
+    ctx.strokeStyle = 'rgba(20,40,30,0.5)';
+    ctx.lineWidth = 1;
+    for (const poly of mmLandPolygons) {
+      ctx.beginPath();
+      poly.forEach(([x, z], i) => {
+        const [px, py] = mmToPx(x, z, w, h);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
 
     for (const c of cities) {
       const [px, py] = mmToPx(c.x, c.z, w, h);
+      if (px < -6 || px > w + 6 || py < -6 || py > h + 6) continue;
       ctx.fillStyle = c.color || '#e6c15a';
-      ctx.beginPath(); ctx.arc(px, py, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, 2.8, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.6; ctx.stroke();
     }
 
     for (const n of npcShips) {
       const [px, py] = mmToPx(n.x, n.z, w, h);
+      if (px < -6 || px > w + 6 || py < -6 || py > h + 6) continue;
       ctx.fillStyle = n.hostile ? '#e0503f' : '#cfe0ea';
       ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI * 2); ctx.fill();
     }
@@ -388,6 +395,7 @@ export const hud = {
     const canvas = $('world-map-canvas');
     const w = canvas.width, h = canvas.height;
     const ctx = canvas.getContext('2d');
+    const t = wmTransform(bounds, w, h);
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#0f3245';
     ctx.fillRect(0, 0, w, h);
@@ -403,13 +411,13 @@ export const hud = {
 
     // 해역 이름 라벨(구획 표시)
     ctx.font = '13px sans-serif';
-    ctx.fillStyle = 'rgba(210,230,240,0.4)';
+    ctx.fillStyle = 'rgba(210,230,240,0.45)';
     ctx.textAlign = 'center';
     for (const [name, poly] of regionBoxes) {
       let cx = 0, cz = 0;
       poly.forEach(([x, z]) => { cx += x; cz += z; });
       cx /= poly.length; cz /= poly.length;
-      const [px, py] = wmToPx(cx, cz, w, h, bounds);
+      const [px, py] = wmToPx(cx, cz, bounds, t);
       if (px >= 10 && px <= w - 10 && py >= 10 && py <= h - 10) ctx.fillText(name, px, py);
     }
 
@@ -420,7 +428,7 @@ export const hud = {
     for (const poly of landPolygons) {
       ctx.beginPath();
       poly.forEach(([x, z], i) => {
-        const [px, py] = wmToPx(x, z, w, h, bounds);
+        const [px, py] = wmToPx(x, z, bounds, t);
         if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
       });
       ctx.closePath();
@@ -428,21 +436,27 @@ export const hud = {
       ctx.stroke();
     }
 
-    // 도시(항상 이름 표시)
+    // 도시 — 항상 이름을 표시하되, 전세계 축척에서도 잘 보이도록 마커를 키우고
+    // 짙은 테두리 + 밝은 후광을 둬 옅은 배경/해안선 위에서도 도드라지게 한다.
     ctx.textAlign = 'left';
     for (const c of cities) {
-      const [px, py] = wmToPx(c.x, c.z, w, h, bounds);
-      ctx.fillStyle = c.color || '#e6c15a';
-      ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1; ctx.stroke();
-      ctx.fillStyle = '#f0e6d2';
-      ctx.font = '12px sans-serif';
-      ctx.fillText(c.name, px + 7, py + 4);
+      const [px, py] = wmToPx(c.x, c.z, bounds, t);
+      if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
+      ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(10,8,4,0.55)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fillStyle = c.color || '#e6c15a'; ctx.fill();
+      ctx.strokeStyle = '#f0e6d2'; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillStyle = 'rgba(6,10,14,0.85)';
+      ctx.fillText(c.name, px + 10, py + 5);
+      ctx.fillStyle = '#f6ecd4';
+      ctx.fillText(c.name, px + 9, py + 4);
     }
 
     // 플레이어 위치(참고용 — 지도 열람 자체는 이동 정보와 무관)
     if (ship) {
-      const [px, py] = wmToPx(ship.x, ship.z, w, h, bounds);
+      const [px, py] = wmToPx(ship.x, ship.z, bounds, t);
       const fw = [Math.sin(ship.heading), Math.cos(ship.heading)];
       const rt = [Math.cos(ship.heading), -Math.sin(ship.heading)];
       const tip = [px + fw[0] * 10, py + fw[1] * 10];
@@ -454,26 +468,6 @@ export const hud = {
       ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
     }
-  },
-
-  renderWorldMapPlaceholder() {
-    const canvas = $('world-map-canvas');
-    const w = canvas.width, h = canvas.height;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#0a1a22';
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(160,180,190,0.12)';
-    ctx.lineWidth = 1;
-    for (let i = -h; i < w; i += 28) {
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + h, h); ctx.stroke();
-    }
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#8fa6b4';
-    ctx.font = '22px sans-serif';
-    ctx.fillText('미개척 해역', w / 2, h / 2 - 10);
-    ctx.font = '13px sans-serif';
-    ctx.fillText('아직 항해 기록이 없습니다', w / 2, h / 2 + 18);
   },
 
   toast(msg, ms = 2200) {

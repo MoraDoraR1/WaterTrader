@@ -18,6 +18,10 @@ export const GOODS = [
   { id: 'amber', name: '호박', category: 'luxury', basePrice: 85 },
   { id: 'glass', name: '유리공예품', category: 'luxury', basePrice: 95 },
   { id: 'olive_oil', name: '올리브유', category: 'goods', basePrice: 22 },
+  // 전세계 항로 확장으로 추가된 신대륙/아시아/아프리카 특산품.
+  { id: 'gold', name: '금', category: 'luxury', basePrice: 150 },
+  { id: 'cacao', name: '카카오', category: 'goods', basePrice: 35 },
+  { id: 'tea', name: '차', category: 'luxury', basePrice: 75 },
 ];
 
 // 도시별 매입가(buy = 상인에게 살 때 지불)/매도가(sell = 상인에게 팔 때 받음).
@@ -95,6 +99,61 @@ export const CITY_MARKET = {
     wool: { buy: 33, sell: 29 },
     tin: { buy: 62, sell: 55 },
     fur: { buy: 52, sell: 46 },
+  },
+  // ---- 전세계 항로 확장 — 각지 원산지는 값이 가장 싸다("멀리 가서 싸게 사 온다"가
+  // 큰 지도에서 갖는 의미). 유럽 항구까지 실어 오면 그만큼 비싸게 팔 수 있다.
+  azores: {
+    wine: { buy: 14, sell: 11 },
+    sugar: { buy: 26, sell: 21 },
+  },
+  canarias: {
+    sugar: { buy: 18, sell: 14 },
+    wine: { buy: 15, sell: 12 },
+  },
+  alger: {
+    silver: { buy: 30, sell: 23 },
+    wine: { buy: 14, sell: 11 },
+    olive_oil: { buy: 12, sell: 9 },
+  },
+  istanbul: {
+    pepper: { buy: 24, sell: 18 },
+    cinnamon: { buy: 32, sell: 24 },
+    clove: { buy: 48, sell: 36 },
+    nutmeg: { buy: 58, sell: 44 },
+    silk: { buy: 68, sell: 51 },
+  },
+  elmina: {
+    gold: { buy: 55, sell: 41 },
+    pepper: { buy: 20, sell: 15 },
+  },
+  havana: {
+    silver: { buy: 22, sell: 16 },
+    sugar: { buy: 15, sell: 11 },
+    cacao: { buy: 13, sell: 10 },
+  },
+  salvador: {
+    sugar: { buy: 13, sell: 10 },
+    cacao: { buy: 12, sell: 9 },
+    wine: { buy: 27, sell: 24 },
+  },
+  new_amsterdam: {
+    fur: { buy: 16, sell: 12 },
+    wool: { buy: 30, sell: 26 },
+  },
+  goa: {
+    pepper: { buy: 17, sell: 13 },
+    cinnamon: { buy: 26, sell: 20 },
+    silk: { buy: 75, sell: 56 },
+  },
+  malacca: {
+    clove: { buy: 33, sell: 25 },
+    nutmeg: { buy: 40, sell: 30 },
+    porcelain: { buy: 52, sell: 39 },
+  },
+  nagasaki: {
+    silver: { buy: 25, sell: 19 },
+    tea: { buy: 28, sell: 21 },
+    porcelain: { buy: 40, sell: 30 },
   },
 };
 

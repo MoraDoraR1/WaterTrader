@@ -13,7 +13,7 @@ import { WeatherSystem, RainEffect } from '../entities/weather.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { getEffectiveShipDef } from '../data/shipParts.js';
 import { CITIES } from '../data/cities.js';
-import { MAINLAND_POLY, BRITAIN_POLY, LAND_POLYGONS, pointOnAnyLand } from '../data/coastline.js';
+import { LAND_POLYGONS, pointOnAnyLand } from '../data/coastline.js';
 import { seaRegionAt } from '../data/seaRegions.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
@@ -32,6 +32,9 @@ const COLLISION_COOLDOWN = 2.5;
 const MELEE_CHANCE = 0.25;
 const MELEE_DURATION = 4.5;
 const BASE_PX_PER_UNIT = 3.2; // 줌 1배 기준, 월드 1단위당 논리 픽셀 수
+const MINIMAP_RADIUS = 260; // 미니맵이 배 주위로 항상 보여주는 반경(월드 단위)
+const WAYPOINT_ARRIVE_DIST = 12;
+const CRUISE_NOTCH = 4;
 
 const WATER_DEEP = '#0d4256';
 const WATER_LIGHT = '#155a78';
@@ -77,16 +80,28 @@ export class SeaScene {
 
     hud.initThrottle(-3, 5);
 
-    const allPts = [...MAINLAND_POLY, ...BRITAIN_POLY, ...CITIES.map((c) => c.pos)];
-    const xs = allPts.map((p) => p[0]), zs = allPts.map((p) => p[1]);
-    const pad = 60;
-    this.minimapBounds = {
-      minX: Math.min(...xs) - pad, maxX: Math.max(...xs) + pad,
-      minZ: Math.min(...zs) - pad, maxZ: Math.max(...zs) + pad,
-    };
-    hud.initMinimap(LAND_POLYGONS, this.minimapBounds);
+    hud.initMinimap(LAND_POLYGONS);
     this.minimapCities = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], color: COUNTRY_COLORS[c.country] || '#e6c15a' }));
+    this.waypoint = null;
   }
+
+  // 미니맵은 배를 중심으로 한 국지 반경만 보여준다(전세계 축척이면 배가 거의 안 움직여 보임).
+  _minimapBounds() {
+    const r = MINIMAP_RADIUS;
+    return {
+      minX: this.ship.pos.x - r, maxX: this.ship.pos.x + r,
+      minZ: this.ship.pos.y - r, maxZ: this.ship.pos.y + r,
+    };
+  }
+
+  // 우클릭으로 먼 목적지를 찍으면 자동으로 그 방향으로 조향·가속한다(세계 지도가 커지면서
+  // 장거리 항해를 매 순간 손으로 조작하지 않아도 되도록). WASD를 직접 누르면 즉시 해제된다.
+  setWaypointAt(screenX, screenY) {
+    const w = this.iso.toWorld(this.camera, screenX, screenY, this.logicalW, this.logicalH);
+    this.waypoint = { x: w.x, z: w.z };
+    hud.toast('자동 항해를 시작합니다. (방향키 입력 시 해제)');
+  }
+  clearWaypoint() { this.waypoint = null; }
 
   setOnDock(fn) { this.onDock = fn; }
   addShake(amount) { this.shakeTrauma = Math.min(1, this.shakeTrauma + amount); }
@@ -354,9 +369,30 @@ export class SeaScene {
     } else if (this.pendingCapture) {
       // 대기
     } else {
-      if (consumeJustPressed('KeyW')) this.ship.throttleUp();
-      if (consumeJustPressed('KeyS')) this.ship.throttleDown();
-      this.ship.turnInput = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
+      const wPressed = consumeJustPressed('KeyW');
+      const sPressed = consumeJustPressed('KeyS');
+      const manualTurn = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
+      if (this.waypoint && (wPressed || sPressed || manualTurn !== 0)) this.waypoint = null;
+      if (wPressed) this.ship.throttleUp();
+      if (sPressed) this.ship.throttleDown();
+
+      if (this.waypoint) {
+        // 자동 항해: 목적지 방향으로 조향하고 순항 노치까지 자동 가속한다.
+        const dx = this.waypoint.x - this.ship.pos.x, dz = this.waypoint.z - this.ship.pos.y;
+        const dist = Math.hypot(dx, dz);
+        if (dist < WAYPOINT_ARRIVE_DIST) {
+          this.waypoint = null;
+        } else {
+          const desiredHeading = Math.atan2(dx, dz);
+          let diff = desiredHeading - this.ship.heading;
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          this.ship.turnInput = clamp(diff * 2.2, -1, 1);
+          if (this.ship.notch < CRUISE_NOTCH) this.ship.throttleUp();
+          else if (this.ship.notch > CRUISE_NOTCH) this.ship.throttleDown();
+        }
+      } else {
+        this.ship.turnInput = manualTurn;
+      }
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
     }
     this._updateWake(delta);
@@ -437,6 +473,7 @@ export class SeaScene {
     }
 
     hud.updateMinimap(
+      this._minimapBounds(),
       { x: this.ship.pos.x, z: this.ship.pos.y, heading: this.ship.heading },
       this.minimapCities,
       this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.def.hostile })),
@@ -477,6 +514,7 @@ export class SeaScene {
     this._drawLand(ctx, w, h);
     for (const m of this.cityMarkers) this._drawCityMarker(ctx, w, h, m);
     this._drawWake(ctx, w, h);
+    if (this.waypoint) this._drawWaypoint(ctx, w, h);
 
     // 화면 앞뒤 순서(페인터 알고리즘) — (x+z, 즉 스크린 y에 대응하는 값)가 클수록 앞쪽이라
     // 나중에 그려야 뒤 물체를 가리지 않는다.
@@ -550,6 +588,25 @@ export class SeaScene {
       ctx.arc(p.x, p.y, Math.max(1, puff.scale * this.iso.scaleY * 0.6), 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  // 자동 항해 목적지 — 수면 위 작은 깃발 표식 + 배에서 이어지는 점선 항로.
+  _drawWaypoint(ctx, w, h) {
+    const p = this.iso.toScreen(this.camera, this.waypoint.x, this.waypoint.z, w, h);
+    const s = this.iso.toScreen(this.camera, this.ship.pos.x, this.ship.pos.y, w, h);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(246,220,140,0.55)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y + 1); ctx.lineTo(p.x, p.y - 9); ctx.stroke();
+    ctx.fillStyle = '#e0503f';
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - 9); ctx.lineTo(p.x + 6, p.y - 6.5); ctx.lineTo(p.x, p.y - 4);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
 
   _drawShip(ctx, w, h, pos, heading, shipDef, variant, alpha) {

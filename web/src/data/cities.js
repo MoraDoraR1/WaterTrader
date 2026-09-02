@@ -1,7 +1,7 @@
-// 유럽 항구도시 데이터 — 대항해시대 실존 무역항 기준
+// 전세계 항구도시 데이터 — 대항해시대 실존 무역항 기준
 // pos: 실제 경위도를 project()로 투영한 바다 맵 [x, z] 좌표 (정박 마커 위치)
-//      → 도시 간 상대적 방향/거리감이 실제 유럽 지도와 일치한다.
-// built: 상세 3D 도시 씬이 구현된 도시(프로토타입 범위), false면 추후 확장용 마커만 존재
+//      → 도시 간 상대적 방향/거리감이 실제 지구본과 일치한다.
+// built: 상세 도시 씬이 구현된 도시. 모든 항목이 true — 마커만 있는 미구현 도시는 없다.
 import { project } from './coastline.js';
 
 export const CITIES = [
@@ -83,6 +83,121 @@ export const CITIES = [
       { role: 'shipwright', name: '아르세날레 조선기사 니콜로', line: '이곳 아르세날레는 유럽에서 가장 빠른 조선소입니다.' },
       { role: 'harbormaster', name: '항구 관리인 자코모', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '곤돌라 사공 필리포', line: '운하도 좋지만 역시 넓은 바다가 그립군요.' },
+    ],
+  },
+  // ---- 대서양 섬(중간 기항지) ----
+  {
+    id: 'azores', name: '폰타델가다', country: 'PT', pos: project(-25.66, 37.74), built: true,
+    desc: '대서양 한가운데 떠 있는 향료 항로의 중간 보급항.',
+    npcs: [
+      { role: 'merchant', name: '포도주 상인 마누엘', line: '대서양을 건너기 전, 술통은 든든히 채워두시죠.' },
+      { role: 'shipwright', name: '조선소 기사 바스코', line: '긴 항해 전 선체 점검은 필수입니다.' },
+      { role: 'harbormaster', name: '항구 관리인 이네스', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '등대지기 조제', line: '여기서부턴 몇 주간 육지가 안 보입니다.' },
+    ],
+  },
+  {
+    id: 'canarias', name: '라스팔마스', country: 'ES', pos: project(-15.41, 28.10), built: true,
+    desc: '신대륙 항로로 떠나는 배들의 마지막 기항지.',
+    npcs: [
+      { role: 'merchant', name: '설탕 농장주 알론소', line: '이곳 사탕수수 농장에서 갓 짜낸 설탕입니다.' },
+      { role: 'shipwright', name: '조선소 기사 라몬', line: '무역풍을 타려면 삭구부터 다시 손봐야죠.' },
+      { role: 'harbormaster', name: '항무관 비센테', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '선원 토마스', line: '여기서 서쪽으로 가면 그야말로 망망대해입니다.' },
+    ],
+  },
+  // ---- 지중해 동부·북아프리카 ----
+  {
+    id: 'alger', name: '알제', country: 'OT', pos: project(3.06, 36.77), built: true,
+    desc: '바르바리 해적의 근거지, 나포한 물자가 헐값에 돌아다니는 항구.',
+    npcs: [
+      { role: 'merchant', name: '전리품 상인 하산', line: '나포선에서 나온 은괴, 값싸게 넘기겠습니다.' },
+      { role: 'shipwright', name: '조선소 기사 유수프', line: '갤리선의 속도라면 저희를 따라올 자가 없습니다.' },
+      { role: 'harbormaster', name: '항구 관리인 무라드', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '노잡이 감독 알리', line: '여기선 누구든 뱃삯 대신 노를 저어야 할 수도 있죠.' },
+    ],
+  },
+  {
+    id: 'istanbul', name: '이스탄불', country: 'OT', pos: project(28.98, 41.01), built: true,
+    desc: '옛 콘스탄티노플. 육로 향신료길과 비단길이 만나는 제국의 관문.',
+    npcs: [
+      { role: 'merchant', name: '대상 상인 이브라힘', line: '육로로 들여온 향신료와 비단, 뱃길보다 신선합니다.' },
+      { role: 'shipwright', name: '조선소 기사 셀림', line: '금각만의 조선소는 제국 해군의 자랑입니다.' },
+      { role: 'harbormaster', name: '항구 관리인 오스만', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '시장 상인 아이셰', line: '보스포루스 해협은 하루도 배가 끊이지 않아요.' },
+    ],
+  },
+  // ---- 아프리카 항로 ----
+  {
+    id: 'elmina', name: '엘미나', country: 'PT', pos: project(-1.35, 5.08), built: true,
+    desc: '황금해안의 포르투갈 무역 요새. 금과 후추가 오가는 항구.',
+    npcs: [
+      { role: 'merchant', name: '황금 상인 곤살루', line: '이 해안의 이름값을 하는 순도 높은 금입니다.' },
+      { role: 'shipwright', name: '조선소 기사 아폰수', line: '적도의 습기는 선체를 빨리 상하게 하니 손질이 중요합니다.' },
+      { role: 'harbormaster', name: '요새 관리인 두아르트', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '통역사 카타리나', line: '이곳 교역은 신뢰가 금값보다 중요합니다.' },
+    ],
+  },
+  // ---- 신대륙 ----
+  {
+    id: 'havana', name: '아바나', country: 'ES', pos: project(-82.38, 23.13), built: true,
+    desc: '신대륙의 은 함대가 유럽행 항해 전에 집결하는 항구.',
+    npcs: [
+      { role: 'merchant', name: '은광 상인 로드리고', line: '포토시에서 온 은괴, 본국보다 훨씬 쌉니다.' },
+      { role: 'shipwright', name: '조선소 기사 에스테반', line: '카리브해의 폭풍을 견디는 선체를 지어드립니다.' },
+      { role: 'harbormaster', name: '항무관 프란시스코', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '해적 감시병 미겔', line: '이 항로엔 사략선이 들끓으니 조심하십시오.' },
+    ],
+  },
+  {
+    id: 'salvador', name: '사우바도르', country: 'PT', pos: project(-38.50, -12.97), built: true,
+    desc: '브라질 사탕수수 농장 지대의 중심. 설탕과 카카오의 항구.',
+    npcs: [
+      { role: 'merchant', name: '설탕 농장주 페드루', line: '갓 정제한 설탕과 카카오, 원산지 가격으로 드립니다.' },
+      { role: 'shipwright', name: '조선소 기사 주앙', line: '적도를 넘나드는 배는 용골부터 다르게 짜야 합니다.' },
+      { role: 'harbormaster', name: '항구 관리인 마리아', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '농장 감독 안토니우', line: '올해도 사탕수수가 풍작이었지요.' },
+    ],
+  },
+  {
+    id: 'new_amsterdam', name: '뉴암스테르담', country: 'NL', pos: project(-74.01, 40.71), built: true,
+    desc: '서인도회사가 세운 모피 교역 전초기지.',
+    npcs: [
+      { role: 'merchant', name: '모피 상인 빌럼', line: '원주민과 거래한 최상급 모피입니다.' },
+      { role: 'shipwright', name: '조선소 기사 클라스', line: '겨울 바다를 견딜 튼튼한 배가 필요하시죠.' },
+      { role: 'harbormaster', name: '항구 관리인 스타위베산트', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '모피 사냥꾼 얀센', line: '내륙 원주민들과의 거래가 점점 늘고 있습니다.' },
+    ],
+  },
+  // ---- 아시아 항로 ----
+  {
+    id: 'goa', name: '고아', country: 'PT', pos: project(73.83, 15.30), built: true,
+    desc: '포르투갈령 인도의 수도. 후추 무역의 심장부.',
+    npcs: [
+      { role: 'merchant', name: '후추 상인 라구', line: '이곳에서 나는 후추는 유럽 값의 반값도 안 됩니다.' },
+      { role: 'shipwright', name: '조선소 기사 페레이라', line: '계절풍을 타는 항해는 선체 보수가 생명입니다.' },
+      { role: 'harbormaster', name: '총독부 관리인 알부케르크', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '향신료 중개상 나라얀', line: '몬순이 오기 전에 거래를 끝내야 합니다.' },
+    ],
+  },
+  {
+    id: 'malacca', name: '믈라카', country: 'PT', pos: project(102.25, 2.20), built: true,
+    desc: '향신료 제도로 가는 관문. 동서 교역이 교차하는 해협의 요충지.',
+    npcs: [
+      { role: 'merchant', name: '정향 상인 탄', line: '말루쿠 제도에서 갓 들어온 정향과 육두구입니다.' },
+      { role: 'shipwright', name: '조선소 기사 곤살베스', line: '해협의 급류를 다루려면 조타가 예민해야 합니다.' },
+      { role: 'harbormaster', name: '항구 관리인 아이레스', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '통역상 리사이', line: '이 해협에서는 하루에도 수십 개 나라의 배를 봅니다.' },
+    ],
+  },
+  {
+    id: 'nagasaki', name: '나가사키', country: 'PT', pos: project(129.87, 32.75), built: true,
+    desc: '일본과의 유일한 교역창구. 은과 도자기, 차가 오가는 항구.',
+    npcs: [
+      { role: 'merchant', name: '은 상인 소에몬', line: '이와미 은산에서 캐낸 은, 순도가 다릅니다.' },
+      { role: 'shipwright', name: '조선소 기사 카를루스', line: '남만선(南蛮船)이라 불릴 만큼 튼튼히 지어드립니다.' },
+      { role: 'harbormaster', name: '항구 관리인 데지마', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '다인(茶人) 리큐', line: '차 한 잔 나누고 가시겠습니까.' },
     ],
   },
 ];

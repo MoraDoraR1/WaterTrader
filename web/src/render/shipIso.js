@@ -4,6 +4,7 @@
 // (카메라 쪽을 향한) 변만 골라 그 변을 위로 밀어올려 "벽"을 만들고, 그 위에 갑판을 얹는다.
 import { SHIP_CLASSES, SHIP_ROLES, COUNTRY_COLORS } from '../data/ships.js';
 import { worldSizeFor } from '../entities/shipSize.js';
+import { SHIP_IMAGES } from './imageAssets.js';
 
 function hexToRgb(hex) {
   const h = hex.replace('#', '');
@@ -29,6 +30,21 @@ const HULL_PROFILE = [
   { f: 0.55, s: -0.85 },
 ];
 
+// 프레임을 가로로 이어붙인 스프라이트시트에서 heading에 가장 가까운 프레임을 오려 그린다.
+// (0번 프레임=이물이 화면 "위"를 향한 모습, 시계방향 순으로 나머지 프레임이 이어진다고 가정)
+function drawShipImageOverride(ctx, iso, camera, p0, heading, override, alpha) {
+  const { image, frames, scale } = override;
+  const angle = iso.facingAngle(heading); // -PI..PI, 화면상 회전각
+  const idx = Math.round((((angle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2)) * frames) % frames;
+  const fw = image.width / frames, fh = image.height;
+  const drawH = fh * camera.zoom * (scale || 0.14);
+  const drawW = fw * (drawH / fh);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(image, idx * fw, 0, fw, fh, p0.x - drawW / 2, p0.y - drawH * 0.82, drawW, drawH);
+  ctx.restore();
+}
+
 function fillPoly(ctx, pts, style) {
   ctx.fillStyle = style;
   ctx.beginPath();
@@ -40,6 +56,13 @@ function fillPoly(ctx, pts, style) {
 export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, variant, alpha) {
   const p0 = iso.toScreen(camera, pos.x, pos.y, w, h);
   if (p0.x < -70 || p0.x > w + 70 || p0.y < -70 || p0.y > h + 70) return;
+
+  // 나중에 이미지 자산을 등록하면(render/imageAssets.js) 절차적 드로잉 대신 이 쪽을 쓴다.
+  const imgOverride = SHIP_IMAGES[shipDef.type];
+  if (imgOverride && imgOverride.image && imgOverride.image.complete) {
+    drawShipImageOverride(ctx, iso, camera, p0, heading, imgOverride, alpha);
+    return;
+  }
 
   const cls = shipDef.class in WALL_PX ? shipDef.class : 'medium';
   const size = worldSizeFor(shipDef);

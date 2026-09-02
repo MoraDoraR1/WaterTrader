@@ -3,10 +3,12 @@
 import { Vec2, clamp } from '../util/math2d.js';
 import { SHIP_CLASSES } from '../data/ships.js';
 
-const NOTCH_SPEED = 4.2;
+// 전세계 지도로 확장하며 SCALE(coastline.js)을 45→90으로 키운 만큼, 체감 항해시간이
+// 지나치게 늘어지지 않도록 순항 속도도 함께 끌어올렸다(4.2→6.0).
+const NOTCH_SPEED = 6.0;
 const MAX_FWD = 5;
 const MAX_REV = -3;
-const ACCEL_BASE = 3.6;
+const ACCEL_BASE = 4.5;
 const TURN_ACCEL_BASE = 0.6;
 
 function degToRad(d) { return (d * Math.PI) / 180; }
