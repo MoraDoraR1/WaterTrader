@@ -1,5 +1,5 @@
 import { Vec2, clamp, lerp } from '../util/math2d.js';
-import { Camera2D, worldToScreen } from '../render/canvas2d.js';
+import { Camera2D, IsoProjection } from '../render/canvas2d.js';
 import { shipSprite, shipSpriteSize, cityIconSprite } from '../render/pixelSprites.js';
 import { ShipController } from '../entities/shipController.js';
 import { worldSizeFor } from '../entities/shipSize.js';
@@ -42,6 +42,7 @@ export class SeaScene {
     this.logicalW = logicalW;
     this.logicalH = logicalH;
     this.camera = new Camera2D();
+    this.iso = new IsoProjection(BASE_PX_PER_UNIT, 0.55);
 
     this.weather = new WeatherSystem();
     this.rain = new RainEffect(logicalW, logicalH);
@@ -458,10 +459,11 @@ export class SeaScene {
     }
   }
 
-  // ---- 렌더링 ----
+  // ---- 렌더링(대각선/아이소메트릭풍 투영) ----
   render(ctx) {
     const w = this.logicalW, h = this.logicalH;
-    const px = BASE_PX_PER_UNIT * this.camera.zoom;
+    this.iso.scaleX = BASE_PX_PER_UNIT * this.camera.zoom;
+    this.iso.scaleY = this.iso.scaleX * 0.55;
 
     ctx.save();
     const shakeAmt = this.shakeTrauma * this.shakeTrauma;
@@ -470,42 +472,60 @@ export class SeaScene {
       ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag);
     }
 
-    this._drawWater(ctx, px, w, h);
-    this._drawLand(ctx, px, w, h);
-    for (const m of this.cityMarkers) this._drawCityMarker(ctx, px, w, h, m);
-    this._drawWake(ctx, px, w, h);
-    for (const n of this.npcShips) this._drawShip(ctx, px, w, h, n.pos, n.heading, n.shipDef, n.dead ? 'wreck' : 'hostile', n.dead ? clamp(1 - n.sinkT / 1.5, 0, 1) : 1);
-    for (const e of this.escorts) this._drawShip(ctx, px, w, h, e.pos, e.heading, e.shipDef, 'friendly', 1);
-    this._drawShip(ctx, px, w, h, this.ship.pos, this.ship.heading, this.ship.shipDef, 'player', 1);
-    this._drawCannonballs(ctx, px, w, h);
+    this._drawWater(ctx, w, h);
+    this._drawLand(ctx, w, h);
+    for (const m of this.cityMarkers) this._drawCityMarker(ctx, w, h, m);
+    this._drawWake(ctx, w, h);
+
+    // 화면 앞뒤 순서(페인터 알고리즘) — (x+z, 즉 스크린 y에 대응하는 값)가 클수록 앞쪽이라
+    // 나중에 그려야 뒤 물체를 가리지 않는다.
+    const drawables = [
+      ...this.npcShips.map((n) => ({ z: n.pos.x + n.pos.y, draw: () => this._drawShip(ctx, w, h, n.pos, n.heading, n.shipDef, n.dead ? 'wreck' : 'hostile', n.dead ? clamp(1 - n.sinkT / 1.5, 0, 1) : 1) })),
+      ...this.escorts.map((e) => ({ z: e.pos.x + e.pos.y, draw: () => this._drawShip(ctx, w, h, e.pos, e.heading, e.shipDef, 'friendly', 1) })),
+      { z: this.ship.pos.x + this.ship.pos.y, draw: () => this._drawShip(ctx, w, h, this.ship.pos, this.ship.heading, this.ship.shipDef, 'player', 1) },
+    ].sort((a, b) => a.z - b.z);
+    for (const d of drawables) d.draw();
+
+    this._drawCannonballs(ctx, w, h);
     this._drawWeatherOverlay(ctx, w, h);
     if (this.rain.visible) this._drawRain(ctx, w, h);
 
     ctx.restore();
   }
 
-  _drawWater(ctx, px, w, h) {
-    const tile = 8;
+  _drawWater(ctx, w, h) {
+    const TILE = 10;
+    const corners = [[0, 0], [w, 0], [0, h], [w, h]].map(([sx, sy]) => this.iso.toWorld(this.camera, sx, sy, w, h));
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const c of corners) { minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x); minZ = Math.min(minZ, c.z); maxZ = Math.max(maxZ, c.z); }
+    const pad = TILE * 2;
+    const x0 = Math.floor((minX - pad) / TILE) * TILE, x1 = Math.ceil((maxX + pad) / TILE) * TILE;
+    const z0 = Math.floor((minZ - pad) / TILE) * TILE, z1 = Math.ceil((maxZ + pad) / TILE) * TILE;
     const t = this.t;
-    for (let sy = 0; sy < h; sy += tile) {
-      for (let sx = 0; sx < w; sx += tile) {
-        const wx = (sx - w / 2) / px + this.camera.x;
-        const wy = (sy - h / 2) / px + this.camera.y;
-        const wave = Math.sin(wx * 0.05 + t * 0.8) + Math.sin(wy * 0.045 - t * 0.6);
+    for (let wz = z0; wz < z1; wz += TILE) {
+      for (let wx = x0; wx < x1; wx += TILE) {
+        const wave = Math.sin(wx * 0.05 + t * 0.8) + Math.sin(wz * 0.045 - t * 0.6);
         ctx.fillStyle = wave > 0.25 ? WATER_LIGHT : WATER_DEEP;
-        ctx.fillRect(sx, sy, tile, tile);
+        const p0 = this.iso.toScreen(this.camera, wx, wz, w, h);
+        const p1 = this.iso.toScreen(this.camera, wx + TILE, wz, w, h);
+        const p2 = this.iso.toScreen(this.camera, wx + TILE, wz + TILE, w, h);
+        const p3 = this.iso.toScreen(this.camera, wx, wz + TILE, w, h);
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
+        ctx.closePath();
+        ctx.fill();
       }
     }
   }
 
-  _drawLand(ctx, px, w, h) {
+  _drawLand(ctx, w, h) {
     ctx.fillStyle = LAND_COLOR;
     ctx.strokeStyle = LAND_EDGE;
     ctx.lineWidth = 1.5;
     for (const poly of LAND_POLYGONS) {
       ctx.beginPath();
       poly.forEach(([wx, wz], i) => {
-        const p = worldToScreen(this.camera, px, wx, wz, w, h);
+        const p = this.iso.toScreen(this.camera, wx, wz, w, h);
         if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
       });
       ctx.closePath();
@@ -514,41 +534,41 @@ export class SeaScene {
     }
   }
 
-  _drawCityMarker(ctx, px, w, h, marker) {
-    const p = worldToScreen(this.camera, px, marker.pos.x, marker.pos.y, w, h);
+  _drawCityMarker(ctx, w, h, marker) {
+    const p = this.iso.toScreen(this.camera, marker.pos.x, marker.pos.y, w, h);
     if (p.x < -20 || p.x > w + 20 || p.y < -20 || p.y > h + 20) return;
     const icon = cityIconSprite(marker.country);
     ctx.drawImage(icon, p.x - icon.width / 2, p.y - icon.height + 4);
   }
 
-  _drawWake(ctx, px, w, h) {
+  _drawWake(ctx, w, h) {
     for (const puff of this.wakeTrail.puffs) {
-      const p = worldToScreen(this.camera, px, puff.x, puff.y, w, h);
+      const p = this.iso.toScreen(this.camera, puff.x, puff.y, w, h);
       ctx.fillStyle = `rgba(238,246,242,${(puff.opacity ?? 0.3).toFixed(3)})`;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(1, puff.scale * px * 0.3), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, Math.max(1, puff.scale * this.iso.scaleY * 0.6), 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  _drawShip(ctx, px, w, h, pos, heading, shipDef, variant, alpha) {
-    const p = worldToScreen(this.camera, px, pos.x, pos.y, w, h);
+  _drawShip(ctx, w, h, pos, heading, shipDef, variant, alpha) {
+    const p = this.iso.toScreen(this.camera, pos.x, pos.y, w, h);
     if (p.x < -40 || p.x > w + 40 || p.y < -40 || p.y > h + 40) return;
     const sprite = shipSprite(shipDef, variant === 'player' ? 'n' : variant === 'friendly' ? 'n' : variant);
-    const scale = px / BASE_PX_PER_UNIT * 1.15;
+    const scale = this.camera.zoom * 1.15;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(p.x, p.y);
-    ctx.rotate(-heading);
+    ctx.rotate(this.iso.facingAngle(heading));
     ctx.scale(scale, scale);
     ctx.drawImage(sprite, -sprite.width / 2, -sprite.height / 2);
     ctx.restore();
   }
 
-  _drawCannonballs(ctx, px, w, h) {
+  _drawCannonballs(ctx, w, h) {
     ctx.fillStyle = '#181614';
     for (const b of this.cannonPool.balls) {
-      const p = worldToScreen(this.camera, px, b.x, b.y, w, h);
+      const p = this.iso.toScreen(this.camera, b.x, b.y, w, h);
       ctx.beginPath();
       ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
       ctx.fill();
