@@ -7,13 +7,42 @@ import { cachedSprite } from './canvas2d.js';
 import { COUNTRY_COLORS } from '../data/ships.js';
 
 // ---- 캐릭터(도시 씬) ----
-export function characterSprite(gender, roleColor) {
-  const key = `char_${gender}_${roleColor || 'p'}`;
+// hanbok: true면 한국 항구(hanok 레이아웃)용 한복 실루엣 — 아래로 퍼지는 치마/도포 자락 +
+// 여성은 저고리 옷고름, 남성은 갓을 얹어 서양식 복장과 실루엣부터 다르게 그린다.
+export function characterSprite(gender, roleColor, hanbok) {
+  const key = `char_${gender}_${roleColor || 'p'}_${hanbok ? 'hb' : 'w'}`;
   return cachedSprite(key, 10, 12, (ctx, w, h) => {
     const outfit = roleColor || (gender === 'female' ? '#8a2d4d' : '#2d4a8a');
     // 그림자
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath(); ctx.ellipse(w / 2, h - 1.5, 3, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+    if (hanbok) {
+      // 치마/도포 자락 — 아래로 퍼지는 실루엣
+      ctx.fillStyle = outfit;
+      ctx.beginPath();
+      ctx.moveTo(w / 2 - 2, h / 2);
+      ctx.lineTo(w / 2 + 2, h / 2);
+      ctx.lineTo(w / 2 + 3.6, h - 2);
+      ctx.lineTo(w / 2 - 3.6, h - 2);
+      ctx.closePath(); ctx.fill();
+      // 저고리(옅은 색 상의)
+      ctx.fillStyle = gender === 'female' ? '#f2e9da' : '#e8e2d0';
+      ctx.fillRect(w / 2 - 2.6, h / 2 - 2, 5.2, 3.4);
+      // 머리
+      ctx.fillStyle = '#e0b18c';
+      ctx.beginPath(); ctx.arc(w / 2, h / 2 - 4, 2.6, 0, Math.PI * 2); ctx.fill();
+      if (gender === 'female') {
+        ctx.fillStyle = '#2b2118';
+        ctx.beginPath(); ctx.arc(w / 2, h / 2 - 4.3, 2.7, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = outfit;
+        ctx.fillRect(w / 2 - 0.6, h / 2 - 6.4, 1.2, 3); // 옷고름
+      } else {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath(); ctx.ellipse(w / 2, h / 2 - 6.6, 3.4, 1, 0, 0, Math.PI * 2); ctx.fill(); // 갓 챙
+        ctx.fillRect(w / 2 - 1.6, h / 2 - 8.6, 3.2, 2.4); // 갓 몸통
+      }
+      return;
+    }
     // 몸통
     ctx.fillStyle = outfit;
     ctx.fillRect(w / 2 - 3, h / 2 - 2, 6, 6);

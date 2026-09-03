@@ -3,10 +3,12 @@ import { state } from '../state.js';
 import { hud } from './hud.js';
 import { getCity } from '../data/cities.js';
 import { COUNTRY_NAMES } from '../data/ships.js';
-import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed } from '../systems/market.js';
+import { CITY_MARKET, getGood } from '../data/goods.js';
+import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed, isBarterCity, barterGoods, goodValue } from '../systems/market.js';
 import { getReputation } from '../systems/quests.js';
 
 const STEP = 10;
+let barterGiveGood = null;
 
 function renderMarket(cityId) {
   const city = getCity(cityId);
@@ -47,7 +49,59 @@ function renderMarket(cityId) {
   });
 }
 
+// ---- 한국·일본·중국 항구의 물물교환 패널 ----
+// 현금 매매 대신, 먼저 화물칸의 어떤 물품을 "내어줄지" 고른 뒤 그 가치만큼
+// 이 항구가 취급하는 물품으로 맞바꾼다. 두캇으로 바뀌는 건 이 물건을 아시아 밖에서 팔 때다.
+function renderBarter(cityId) {
+  const city = getCity(cityId);
+  const cargo = `${getCargoUsed()} / ${getCargoCapacity()} t`;
+  if (!barterGiveGood) {
+    const rows = state.inventory.map((it) => ({
+      name: it.name,
+      sub: `보유 ${it.qty}t · 환산 가치 ${goodValue(it.id)}/t`,
+      actions: [{ label: '이 물품 내어주기', onAction: () => { barterGiveGood = it.id; renderBarter(cityId); } }],
+    }));
+    if (rows.length === 0) rows.push({ name: '내어줄 물품이 없습니다', sub: '화물칸에 교역품을 싣고 오세요.', actions: [] });
+    hud.renderMarket({ title: `${city.name} 물물교환 · 내어줄 물품 선택`, gold: state.gold, cargo, rows });
+    return;
+  }
+  const giveGood = getGood(barterGiveGood);
+  const heldQty = state.inventory.find((it) => it.id === barterGiveGood)?.qty || 0;
+  const market = CITY_MARKET[cityId] || {};
+  const rows = [{
+    name: `◀ ${giveGood.name} 선택 취소`,
+    sub: `보유 ${heldQty}t`,
+    actions: [{ label: '다시 고르기', onAction: () => { barterGiveGood = null; renderBarter(cityId); } }],
+  }];
+  for (const goodId of Object.keys(market)) {
+    if (goodId === barterGiveGood) continue;
+    const good = getGood(goodId);
+    const qty = Math.min(STEP, heldQty);
+    const receiveQty = Math.floor((qty * goodValue(barterGiveGood)) / goodValue(goodId));
+    rows.push({
+      name: good.name,
+      sub: `${giveGood.name} ${qty}t → ${good.name} 약 ${receiveQty}t`,
+      actions: [{
+        label: '교환하기',
+        disabled: heldQty <= 0,
+        onAction: () => {
+          const res = barterGoods(cityId, barterGiveGood, STEP, goodId);
+          if (res.ok) hud.toast(`${giveGood.name} ${res.giveQty}t → ${good.name} ${res.receiveQty}t 교환`);
+          else hud.toast(res.reason);
+          renderBarter(cityId);
+        },
+      }],
+    });
+  }
+  hud.renderMarket({ title: `${city.name} 물물교환 · 받을 물품 선택`, gold: state.gold, cargo, rows });
+}
+
 export function openMarket(cityId) {
-  renderMarket(cityId);
+  if (isBarterCity(cityId)) {
+    barterGiveGood = null;
+    renderBarter(cityId);
+  } else {
+    renderMarket(cityId);
+  }
   hud.showMarket(true);
 }

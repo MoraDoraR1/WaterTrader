@@ -191,7 +191,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'nagasaki', name: '나가사키', country: 'PT', pos: project(129.87, 32.75), built: true, layout: 'trading_post',
+    id: 'nagasaki', name: '나가사키', country: 'PT', pos: project(129.87, 32.75), built: true, layout: 'trading_post', barter: true,
     desc: '일본과의 유일한 교역창구. 은과 도자기, 차가 오가는 항구.',
     npcs: [
       { role: 'merchant', name: '은 상인 소에몬', line: '이와미 은산에서 캐낸 은, 순도가 다릅니다.' },
@@ -365,7 +365,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'macau', name: '마카오', country: 'PT', pos: project(113.55, 22.20), built: true, layout: 'trading_post',
+    id: 'macau', name: '마카오', country: 'PT', pos: project(113.55, 22.20), built: true, layout: 'trading_post', barter: true,
     desc: '명 제국과의 유일한 통상 창구. 좁은 반도에 세운 작은 무역 거점.',
     npcs: [
       { role: 'merchant', name: '비단 상인 유', line: '광저우에서 들여온 비단과 도자기, 차 — 원산지 가격입니다.' },
@@ -402,6 +402,285 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 소아레스', line: '만의 무더위 속에서도 선체 관리는 소홀히 할 수 없습니다.' },
       { role: 'harbormaster', name: '요새 사령관 알부케르크 2세', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '진주 채취인 하산', line: '이 만은 진주로도 유명하지만, 향신료가 더 큰 돈이 되지요.' },
+    ],
+  },
+  // ---- 신규 항구 30곳: 동아시아(한국·일본·중국은 물물교환), 동남아, 그리고 나머지 대륙 확장 ----
+  // 한국(조선) — hanok 레이아웃(한옥 처마 곡선 지오메트리) + 한복 캐릭터, barter:true(물물교환).
+  {
+    id: 'busan', name: '부산', country: 'KR', pos: project(129.08, 35.10), built: true, layout: 'hanok', barter: true,
+    desc: '조선이 일본과 유일하게 공식 교역을 허가한 왜관(倭館)의 항구.',
+    npcs: [
+      { role: 'merchant', name: '역관 상인 김만덕', line: '인삼과 청자, 가져오신 물건 가치만큼 맞바꿔 드립니다.' },
+      { role: 'harbormaster', name: '왜관 관리 박첨지', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 이서방', line: '대마도에서 온 배가 또 들어왔군요.' },
+    ],
+  },
+  {
+    id: 'incheon', name: '제물포', country: 'KR', pos: project(126.63, 37.45), built: true, layout: 'hanok', barter: true,
+    desc: '한성으로 통하는 관문 포구. 개항 이후 각국 상선이 드나든다.',
+    npcs: [
+      { role: 'merchant', name: '객주 최상궁', line: '인삼과 비단, 이곳 물건과 바꿔가시지요.' },
+      { role: 'harbormaster', name: '개항장 관리 윤참봉', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '나루터 아낙 순이', line: '한성 가는 길이 여기서 지척입니다.' },
+    ],
+  },
+  // 일본 — 나가사키 데지마 외에 실제 대규모 상업항 두 곳을 더한다. barter:true.
+  {
+    id: 'osaka', name: '오사카', country: 'JP', pos: project(135.50, 34.65), built: true, layout: 'trading_post', barter: true,
+    desc: '"천하의 부엌"이라 불린 일본 상업의 중심. 각지 쌀과 물자가 모인다.',
+    npcs: [
+      { role: 'merchant', name: '상인 요도야', line: '가져오신 물건, 은과 차로 맞바꿔 드리지요.' },
+      { role: 'harbormaster', name: '항구 관리 사토', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사람 곤베에', line: '요도가와 강을 오가는 배가 하루도 끊이질 않습니다.' },
+    ],
+  },
+  {
+    id: 'hakata', name: '하카타', country: 'JP', pos: project(130.40, 33.60), built: true, layout: 'bazaar', barter: true,
+    desc: '규슈의 대륙 교역 관문. 옛부터 대륙 문물이 가장 먼저 닿는 항구.',
+    npcs: [
+      { role: 'merchant', name: '상인 시마즈', line: '아리타 도자기와 차, 값진 물건과 바꿔드립니다.' },
+      { role: 'harbormaster', name: '항구 관리 다나카', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '어부 헤이스케', line: '겐카이나다 바다가 오늘은 잔잔하군요.' },
+    ],
+  },
+  // 중국 — 마카오 외에 청·송원대 실제 대외무역 거점 두 곳. barter:true.
+  {
+    id: 'guangzhou', name: '광저우', country: 'CN', pos: project(113.26, 23.13), built: true, layout: 'bazaar', barter: true,
+    desc: '청 제국이 유일하게 허가한 서양 무역항. 십삼행(十三行) 상관이 늘어서 있다.',
+    npcs: [
+      { role: 'merchant', name: '행상 오병감', line: '비단과 차, 도자기 — 광둥 물건과 바꾸어 가시지요.' },
+      { role: 'harbormaster', name: '해관 관리 임씨', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 아창', line: '주강을 오르내리는 삼판선이 강을 가득 메웁니다.' },
+    ],
+  },
+  {
+    id: 'quanzhou', name: '취안저우', country: 'CN', pos: project(118.68, 24.90), built: true, layout: 'trading_post', barter: true,
+    desc: '송·원대 세계 최대의 항구였던 "자이툰". 옛 영화가 서린 교역 도시.',
+    npcs: [
+      { role: 'merchant', name: '상인 임씨', line: '이곳 비단과 도자기, 가져오신 물건과 바꿔드립니다.' },
+      { role: 'harbormaster', name: '시박사 관리 진씨', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사람 왕씨', line: '옛날엔 이 항구에 세상 모든 배가 모였다지요.' },
+    ],
+  },
+  // ---- 동남아시아 (현금 교역) ----
+  {
+    id: 'hoi_an', name: '호이안', country: 'VN', pos: project(108.33, 15.88), built: true, layout: 'bazaar',
+    desc: '베트남 중부의 국제무역항. 여러 나라 상관이 나란히 늘어서 있다.',
+    npcs: [
+      { role: 'merchant', name: '상인 응우옌', line: '비단과 도자기, 원산지 못지않은 값에 드립니다.' },
+      { role: 'harbormaster', name: '항구 관리 쩐씨', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 레반', line: '투본 강 하구는 계절풍이 바뀔 때마다 배로 붐빕니다.' },
+    ],
+  },
+  {
+    id: 'ayutthaya', name: '아유타야', country: 'SM', pos: project(100.58, 13.55), built: true, layout: 'plaza',
+    desc: '샴 왕국의 수도이자 국제무역항. 주석과 쌀이 풍부하다.',
+    npcs: [
+      { role: 'merchant', name: '상인 프라야', line: '시암산 주석, 좋은 값에 팔고 있습니다.' },
+      { role: 'harbormaster', name: '항구 관리 쑤리야', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 아논', line: '차오프라야 강을 따라 온갖 나라 배가 오갑니다.' },
+    ],
+  },
+  {
+    id: 'bago', name: '페구', country: 'BU', pos: project(96.20, 16.75), built: true, layout: 'waypost',
+    desc: '버마 몬 왕조의 항구. 티크목과 보석 교역으로 이름났다.',
+    npcs: [
+      { role: 'merchant', name: '상인 마웅', line: '내륙에서 캐낸 금, 값을 후하게 쳐드립니다.' },
+      { role: 'harbormaster', name: '항구 관리 우툰', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 코코', line: '우기가 오기 전에 교역을 마쳐야 합니다.' },
+    ],
+  },
+  {
+    id: 'aceh', name: '반다르아체', country: 'AC', pos: project(95.32, 5.55), built: true, layout: 'bazaar',
+    desc: '수마트라 북단의 이슬람 향신료 왕국. 세계 최대급 후추 산지.',
+    npcs: [
+      { role: 'merchant', name: '상인 테우쿠', line: '아체산 후추입니다. 캘리컷 못지않게 쌉니다 — 여기도 원산지니까요.' },
+      { role: 'harbormaster', name: '항구 관리 스리', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 이스마일', line: '말라카 해협 어귀라 오가는 배가 끊이질 않습니다.' },
+    ],
+  },
+  {
+    id: 'brunei', name: '브루나이', country: 'BN', pos: project(114.94, 4.94), built: true, layout: 'waypost',
+    desc: '보르네오의 이슬람 술탄국. 물 위에 지은 수상 도시로 유명하다.',
+    npcs: [
+      { role: 'merchant', name: '상인 아왕', line: '내륙에서 캐낸 사금과 장뇌, 관심 있으신가요.' },
+      { role: 'harbormaster', name: '항구 관리 하지', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 유수프', line: '이 도시는 집도 시장도 전부 물 위에 있지요.' },
+    ],
+  },
+  {
+    id: 'cebu', name: '세부', country: 'ES', pos: project(123.90, 10.30), built: true, layout: 'colonial',
+    desc: '마젤란이 처음 발을 디딘 필리핀 최초의 스페인 거점.',
+    npcs: [
+      { role: 'merchant', name: '상인 곤살레스', line: '중국 정크선이 실어온 물건, 마닐라보다 싸게 넘깁니다.' },
+      { role: 'harbormaster', name: '항무관 델라크루즈', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '선교사 페드로', line: '마젤란 십자가가 아직도 이 자리에 서 있습니다.' },
+    ],
+  },
+  // ---- 유럽 확장 ----
+  {
+    id: 'antwerp', name: '안트베르펜', country: 'NL', pos: project(4.25, 51.35), built: true, layout: 'plaza',
+    desc: '중세~근세 유럽 최대의 상업·금융 도시. 플랑드르 모직물의 중심.',
+    npcs: [
+      { role: 'merchant', name: '모직물 상인 페터르', line: '플랑드르 모직물과 비단, 이곳이 유럽 최대 시장입니다.' },
+      { role: 'harbormaster', name: '항구 관리인 요스', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '환전상 빌럼', line: '스헬더 강 어귀는 유럽 자본이 모이는 곳이지요.' },
+    ],
+  },
+  {
+    id: 'stockholm', name: '스톡홀름', country: 'SE', pos: project(18.07, 59.33), built: true, layout: 'plaza',
+    desc: '발트해 무역과 스웨덴 철·주석 수출의 거점.',
+    npcs: [
+      { role: 'merchant', name: '상인 에리크', line: '북방산 주석과 모피, 좋은 값에 넘깁니다.' },
+      { role: 'harbormaster', name: '항구 관리인 구스타프', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '어부 라르스', line: '군도 사이 물길이 얼기 전에 서둘러야지요.' },
+    ],
+  },
+  {
+    id: 'cadiz', name: '카디스', country: 'ES', pos: project(-6.29, 36.53), built: true, layout: 'fortress',
+    desc: '신대륙 은 함대가 입항하는 스페인의 대서양 관문.',
+    npcs: [
+      { role: 'merchant', name: '은 상인 마누엘', line: '방금 들어온 은 함대의 신대륙산 은괴입니다.' },
+      { role: 'harbormaster', name: '항무관 라파엘', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '부두 노동자 호세', line: '함대가 들어오는 날은 항구가 온통 축제 같지요.' },
+    ],
+  },
+  {
+    id: 'valletta', name: '발레타', country: 'MT', pos: project(14.51, 35.90), built: true, layout: 'fortress',
+    desc: '성 요한 기사단의 지중해 요새 도시. 코르시어(사략선)의 거점.',
+    npcs: [
+      { role: 'merchant', name: '전리품 상인 조반니', line: '기사단 코르시어가 나포한 물건, 값싸게 넘기겠습니다.' },
+      { role: 'harbormaster', name: '요새 관리인 안토니오', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '수비병 카르멜로', line: '대공위 시대의 포위전 흔적이 성벽에 그대로 남아있죠.' },
+    ],
+  },
+  {
+    id: 'dubrovnik', name: '두브로브니크', country: 'RG', pos: project(18.11, 42.65), built: true, layout: 'plaza',
+    desc: '아드리아해의 독립 상업 공화국 라구사. 발칸 교역의 관문.',
+    npcs: [
+      { role: 'merchant', name: '상인 이반', line: '발칸 내륙에서 들여온 비단과 포도주입니다.' },
+      { role: 'harbormaster', name: '항구 관리인 마린', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '선주 니콜라', line: '베네치아 눈치를 보면서도 독립을 지켜온 도시입니다.' },
+    ],
+  },
+  // ---- 아프리카 확장 ----
+  {
+    id: 'zanzibar', name: '잔지바르', country: 'OM', pos: project(39.19, -6.16), built: true, layout: 'bazaar',
+    desc: '오만 술탄국이 다스리는 인도양 향신료·교역의 중심.',
+    npcs: [
+      { role: 'merchant', name: '상인 살림', line: '이 섬의 정향입니다. 세상 어디보다 쌉니다 — 여기가 산지니까요.' },
+      { role: 'harbormaster', name: '항구 관리인 하미드', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '농장 감독 파라지', line: '섬 전체가 정향나무로 뒤덮여 있지요.' },
+    ],
+  },
+  {
+    id: 'alexandria', name: '알렉산드리아', country: 'OT', pos: project(29.92, 31.20), built: true, layout: 'bazaar',
+    desc: '지중해와 홍해를 잇는 이집트의 관문. 옛 향신료길의 종착지.',
+    npcs: [
+      { role: 'merchant', name: '상인 유수프', line: '홍해를 건너온 향신료와 유리공예품입니다.' },
+      { role: 'harbormaster', name: '항구 관리인 마흐무드', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 카림', line: '나일 강 삼각주는 예나 지금이나 교역의 요람이지요.' },
+    ],
+  },
+  {
+    id: 'cape_town', name: '케이프타운', country: 'NL', pos: project(18.42, -33.92), built: true, layout: 'waypost',
+    desc: '희망봉의 VOC 보급기지. 유럽과 아시아 항로의 중간 정박지.',
+    npcs: [
+      { role: 'merchant', name: '농장주 야코뷔스', line: '이곳 포도밭에서 갓 담근 포도주입니다.' },
+      { role: 'harbormaster', name: '항구 관리인 코르넬리스', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '선원 헨드릭', line: '여기서 정비 안 하면 인도양 끝까지 못 갑니다.' },
+    ],
+  },
+  {
+    id: 'sao_tome', name: '상투메', country: 'PT', pos: project(6.73, 0.33), built: true, layout: 'colonial',
+    desc: '기니만의 적도 섬. 유럽인이 사탕수수를 처음 대규모로 재배한 섬.',
+    npcs: [
+      { role: 'merchant', name: '농장주 곤살루', line: '이 섬 설탕은 유럽 어디보다도 원산지 값입니다.' },
+      { role: 'harbormaster', name: '항구 관리인 바스투', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '농장 감독 이자벨', line: '적도의 더위 속에서도 사탕수수는 잘 자랍니다.' },
+    ],
+  },
+  // ---- 신대륙 확장 ----
+  {
+    id: 'new_orleans', name: '뉴올리언스', country: 'FR', pos: project(-90.07, 29.95), built: true, layout: 'colonial',
+    desc: '미시시피 강 하구의 프랑스령 항구. 모피와 설탕이 오간다.',
+    npcs: [
+      { role: 'merchant', name: '모피 상인 자크', line: '내륙에서 실어온 모피, 퀘벡 못지않게 쌉니다.' },
+      { role: 'harbormaster', name: '항구 관리인 루이', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사공 앙리', line: '미시시피 강은 대륙 안쪽까지 뱃길이 이어집니다.' },
+    ],
+  },
+  {
+    id: 'charleston', name: '찰스턴', country: 'EN', pos: project(-79.93, 32.78), built: true, layout: 'colonial',
+    desc: '남부 식민지의 항구. 설탕과 모피 교역으로 성장한 신흥 도시.',
+    npcs: [
+      { role: 'merchant', name: '농장주 새뮤얼', line: '남부 농장에서 온 설탕과 모피입니다.' },
+      { role: 'harbormaster', name: '항구 관리인 윌리엄', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '부두 노동자 토머스', line: '이 항구는 보스턴 못지않게 빠르게 크고 있습니다.' },
+    ],
+  },
+  {
+    id: 'callao', name: '카야오', country: 'ES', pos: project(-77.15, -12.05), built: true, layout: 'fortress',
+    desc: '페루 부왕령의 관문. 포토시 은이 태평양으로 나가는 길목.',
+    npcs: [
+      { role: 'merchant', name: '은광 상인 리마', line: '포토시 은광에서 캐낸 은괴, 세상 어디보다 쌉니다 — 여기가 산지니까요.' },
+      { role: 'harbormaster', name: '항무관 알바로', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '짐꾼 마르코스', line: '안데스에서 내려온 은 수레가 하루 종일 이어집니다.' },
+    ],
+  },
+  {
+    id: 'buenos_aires', name: '부에노스아이레스', country: 'ES', pos: project(-58.37, -34.60), built: true, layout: 'colonial',
+    desc: '라플라타 강 하구의 신흥 무역항. 남미 남부 교역의 관문.',
+    npcs: [
+      { role: 'merchant', name: '상인 디에고', line: '내륙에서 온 은과 모피, 관심 있으신가요.' },
+      { role: 'harbormaster', name: '항구 관리인 파블로', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '목동 후안', line: '팜파스 초원의 가죽이 이 항구로 다 모입니다.' },
+    ],
+  },
+  {
+    id: 'port_royal', name: '포트로열', country: 'EN', pos: project(-76.84, 17.94), built: true, layout: 'fortress',
+    desc: '카리브해 사략선과 해적의 소굴로 악명 높은 항구.',
+    npcs: [
+      { role: 'merchant', name: '전리품 상인 잭', line: '나포선에서 나온 은괴, 묻지도 따지지도 않고 넘깁니다.' },
+      { role: 'harbormaster', name: '항구 관리인 헨리', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '술집 주인 메리', line: '이 항구에서 제일 안전한 곳은 제 술집뿐이지요.' },
+    ],
+  },
+  // ---- 그 외 ----
+  {
+    id: 'bordeaux', name: '보르도', country: 'FR', pos: project(-1.15, 45.55), built: true, layout: 'plaza',
+    desc: '지롱드 강 하구의 포도주 항구. 세계에서 가장 유명한 산지.',
+    npcs: [
+      { role: 'merchant', name: '포도주 상인 클로드', line: '보르도 포도주입니다. 원산지라 유럽 어디보다 쌉니다.' },
+      { role: 'harbormaster', name: '항구 관리인 필리프', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '포도밭 농부 마르셀', line: '올해도 지롱드 강변 포도가 실하게 여물었습니다.' },
+    ],
+  },
+  {
+    id: 'leith', name: '리스', country: 'SC', pos: project(-3.17, 55.98), built: true, layout: 'plaza',
+    desc: '스코틀랜드 에든버러의 관문항. 양모와 청어 무역이 활발하다.',
+    npcs: [
+      { role: 'merchant', name: '모직물 상인 던컨', line: '스코틀랜드산 양모와 모피, 좋은 값에 넘깁니다.' },
+      { role: 'harbormaster', name: '항구 관리인 앵거스', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '어부 이완', line: '포스 만은 청어 떼로 유명하지요.' },
+    ],
+  },
+  {
+    id: 'mozambique_island', name: '모잠비크 섬', country: 'PT', pos: project(40.73, -15.03), built: true, layout: 'waypost',
+    desc: '동아프리카 항로의 포르투갈 보급 거점. 인도로 가는 길목.',
+    npcs: [
+      { role: 'merchant', name: '상인 페드루', line: '내륙에서 온 금, 인도로 가기 전 여기서 거래합니다.' },
+      { role: 'harbormaster', name: '요새 관리인 아폰수', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '통역사 마리아', line: '이곳부터는 계절풍을 잘 타야 인도까지 갑니다.' },
+    ],
+  },
+  {
+    id: 'muscat', name: '무스카트', country: 'OM', pos: project(58.59, 23.61), built: true, layout: 'fortress',
+    desc: '오만 술탄국의 수도. 인도양 서부 교역로의 요충지.',
+    npcs: [
+      { role: 'merchant', name: '상인 사이드', line: '페르시아산 비단과 후추, 좋은 값에 넘깁니다.' },
+      { role: 'harbormaster', name: '요새 사령관 알리', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
+      { role: 'citizen', name: '뱃사람 라시드', line: '오만 배는 아프리카 해안까지 두루 다닙니다.' },
     ],
   },
 ];

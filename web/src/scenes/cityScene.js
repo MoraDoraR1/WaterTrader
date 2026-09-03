@@ -56,6 +56,13 @@ const LAYOUT_TEMPLATES = {
     plazaRadius: 14, groundColor: '#9ea88a', plazaColor: '#c2c49f', npcRadius: 11,
     wallA: '#cfd2c4', wallB: '#e2e4d8', roofA: '#6a5040', roofB: '#7c6048',
   },
+  // 한국(조선) 항구 — 회벽 목조 건물 + 팔작지붕의 처마 곡선을 별도 지오메트리로 그린다
+  // (hanok: true → _drawBuildingBlock이 _drawHanokBlock으로 분기). NPC/플레이어도 한복으로 그려진다.
+  hanok: {
+    buildingPositions: [[-42, -22], [42, -22], [-42, 24], [42, 24], [0, -54], [-58, 6], [58, 6]],
+    plazaRadius: 24, groundColor: '#cdbf9a', plazaColor: '#e2d6ae', npcRadius: 17,
+    wallA: '#d9cfae', wallB: '#f2e9cd', roofA: '#2e2e2b', roofB: '#5f5952', hanok: true,
+  },
 };
 
 function defaultNpcs() {
@@ -105,7 +112,7 @@ export class CityScene {
     for (const [x, z] of t.buildingPositions) {
       const w = 16 + Math.random() * 6, d = 14 + Math.random() * 5;
       const box = { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 };
-      buildings.push({ x, z, w, d, wallA: t.wallA, wallB: t.wallB, roofA: t.roofA, roofB: t.roofB });
+      buildings.push({ x, z, w, d, wallA: t.wallA, wallB: t.wallB, roofA: t.roofA, roofB: t.roofB, hanok: t.hanok });
       this.buildingColliders.push(box);
     }
     return buildings;
@@ -225,6 +232,7 @@ export class CityScene {
 
   // 3면(지붕/오른쪽 벽/앞쪽 벽)이 보이는 단순 아이소메트릭 건물 블록.
   _drawBuildingBlock(ctx, w, h, b) {
+    if (b.hanok) { this._drawHanokBlock(ctx, w, h, b); return; }
     const hw = b.w / 2, hd = b.d / 2;
     const wallPx = 13 * this.camera.zoom, roofPx = 9 * this.camera.zoom;
     const corners = [
@@ -250,6 +258,36 @@ export class CityScene {
     poly(ctx, [wallTop[2], wallTop[3], roofPeak], b.roofB || '#a8492f');
     poly(ctx, [wallTop[0], wallTop[1], roofPeak], b.roofA || '#8a3a28');
     poly(ctx, [wallTop[3], wallTop[0], roofPeak], b.roofB || '#a8492f');
+  }
+
+  // 한옥 전용 건물 블록 — 벽 위 지붕선이 바깥으로 내밀며(처마) 위로 살짝 들려 올라가는
+  // 팔작지붕 곡선 실루엣을 낸다(서양식 각뿔 지붕과 확실히 다른 형태가 되도록 별도 지오메트리로 그린다).
+  _drawHanokBlock(ctx, w, h, b) {
+    const hw = b.w / 2, hd = b.d / 2;
+    const wallPx = 10 * this.camera.zoom, roofPx = 8 * this.camera.zoom;
+    const corners = [
+      [b.x - hw, b.z - hd], [b.x + hw, b.z - hd], [b.x + hw, b.z + hd], [b.x - hw, b.z + hd],
+    ].map(([x, z]) => this.iso.toScreen(this.camera, x, z, w, h));
+    const wallTop = corners.map((p) => ({ x: p.x, y: p.y - wallPx }));
+    const cx = (wallTop[0].x + wallTop[2].x) / 2, cy = (wallTop[0].y + wallTop[2].y) / 2;
+    const eave = wallTop.map((p) => ({ x: cx + (p.x - cx) * 1.4, y: p.y - roofPx * 0.5 }));
+    const roofPeak = { x: cx, y: cy - roofPx * 1.9 };
+    const poly = (pts, style) => {
+      ctx.fillStyle = style;
+      ctx.beginPath();
+      pts.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.closePath();
+      ctx.fill();
+    };
+    // 회벽 목조 벽체(오른쪽/앞쪽 면)
+    poly([corners[1], corners[2], wallTop[2], wallTop[1]], b.wallA || '#e8e2d0');
+    poly([corners[2], corners[3], wallTop[3], wallTop[2]], b.wallB || '#d8d0ba');
+    // 처마 — 벽보다 바깥으로 내밀리며 살짝 들려 올라간 곡선 기와 처마.
+    poly([wallTop[1], wallTop[2], eave[2], eave[1]], b.roofB || '#4a4a46');
+    poly([wallTop[2], wallTop[3], eave[3], eave[2]], b.roofB || '#4a4a46');
+    // 팔작지붕 상단 — 처마에서 용마루로 모이는 완만한 기와 경사면.
+    poly([eave[1], eave[2], roofPeak], b.roofA || '#33332f');
+    poly([eave[2], eave[3], roofPeak], b.roofA || '#33332f');
   }
 
   render(ctx) {
@@ -293,7 +331,7 @@ export class CityScene {
     ctx.fillStyle = roleColor;
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 3, 4.6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
-    const sprite = characterSprite(o.gender, roleColor);
+    const sprite = characterSprite(o.gender, roleColor, this.layout.hanok);
     const scale = this.camera.zoom * 1.3;
     ctx.drawImage(sprite, p.x - (sprite.width * scale) / 2, p.y - sprite.height * scale + 4, sprite.width * scale, sprite.height * scale);
     ctx.fillStyle = 'rgba(20,14,8,0.75)';
@@ -312,7 +350,7 @@ export class CityScene {
     ctx.fillStyle = '#2a2016';
     ctx.beginPath(); ctx.ellipse(cp.x, cp.y + 3, 4.6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
-    const sprite = characterSprite(state.gender, null);
+    const sprite = characterSprite(state.gender, null, this.layout.hanok);
     const scale = this.camera.zoom * 1.3;
     ctx.save();
     ctx.translate(cp.x, cp.y - sprite.height * scale / 2 + 3);

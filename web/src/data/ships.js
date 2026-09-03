@@ -173,10 +173,17 @@ export const COUNTRY_COLORS = {
   PT: '#0f6e3e', ES: '#c8102e', EN: '#1e3a8a', NL: '#e8720c',
   HAN: '#6b4f3a', IT: '#7a1f3d', SE: '#0a4a9e', FR: '#274e9c',
   OT: '#a8862a', DK: '#c60c30',
+  // ---- 아시아·동남아·기타 확장 항구 국가색 ----
+  KR: '#3f7d5c', JP: '#bf2a37', CN: '#8b1e1e', VN: '#c0392b',
+  SM: '#d4a017', BU: '#a0522d', AC: '#6b8e23', BN: '#f1c40f',
+  MT: '#c8102e', RG: '#5a3e8a', OM: '#b03a2e', SC: '#1e5b8a',
 };
 
 export const COUNTRY_NAMES = {
   PT: '포르투갈', ES: '스페인', EN: '잉글랜드', NL: '네덜란드',
   HAN: '한자동맹', IT: '베네치아', SE: '스웨덴', FR: '프랑스',
   OT: '오스만', DK: '덴마크',
+  KR: '조선', JP: '일본', CN: '중국', VN: '베트남',
+  SM: '샴', BU: '버마', AC: '아체', BN: '브루나이',
+  MT: '몰타 기사단', RG: '라구사', OM: '오만', SC: '스코틀랜드',
 };

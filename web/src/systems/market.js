@@ -138,6 +138,40 @@ export function buyGood(cityId, goodId, qty) {
   return { ok: true, qty: actualQty, cost };
 }
 
+// ---- 아시아(한국·일본·중국) 물물교환 ----
+// 이 세 나라 항구는 두캇 현금이 아니라 "가져온 무역품의 가치"를 그 항구가 취급하는
+// 다른 물품으로 맞바꾼다. 가치 기준은 GOODS.basePrice(품목 고유의 절대 기준가)로 고정해
+// 어느 항구를 거치든 같은 물건은 같은 가치로 쳐준다. 이렇게 얻은 물품을 아시아 밖 항구에서
+// 팔아야 비로소 두캇으로 바뀐다.
+export function isBarterCity(cityId) {
+  return !!getCity(cityId)?.barter;
+}
+
+export function goodValue(goodId) {
+  return getGood(goodId)?.basePrice || 1;
+}
+
+export function barterGoods(cityId, giveGoodId, giveQty, receiveGoodId) {
+  const market = CITY_MARKET[cityId];
+  if (!market || !market[receiveGoodId]) return { ok: false, reason: '이 항구에서 취급하지 않는 물품입니다.' };
+  if (giveGoodId === receiveGoodId) return { ok: false, reason: '같은 물품끼리는 교환할 수 없습니다.' };
+  const item = state.inventory.find((it) => it.id === giveGoodId);
+  const held = item ? item.qty : 0;
+  const actualGiveQty = Math.min(giveQty, held);
+  if (actualGiveQty <= 0) return { ok: false, reason: '내어줄 물량이 없습니다.' };
+  const value = actualGiveQty * goodValue(giveGoodId);
+  const spaceLeft = getCargoCapacity() - getCargoUsed() + actualGiveQty;
+  const receiveQty = Math.min(Math.floor(value / goodValue(receiveGoodId)), spaceLeft);
+  if (receiveQty <= 0) return { ok: false, reason: '교환할 만큼 가치가 부족합니다.' };
+  item.qty -= actualGiveQty;
+  if (item.qty <= 0) state.inventory = state.inventory.filter((it) => it.id !== giveGoodId);
+  const recv = state.inventory.find((it) => it.id === receiveGoodId);
+  if (recv) recv.qty += receiveQty;
+  else state.inventory.push({ id: receiveGoodId, name: getGood(receiveGoodId).name, qty: receiveQty });
+  notify({ inventoryChanged: true });
+  return { ok: true, giveQty: actualGiveQty, receiveQty };
+}
+
 export function sellGood(cityId, goodId, qty) {
   const rows = getMarketRows(cityId);
   const row = rows.find((r) => r.good.id === goodId);

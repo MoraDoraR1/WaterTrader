@@ -22,6 +22,8 @@ export const GOODS = [
   { id: 'gold', name: '금', category: 'luxury', basePrice: 150 },
   { id: 'cacao', name: '카카오', category: 'goods', basePrice: 35 },
   { id: 'tea', name: '차', category: 'luxury', basePrice: 75 },
+  // 한국 특산품 — 물물교환 항구(한국·일본·중국)의 가치 환산 기준(basePrice)에도 그대로 쓰인다.
+  { id: 'ginseng', name: '인삼', category: 'luxury', basePrice: 65 },
 ];
 
 // 도시별 매입가(buy = 상인에게 살 때 지불)/매도가(sell = 상인에게 팔 때 받음).
@@ -240,6 +242,40 @@ export const CITY_MARKET = {
     silk: { buy: 60, sell: 45 },
     pepper: { buy: 22, sell: 17 },
   },
+  // ---- 신규 항구 30곳 ----
+  // 한국·일본·중국(barter:true)도 CITY_MARKET 구조는 동일하게 쓴다 — 다만 매매가 아니라
+  // "이 항구가 취급하는 물품 목록·가치 참고용"으로만 쓰이고(실제 교환은 basePrice 기준),
+  // 이 buy가가 원산지 판별(findOrigin)에도 그대로 들어가 다른 항구의 거리 프리미엄에 반영된다.
+  busan: { ginseng: { buy: 18, sell: 14 }, porcelain: { buy: 38, sell: 29 } },
+  incheon: { ginseng: { buy: 21, sell: 16 }, silk: { buy: 72, sell: 55 } },
+  osaka: { silver: { buy: 23, sell: 17 }, tea: { buy: 26, sell: 20 } },
+  hakata: { porcelain: { buy: 35, sell: 26 }, tea: { buy: 24, sell: 18 } },
+  guangzhou: { silk: { buy: 40, sell: 30 }, tea: { buy: 16, sell: 12 }, porcelain: { buy: 26, sell: 20 } },
+  quanzhou: { silk: { buy: 42, sell: 32 }, porcelain: { buy: 28, sell: 21 } },
+  hoi_an: { silk: { buy: 48, sell: 36 }, porcelain: { buy: 44, sell: 33 } },
+  ayutthaya: { tin: { buy: 26, sell: 20 }, sugar: { buy: 16, sell: 12 } },
+  bago: { gold: { buy: 52, sell: 40 }, tin: { buy: 22, sell: 17 } },
+  aceh: { pepper: { buy: 12, sell: 9 } },
+  brunei: { gold: { buy: 47, sell: 36 } },
+  cebu: { gold: { buy: 44, sell: 34 } },
+  antwerp: { wool: { buy: 14, sell: 11 }, silk: { buy: 80, sell: 60 } },
+  stockholm: { tin: { buy: 28, sell: 22 }, fur: { buy: 18, sell: 14 } },
+  cadiz: { silver: { buy: 20, sell: 15 } },
+  valletta: { olive_oil: { buy: 11, sell: 8 }, glass: { buy: 58, sell: 44 } },
+  dubrovnik: { wine: { buy: 16, sell: 13 }, silk: { buy: 75, sell: 57 } },
+  zanzibar: { clove: { buy: 18, sell: 14 } },
+  alexandria: { pepper: { buy: 26, sell: 20 }, glass: { buy: 55, sell: 42 } },
+  cape_town: { wine: { buy: 17, sell: 13 }, wool: { buy: 22, sell: 18 } },
+  sao_tome: { sugar: { buy: 12, sell: 9 } },
+  new_orleans: { fur: { buy: 14, sell: 11 }, sugar: { buy: 16, sell: 12 } },
+  charleston: { sugar: { buy: 17, sell: 13 }, fur: { buy: 16, sell: 12 } },
+  callao: { silver: { buy: 16, sell: 12 } },
+  buenos_aires: { silver: { buy: 19, sell: 14 }, fur: { buy: 17, sell: 13 } },
+  port_royal: { silver: { buy: 21, sell: 16 }, sugar: { buy: 14, sell: 11 } },
+  bordeaux: { wine: { buy: 9, sell: 7 } },
+  leith: { wool: { buy: 15, sell: 12 }, fur: { buy: 19, sell: 15 } },
+  mozambique_island: { gold: { buy: 49, sell: 38 } },
+  muscat: { pepper: { buy: 24, sell: 19 }, silk: { buy: 58, sell: 44 } },
 };
 
 export function getGood(id) {
