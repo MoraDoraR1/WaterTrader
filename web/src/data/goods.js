@@ -155,6 +155,91 @@ export const CITY_MARKET = {
     tea: { buy: 28, sell: 21 },
     porcelain: { buy: 40, sell: 30 },
   },
+  // ---- 항구 대량 확충 — 각 품목의 진짜 원산지를 최저가로 잡아, 어디서 사서 얼마나 멀리
+  // 가져가느냐가 곧 이문이 되는 구조를 강화한다(거리 프리미엄은 systems/market.js가 계산).
+  napoli: {
+    olive_oil: { buy: 16, sell: 13 },
+    wine: { buy: 20, sell: 17 },
+    silk: { buy: 90, sell: 68 },
+  },
+  barcelona: {
+    wool: { buy: 19, sell: 16 },
+    olive_oil: { buy: 16, sell: 13 },
+  },
+  porto: {
+    wine: { buy: 10, sell: 8 },
+    olive_oil: { buy: 15, sell: 12 },
+  },
+  bristol: {
+    wool: { buy: 17, sell: 14 },
+    tin: { buy: 24, sell: 19 },
+  },
+  copenhagen: {
+    amber: { buy: 45, sell: 36 },
+    fur: { buy: 22, sell: 18 },
+  },
+  danzig: {
+    amber: { buy: 35, sell: 28 },
+    fur: { buy: 20, sell: 16 },
+  },
+  tanger: {
+    silver: { buy: 26, sell: 20 },
+    olive_oil: { buy: 13, sell: 10 },
+  },
+  mombasa: {
+    gold: { buy: 50, sell: 38 },
+    pepper: { buy: 22, sell: 17 },
+  },
+  luanda: {
+    gold: { buy: 48, sell: 37 },
+    fur: { buy: 24, sell: 19 },
+  },
+  cartagena: {
+    gold: { buy: 35, sell: 27 },
+    silver: { buy: 18, sell: 14 },
+  },
+  veracruz: {
+    cacao: { buy: 9, sell: 7 },
+    silver: { buy: 20, sell: 15 },
+  },
+  rio_de_janeiro: {
+    sugar: { buy: 14, sell: 11 },
+    gold: { buy: 45, sell: 35 },
+  },
+  quebec: {
+    fur: { buy: 11, sell: 8 },
+    wine: { buy: 30, sell: 27 },
+  },
+  boston: {
+    fur: { buy: 15, sell: 12 },
+    wool: { buy: 20, sell: 17 },
+  },
+  calicut: {
+    pepper: { buy: 14, sell: 11 },
+    cinnamon: { buy: 22, sell: 17 },
+  },
+  colombo: {
+    cinnamon: { buy: 16, sell: 12 },
+  },
+  macau: {
+    silk: { buy: 45, sell: 34 },
+    porcelain: { buy: 30, sell: 23 },
+    tea: { buy: 20, sell: 15 },
+  },
+  manila: {
+    silver: { buy: 30, sell: 23 },
+    porcelain: { buy: 42, sell: 32 },
+    silk: { buy: 55, sell: 41 },
+  },
+  batavia: {
+    clove: { buy: 24, sell: 18 },
+    nutmeg: { buy: 30, sell: 23 },
+    pepper: { buy: 19, sell: 15 },
+  },
+  hormuz: {
+    silk: { buy: 60, sell: 45 },
+    pepper: { buy: 22, sell: 17 },
+  },
 };
 
 export function getGood(id) {

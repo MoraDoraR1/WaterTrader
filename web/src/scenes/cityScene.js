@@ -15,6 +15,49 @@ const BOUNDS = { minX: -85, maxX: 85, minZ: -85, maxZ: 85 };
 const INTERACT_RANGE = 7.5;
 const PX_PER_UNIT = 2.55;
 
+// ---- 도시 배치 템플릿 ----
+// 모든 항구가 같은 "광장+건물 7채" 틀을 쓰던 것을 도시 성격별로 분화한다.
+// buildingPositions: 건물 배치, plazaRadius/groundColor: 중심 공터 크기·색,
+// npcRadius: NPC가 둘러선 반경, wallA/wallB/roofA/roofB: 건물 외장 배색(지역색).
+const LAYOUT_TEMPLATES = {
+  // 유럽 왕실/상관 도시 — 넓은 광장 중심(기존 표준형)
+  plaza: {
+    buildingPositions: [[-46, -20], [46, -20], [-46, 20], [46, 20], [0, -55], [-60, -55], [60, -55]],
+    plazaRadius: 30, groundColor: '#c9b896', plazaColor: '#d8cba3', npcRadius: 18,
+    wallA: '#c7b48c', wallB: '#e4dcc3', roofA: '#8a3a28', roofB: '#a8492f',
+  },
+  // 식민지/전략 요충 요새 — 건물이 중앙 연병장을 방어하듯 둘러싼다
+  fortress: {
+    buildingPositions: [[-30, -45], [30, -45], [-52, 0], [52, 0], [-30, 45], [30, 45], [0, -72]],
+    plazaRadius: 16, groundColor: '#a89e88', plazaColor: '#8f8878', npcRadius: 13,
+    wallA: '#8a8a82', wallB: '#a8a89c', roofA: '#4a4a48', roofB: '#5c5c56',
+  },
+  // 오스만·인도양 교역 거점 — 좁은 골목에 상점이 밀집한 시장
+  bazaar: {
+    buildingPositions: [[-32, -30], [32, -30], [-52, 8], [52, 8], [-20, 42], [20, 42], [0, -58], [-55, -55], [55, -55]],
+    plazaRadius: 22, groundColor: '#cbab6e', plazaColor: '#e0c07d', npcRadius: 15,
+    wallA: '#c9975a', wallB: '#e0b378', roofA: '#3a6b7a', roofB: '#4a8494',
+  },
+  // 나가사키 데지마·마카오·바타비아 — 외딴 소규모 교역 거점, 건물 서너 채뿐
+  trading_post: {
+    buildingPositions: [[-28, -18], [28, -18], [0, -48]],
+    plazaRadius: 19, groundColor: '#8f9a80', plazaColor: '#aab391', npcRadius: 14,
+    wallA: '#7a5a3a', wallB: '#96754c', roofA: '#4a3624', roofB: '#5c4530',
+  },
+  // 신대륙/개척 식민지 — 건물이 듬성듬성 흩어진 개척촌
+  colonial: {
+    buildingPositions: [[-58, -32], [58, -32], [-72, 18], [72, 18], [0, -66]],
+    plazaRadius: 26, groundColor: '#b89a72', plazaColor: '#cdb185', npcRadius: 20,
+    wallA: '#d8cfb8', wallB: '#ece4cf', roofA: '#5a4636', roofB: '#6e5744',
+  },
+  // 대서양 섬 기항지 — 초소형 보급항, 건물 두 채
+  waypost: {
+    buildingPositions: [[-24, -10], [24, -10]],
+    plazaRadius: 14, groundColor: '#9ea88a', plazaColor: '#c2c49f', npcRadius: 11,
+    wallA: '#cfd2c4', wallB: '#e2e4d8', roofA: '#6a5040', roofB: '#7c6048',
+  },
+};
+
 function defaultNpcs() {
   return [
     { role: 'harbormaster', name: '항구 관리인', line: '아직 이 항구는 정비가 덜 되었습니다. 곧 상단이 들어올 예정입니다.' },
@@ -31,6 +74,7 @@ export class CityScene {
     this.logicalH = logicalH;
     this.camera = new Camera2D();
     this.iso = new IsoProjection(PX_PER_UNIT, 0.55);
+    this.layout = LAYOUT_TEMPLATES[city.layout] || LAYOUT_TEMPLATES.plaza;
 
     this.buildingColliders = [];
     this._buildings = this._layoutBuildings();
@@ -56,15 +100,12 @@ export class CityScene {
   }
 
   _layoutBuildings() {
-    const positions = [
-      [-46, -20], [46, -20], [-46, 20], [46, 20],
-      [0, -55], [-60, -55], [60, -55],
-    ];
+    const t = this.layout;
     const buildings = [];
-    for (const [x, z] of positions) {
+    for (const [x, z] of t.buildingPositions) {
       const w = 16 + Math.random() * 6, d = 14 + Math.random() * 5;
       const box = { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 };
-      buildings.push({ x, z, w, d });
+      buildings.push({ x, z, w, d, wallA: t.wallA, wallB: t.wallB, roofA: t.roofA, roofB: t.roofB });
       this.buildingColliders.push(box);
     }
     return buildings;
@@ -72,9 +113,9 @@ export class CityScene {
 
   _layoutNpcs() {
     const angleStep = (Math.PI * 2) / Math.max(1, this.city.npcs.length);
+    const r = this.layout.npcRadius;
     return this.city.npcs.map((npc, i) => {
       const angle = angleStep * i - Math.PI / 2;
-      const r = 18;
       const pos = new Vec2(Math.cos(angle) * r, Math.sin(angle) * r - 10);
       return { npc, pos, facing: angle + Math.PI, gender: npc.role === 'merchant' && i % 2 === 0 ? 'female' : 'male' };
     });
@@ -201,13 +242,14 @@ export class CityScene {
       ctx2.fill();
     };
     // 오른쪽 벽(c1-c2), 앞쪽 벽(c2-c3) — 항상 이 두 면이 카메라를 향한다.
-    poly(ctx, [corners[1], corners[2], wallTop[2], wallTop[1]], '#c7b48c');
-    poly(ctx, [corners[2], corners[3], wallTop[3], wallTop[2]], '#e4dcc3');
+    // (배색은 도시 배치 템플릿을 따른다 — 유럽 붉은기와/요새 회색석재/시장 청록타일 등)
+    poly(ctx, [corners[1], corners[2], wallTop[2], wallTop[1]], b.wallA || '#c7b48c');
+    poly(ctx, [corners[2], corners[3], wallTop[3], wallTop[2]], b.wallB || '#e4dcc3');
     // 지붕(각뿔형 근사 — 꼭짓점 하나로 모으는 팔작지붕 느낌)
-    poly(ctx, [wallTop[1], wallTop[2], roofPeak], '#8a3a28');
-    poly(ctx, [wallTop[2], wallTop[3], roofPeak], '#a8492f');
-    poly(ctx, [wallTop[0], wallTop[1], roofPeak], '#8a3a28');
-    poly(ctx, [wallTop[3], wallTop[0], roofPeak], '#a8492f');
+    poly(ctx, [wallTop[1], wallTop[2], roofPeak], b.roofA || '#8a3a28');
+    poly(ctx, [wallTop[2], wallTop[3], roofPeak], b.roofB || '#a8492f');
+    poly(ctx, [wallTop[0], wallTop[1], roofPeak], b.roofA || '#8a3a28');
+    poly(ctx, [wallTop[3], wallTop[0], roofPeak], b.roofB || '#a8492f');
   }
 
   render(ctx) {
@@ -215,10 +257,10 @@ export class CityScene {
     this.iso.scaleX = PX_PER_UNIT * this.camera.zoom;
     this.iso.scaleY = this.iso.scaleX * 0.55;
 
-    ctx.fillStyle = '#c9b896';
+    ctx.fillStyle = this.layout.groundColor;
     ctx.fillRect(0, 0, w, h);
 
-    this._isoDisc(ctx, w, h, 0, 0, 30, '#d8cba3');
+    this._isoDisc(ctx, w, h, 0, 0, this.layout.plazaRadius, this.layout.plazaColor);
 
     // 부두/바다(도시 남쪽)
     this._isoQuad(ctx, w, h, -140, 55, 140, 220, '#0f4a63');

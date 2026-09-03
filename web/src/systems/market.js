@@ -74,6 +74,34 @@ export function getCargoUsed() {
   return state.inventory.reduce((sum, it) => sum + it.qty, 0);
 }
 
+// ---- 원산지 거리 프리미엄 ----
+// 실제 교역이 그랬듯, 어떤 상품이든 그 상품을 가장 싸게 파는(=원산지) 항구에서 멀리 떨어질수록
+// 매도가가 자연히 더 붙는다. 수작업 가격표가 아니라 실제 지도 좌표 간 거리에서 그대로 계산되므로,
+// 새 항구를 추가해도 "먼 곳까지 실어 나를수록 남는다"는 구조가 저절로 성립한다.
+const DISTANCE_PREMIUM_K = 1.6; // 두캇 = K * sqrt(원산지까지 거리)
+
+let originCache = null;
+function findOrigin(goodId) {
+  if (!originCache) originCache = {};
+  if (goodId in originCache) return originCache[goodId];
+  let bestCity = null, bestBuy = Infinity;
+  for (const [cid, market] of Object.entries(CITY_MARKET)) {
+    const p = market[goodId];
+    if (p && p.buy < bestBuy) { bestBuy = p.buy; bestCity = cid; }
+  }
+  originCache[goodId] = bestCity;
+  return bestCity;
+}
+
+function distancePremium(cityId, goodId) {
+  const origin = findOrigin(goodId);
+  if (!origin || origin === cityId) return 0;
+  const a = getCity(cityId)?.pos, b = getCity(origin)?.pos;
+  if (!a || !b) return 0;
+  const dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
+  return Math.round(DISTANCE_PREMIUM_K * Math.sqrt(dist));
+}
+
 export function getMarketRows(cityId) {
   const market = CITY_MARKET[cityId];
   if (!market) return [];
@@ -82,7 +110,8 @@ export function getMarketRows(cityId) {
     const held = state.inventory.find((it) => it.id === goodId);
     const dynMul = decayedSupplyMul(cityId, goodId) * ambientMul(cityId, goodId);
     const effBuy = Math.max(1, Math.round(price.buy * (1 - f * REP_PRICE_EFFECT_MAX) * dynMul));
-    const effSell = Math.max(1, Math.round(price.sell * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul));
+    const premium = distancePremium(cityId, goodId);
+    const effSell = Math.max(1, Math.round(price.sell * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul) + premium);
     const trend = dynMul > 1.04 ? 'up' : dynMul < 0.96 ? 'down' : 'flat';
     return { good: getGood(goodId), price: { buy: effBuy, sell: effSell }, heldQty: held ? held.qty : 0, trend };
   });
