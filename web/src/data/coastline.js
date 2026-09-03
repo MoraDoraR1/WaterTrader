@@ -1,6 +1,8 @@
 // 실제 경위도를 게임 좌표로 투영하는 간이 등장방형(equirectangular) 투영.
 // refLon/refLat을 원점으로 두고 도(度)당 SCALE 유닛만큼 배치한다.
-const SCALE = 90;
+// (항해가 너무 짧다는 피드백으로 45→90→140까지 키웠다 — shipController.js의 순항 속도도
+//  함께 조정해, 인접 항구는 적당히, 대륙 간 항로는 확실히 "긴 항해"로 느껴지게 했다.)
+const SCALE = 140;
 const REF_LON = 1.5;
 const REF_LAT = 45;
 

@@ -3,9 +3,10 @@
 import { Vec2, clamp } from '../util/math2d.js';
 import { SHIP_CLASSES } from '../data/ships.js';
 
-// 전세계 지도로 확장하며 SCALE(coastline.js)을 45→90으로 키운 만큼, 체감 항해시간이
-// 지나치게 늘어지지 않도록 순항 속도도 함께 끌어올렸다(4.2→6.0).
-const NOTCH_SPEED = 6.0;
+// 전세계 지도로 확장하며 SCALE(coastline.js)을 45→140으로 키웠다. 순항 속도도 어느 정도
+// 함께 올리되(4.2→7.0) 거리만큼 다 따라가진 않게 해, 인접 항구는 적당히 길어지고
+// 대륙을 넘나드는 항로는 확실히 "긴 항해"로 느껴지도록 했다.
+const NOTCH_SPEED = 7.0;
 const MAX_FWD = 5;
 const MAX_REV = -3;
 const ACCEL_BASE = 4.5;
