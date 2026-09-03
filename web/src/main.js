@@ -127,8 +127,18 @@ function renderWorldMapPage() {
   hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: regionBoundsToWorld(region.bounds), cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship });
 }
 
+// 캔버스 width/height 속성을 뷰포트에 맞춰 직접 키운다(= 내부 해상도와 표시 크기가 항상
+// 1:1로 맞아 흐릿해지지 않는다 — CSS로 늘리면 고정 해상도를 억지로 스트레치해서 깨져 보인다).
+function resizeWorldMapCanvas() {
+  const canvas = document.getElementById('world-map-canvas');
+  const w = Math.round(Math.min(Math.max(window.innerWidth * 0.86, 640), 1500));
+  const h = Math.round(Math.min(Math.max(window.innerHeight * 0.78, 480), 980));
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+}
+
 function openWorldMap() {
   if (state.screen === 'title') return;
+  resizeWorldMapCanvas();
   hud.showWorldMap(true);
   renderWorldMapPage();
 }
@@ -137,6 +147,9 @@ function cycleWorldMap(dir) {
   worldMapIndex = (worldMapIndex + dir + WORLD_REGIONS.length) % WORLD_REGIONS.length;
   renderWorldMapPage();
 }
+window.addEventListener('resize', () => {
+  if (hud.isWorldMapOpen()) { resizeWorldMapCanvas(); renderWorldMapPage(); }
+});
 
 document.getElementById('mute-btn').addEventListener('click', () => {
   state.audioMuted = !state.audioMuted;
