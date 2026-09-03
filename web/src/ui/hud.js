@@ -442,16 +442,19 @@ export const hud = {
     for (const c of cities) {
       const [px, py] = wmToPx(c.x, c.z, bounds, t);
       if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
-      ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2);
+      // 국가별 대도시는 마커·글자를 한 단계 키워 지도에서도 눈에 띄게 한다.
+      const rOuter = c.capital ? 10 : 7, rInner = c.capital ? 7.5 : 5;
+      ctx.beginPath(); ctx.arc(px, py, rOuter, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(10,8,4,0.55)'; ctx.fill();
-      ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(px, py, rInner, 0, Math.PI * 2);
       ctx.fillStyle = c.color || '#e6c15a'; ctx.fill();
-      ctx.strokeStyle = '#f0e6d2'; ctx.lineWidth = 1.4; ctx.stroke();
-      ctx.font = 'bold 13px sans-serif';
+      ctx.strokeStyle = '#f0e6d2'; ctx.lineWidth = c.capital ? 2 : 1.4; ctx.stroke();
+      ctx.font = c.capital ? 'bold 15px sans-serif' : 'bold 13px sans-serif';
+      const tx = px + rOuter + 3, ty = py + (c.capital ? 6 : 5);
       ctx.fillStyle = 'rgba(6,10,14,0.85)';
-      ctx.fillText(c.name, px + 10, py + 5);
-      ctx.fillStyle = '#f6ecd4';
-      ctx.fillText(c.name, px + 9, py + 4);
+      ctx.fillText(c.name, tx + 1, ty + 1);
+      ctx.fillStyle = c.capital ? '#ffe6a0' : '#f6ecd4';
+      ctx.fillText(c.name, tx, ty);
     }
 
     // 플레이어 위치(참고용 — 지도 열람 자체는 이동 정보와 무관)

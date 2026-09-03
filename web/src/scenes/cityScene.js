@@ -76,12 +76,23 @@ export class CityScene {
   constructor(cityId, onExit, logicalW, logicalH) {
     const city = getCity(cityId);
     this.city = { ...city, npcs: city.npcs && city.npcs.length ? city.npcs : defaultNpcs() };
+    // 국가별 대도시(capital: true) — 건물 수·광장·이동 가능 범위를 한 단계 키우고
+    // 총독 NPC를 하나 더 세워 "이 나라에서 손꼽히는 큰 도시"라는 느낌을 낸다.
+    this.isCapital = !!city.capital;
+    if (this.isCapital) {
+      this.city.npcs = [
+        { role: 'governor', name: '총독', line: `이곳은 ${COUNTRY_NAMES[city.country] || city.country}에서 손꼽히는 대도시입니다. 상단도, 함대도 이곳에서 가장 크게 모입니다.` },
+        ...this.city.npcs,
+      ];
+    }
+    this.bounds = this.isCapital ? { minX: -120, maxX: 120, minZ: -120, maxZ: 120 } : BOUNDS;
     this.onExit = onExit;
     this.logicalW = logicalW;
     this.logicalH = logicalH;
     this.camera = new Camera2D();
     this.iso = new IsoProjection(PX_PER_UNIT, 0.55);
     this.layout = LAYOUT_TEMPLATES[city.layout] || LAYOUT_TEMPLATES.plaza;
+    this.sizeMul = this.isCapital ? 1.4 : 1;
 
     this.buildingColliders = [];
     this._buildings = this._layoutBuildings();
@@ -109,8 +120,13 @@ export class CityScene {
   _layoutBuildings() {
     const t = this.layout;
     const buildings = [];
-    for (const [x, z] of t.buildingPositions) {
-      const w = 16 + Math.random() * 6, d = 14 + Math.random() * 5;
+    // 대도시는 같은 배치를 더 바깥 링에 한 번 더 세워 실제로 두 배 큰 도시처럼 보이게 한다.
+    const positions = this.isCapital
+      ? [...t.buildingPositions, ...t.buildingPositions.map(([x, z]) => [x * 1.7, z * 1.7])]
+      : t.buildingPositions;
+    const sizeBoost = this.isCapital ? 5 : 0;
+    for (const [x, z] of positions) {
+      const w = 16 + sizeBoost + Math.random() * 6, d = 14 + sizeBoost + Math.random() * 5;
       const box = { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 };
       buildings.push({ x, z, w, d, wallA: t.wallA, wallB: t.wallB, roofA: t.roofA, roofB: t.roofB, hanok: t.hanok });
       this.buildingColliders.push(box);
@@ -120,7 +136,7 @@ export class CityScene {
 
   _layoutNpcs() {
     const angleStep = (Math.PI * 2) / Math.max(1, this.city.npcs.length);
-    const r = this.layout.npcRadius;
+    const r = this.layout.npcRadius * this.sizeMul;
     return this.city.npcs.map((npc, i) => {
       const angle = angleStep * i - Math.PI / 2;
       const pos = new Vec2(Math.cos(angle) * r, Math.sin(angle) * r - 10);
@@ -179,7 +195,7 @@ export class CityScene {
   // 화면 좌표(캔버스 기준, 논리 해상도 스케일)를 월드 좌표로 되돌려 이동 목표로 삼는다.
   handleRightClickAt(screenX, screenY) {
     const p = this.iso.toWorld(this.camera, screenX, screenY, this.logicalW, this.logicalH);
-    this.character.moveTo(clamp(p.x, BOUNDS.minX, BOUNDS.maxX), clamp(p.z, BOUNDS.minZ, BOUNDS.maxZ));
+    this.character.moveTo(clamp(p.x, this.bounds.minX, this.bounds.maxX), clamp(p.z, this.bounds.minZ, this.bounds.maxZ));
   }
 
   update(delta) {
@@ -188,7 +204,7 @@ export class CityScene {
     // 대각선(아이소메트릭) 시점에 맞춰 WASD를 화면 방향 기준으로 재매핑한다
     // (W=화면 위쪽, D=화면 오른쪽 …) — 월드 절대축 기준이면 시점과 어긋나 보인다.
     const screenRelative = { x: strafe - forward, y: -(forward + strafe) };
-    this.character.update(delta, screenRelative, BOUNDS, this.buildingColliders);
+    this.character.update(delta, screenRelative, this.bounds, this.buildingColliders);
     this.camera.follow(this.character.pos.x, this.character.pos.y, delta, 7);
 
     const interactable = this._findInteractable();
@@ -298,7 +314,7 @@ export class CityScene {
     ctx.fillStyle = this.layout.groundColor;
     ctx.fillRect(0, 0, w, h);
 
-    this._isoDisc(ctx, w, h, 0, 0, this.layout.plazaRadius, this.layout.plazaColor);
+    this._isoDisc(ctx, w, h, 0, 0, this.layout.plazaRadius * this.sizeMul, this.layout.plazaColor);
 
     // 부두/바다(도시 남쪽)
     this._isoQuad(ctx, w, h, -140, 55, 140, 220, '#0f4a63');

@@ -6,7 +6,7 @@ import { project } from './coastline.js';
 
 export const CITIES = [
   {
-    id: 'lisboa', name: '리스본', country: 'PT', pos: project(-9.14, 38.72), built: true, layout: 'plaza',
+    id: 'lisboa', name: '리스본', country: 'PT', pos: project(-9.14, 38.72), built: true, layout: 'plaza', capital: true,
     desc: '대항해시대 개막의 출발점. 인도 항로 개척의 중심 항구.',
     npcs: [
       { role: 'merchant', name: '향신료 상인 조앙', line: '후추와 계피, 좋은 값에 삽니다.' },
@@ -16,7 +16,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'sevilla', name: '세비야', country: 'ES', pos: project(-5.99, 37.39), built: true, layout: 'plaza',
+    id: 'sevilla', name: '세비야', country: 'ES', pos: project(-5.99, 37.39), built: true, capital: true, layout: 'plaza',
     desc: '스페인 신대륙 무역을 독점한 통상원(Casa de Contratación) 소재지.',
     npcs: [
       { role: 'merchant', name: '은 상인 카를로스', line: '신대륙에서 온 은괴, 관심 있으신가요?' },
@@ -26,7 +26,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'london', name: '런던', country: 'EN', pos: project(-0.13, 51.51), built: true, layout: 'plaza',
+    id: 'london', name: '런던', country: 'EN', pos: project(-0.13, 51.51), built: true, capital: true, layout: 'plaza',
     desc: '영국 해군과 동인도회사의 본거지.',
     npcs: [
       { role: 'merchant', name: '모직물 상인 윌리엄', line: '고급 모직물과 주석, 좋은 값에 거래합니다.' },
@@ -36,7 +36,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'amsterdam', name: '암스테르담', country: 'NL', pos: project(4.90, 52.37), built: true, layout: 'plaza',
+    id: 'amsterdam', name: '암스테르담', country: 'NL', pos: project(4.90, 52.37), built: true, capital: true, layout: 'plaza',
     desc: '네덜란드 동인도회사(VOC)의 향신료 무역 허브.',
     npcs: [
       { role: 'merchant', name: '동인도 상인 얀', line: '아시아에서 온 비단과 도자기, 최고가에 팝니다.' },
@@ -46,7 +46,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'hamburg', name: '함부르크', country: 'HAN', pos: project(10.00, 53.55), built: true, layout: 'plaza',
+    id: 'hamburg', name: '함부르크', country: 'HAN', pos: project(10.00, 53.55), built: true, capital: true, layout: 'plaza',
     desc: '한자동맹의 북해·발트해 교역 거점.',
     npcs: [
       { role: 'merchant', name: '한자상인 프리드리히', line: '발트해산 호박과 모피를 취급합니다.' },
@@ -56,7 +56,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'marseille', name: '마르세유', country: 'FR', pos: project(5.37, 43.30), built: true, layout: 'plaza',
+    id: 'marseille', name: '마르세유', country: 'FR', pos: project(5.37, 43.30), built: true, capital: true, layout: 'plaza',
     desc: '프랑스 지중해 무역의 관문.',
     npcs: [
       { role: 'merchant', name: '올리브유 상인 자크', line: '프로방스산 올리브유, 향과 품질이 다릅니다.' },
@@ -76,7 +76,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'venezia', name: '베네치아', country: 'IT', pos: project(12.32, 45.44), built: true, layout: 'plaza',
+    id: 'venezia', name: '베네치아', country: 'IT', pos: project(12.32, 45.44), built: true, capital: true, layout: 'plaza',
     desc: '동방 무역으로 번영한 아드리아해의 여왕.',
     npcs: [
       { role: 'merchant', name: '베네치아 상인 안드레아', line: '무라노 유리공예품과 도자기, 진품만 취급합니다.' },
@@ -118,7 +118,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'istanbul', name: '이스탄불', country: 'OT', pos: project(28.98, 41.01), built: true, layout: 'bazaar',
+    id: 'istanbul', name: '이스탄불', country: 'OT', pos: project(28.98, 41.01), built: true, capital: true, layout: 'bazaar',
     desc: '옛 콘스탄티노플. 육로 향신료길과 비단길이 만나는 제국의 관문.',
     npcs: [
       { role: 'merchant', name: '대상 상인 이브라힘', line: '육로로 들여온 향신료와 비단, 뱃길보다 신선합니다.' },
@@ -242,7 +242,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'copenhagen', name: '코펜하겐', country: 'DK', pos: project(12.57, 55.68), built: true, layout: 'plaza',
+    id: 'copenhagen', name: '코펜하겐', country: 'DK', pos: project(12.57, 55.68), built: true, capital: true, layout: 'plaza',
     desc: '외레순 해협을 지키는 관세관. 발트해를 드나드는 배는 모두 이곳에 통행세를 낸다.',
     npcs: [
       { role: 'merchant', name: '호박 상인 닐스', line: '발트해산 호박, 함부르크보다 싸게 드립니다.' },
@@ -407,7 +407,7 @@ export const CITIES = [
   // ---- 신규 항구 30곳: 동아시아(한국·일본·중국은 물물교환), 동남아, 그리고 나머지 대륙 확장 ----
   // 한국(조선) — hanok 레이아웃(한옥 처마 곡선 지오메트리) + 한복 캐릭터, barter:true(물물교환).
   {
-    id: 'busan', name: '부산', country: 'KR', pos: project(129.08, 35.10), built: true, layout: 'hanok', barter: true,
+    id: 'busan', name: '부산', country: 'KR', pos: project(129.08, 35.10), built: true, layout: 'hanok', barter: true, capital: true,
     desc: '조선이 일본과 유일하게 공식 교역을 허가한 왜관(倭館)의 항구.',
     npcs: [
       { role: 'merchant', name: '역관 상인 김만덕', line: '인삼과 청자, 가져오신 물건 가치만큼 맞바꿔 드립니다.' },
@@ -426,7 +426,7 @@ export const CITIES = [
   },
   // 일본 — 나가사키 데지마 외에 실제 대규모 상업항 두 곳을 더한다. barter:true.
   {
-    id: 'osaka', name: '오사카', country: 'JP', pos: project(135.50, 34.65), built: true, layout: 'trading_post', barter: true,
+    id: 'osaka', name: '오사카', country: 'JP', pos: project(135.50, 34.65), built: true, capital: true, layout: 'trading_post', barter: true,
     desc: '"천하의 부엌"이라 불린 일본 상업의 중심. 각지 쌀과 물자가 모인다.',
     npcs: [
       { role: 'merchant', name: '상인 요도야', line: '가져오신 물건, 은과 차로 맞바꿔 드리지요.' },
@@ -445,7 +445,7 @@ export const CITIES = [
   },
   // 중국 — 마카오 외에 청·송원대 실제 대외무역 거점 두 곳. barter:true.
   {
-    id: 'guangzhou', name: '광저우', country: 'CN', pos: project(113.26, 23.13), built: true, layout: 'bazaar', barter: true,
+    id: 'guangzhou', name: '광저우', country: 'CN', pos: project(113.26, 23.13), built: true, capital: true, layout: 'bazaar', barter: true,
     desc: '청 제국이 유일하게 허가한 서양 무역항. 십삼행(十三行) 상관이 늘어서 있다.',
     npcs: [
       { role: 'merchant', name: '행상 오병감', line: '비단과 차, 도자기 — 광둥 물건과 바꾸어 가시지요.' },
@@ -464,7 +464,7 @@ export const CITIES = [
   },
   // ---- 동남아시아 (현금 교역) ----
   {
-    id: 'hoi_an', name: '호이안', country: 'VN', pos: project(108.33, 15.88), built: true, layout: 'bazaar',
+    id: 'hoi_an', name: '호이안', country: 'VN', pos: project(108.33, 15.88), built: true, capital: true, layout: 'bazaar',
     desc: '베트남 중부의 국제무역항. 여러 나라 상관이 나란히 늘어서 있다.',
     npcs: [
       { role: 'merchant', name: '상인 응우옌', line: '비단과 도자기, 원산지 못지않은 값에 드립니다.' },
@@ -473,7 +473,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'ayutthaya', name: '아유타야', country: 'SM', pos: project(100.58, 13.55), built: true, layout: 'plaza',
+    id: 'ayutthaya', name: '아유타야', country: 'SM', pos: project(100.58, 13.55), built: true, capital: true, layout: 'plaza',
     desc: '샴 왕국의 수도이자 국제무역항. 주석과 쌀이 풍부하다.',
     npcs: [
       { role: 'merchant', name: '상인 프라야', line: '시암산 주석, 좋은 값에 팔고 있습니다.' },
@@ -482,7 +482,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'bago', name: '페구', country: 'BU', pos: project(96.20, 16.75), built: true, layout: 'waypost',
+    id: 'bago', name: '페구', country: 'BU', pos: project(96.20, 16.75), built: true, capital: true, layout: 'waypost',
     desc: '버마 몬 왕조의 항구. 티크목과 보석 교역으로 이름났다.',
     npcs: [
       { role: 'merchant', name: '상인 마웅', line: '내륙에서 캐낸 금, 값을 후하게 쳐드립니다.' },
@@ -491,7 +491,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'aceh', name: '반다르아체', country: 'AC', pos: project(95.32, 5.55), built: true, layout: 'bazaar',
+    id: 'aceh', name: '반다르아체', country: 'AC', pos: project(95.32, 5.55), built: true, capital: true, layout: 'bazaar',
     desc: '수마트라 북단의 이슬람 향신료 왕국. 세계 최대급 후추 산지.',
     npcs: [
       { role: 'merchant', name: '상인 테우쿠', line: '아체산 후추입니다. 캘리컷 못지않게 쌉니다 — 여기도 원산지니까요.' },
@@ -500,7 +500,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'brunei', name: '브루나이', country: 'BN', pos: project(114.94, 4.94), built: true, layout: 'waypost',
+    id: 'brunei', name: '브루나이', country: 'BN', pos: project(114.94, 4.94), built: true, capital: true, layout: 'waypost',
     desc: '보르네오의 이슬람 술탄국. 물 위에 지은 수상 도시로 유명하다.',
     npcs: [
       { role: 'merchant', name: '상인 아왕', line: '내륙에서 캐낸 사금과 장뇌, 관심 있으신가요.' },
@@ -528,7 +528,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'stockholm', name: '스톡홀름', country: 'SE', pos: project(18.07, 59.33), built: true, layout: 'plaza',
+    id: 'stockholm', name: '스톡홀름', country: 'SE', pos: project(18.07, 59.33), built: true, capital: true, layout: 'plaza',
     desc: '발트해 무역과 스웨덴 철·주석 수출의 거점.',
     npcs: [
       { role: 'merchant', name: '상인 에리크', line: '북방산 주석과 모피, 좋은 값에 넘깁니다.' },
@@ -546,7 +546,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'valletta', name: '발레타', country: 'MT', pos: project(14.51, 35.90), built: true, layout: 'fortress',
+    id: 'valletta', name: '발레타', country: 'MT', pos: project(14.51, 35.90), built: true, capital: true, layout: 'fortress',
     desc: '성 요한 기사단의 지중해 요새 도시. 코르시어(사략선)의 거점.',
     npcs: [
       { role: 'merchant', name: '전리품 상인 조반니', line: '기사단 코르시어가 나포한 물건, 값싸게 넘기겠습니다.' },
@@ -555,7 +555,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'dubrovnik', name: '두브로브니크', country: 'RG', pos: project(18.11, 42.65), built: true, layout: 'plaza',
+    id: 'dubrovnik', name: '두브로브니크', country: 'RG', pos: project(18.11, 42.65), built: true, capital: true, layout: 'plaza',
     desc: '아드리아해의 독립 상업 공화국 라구사. 발칸 교역의 관문.',
     npcs: [
       { role: 'merchant', name: '상인 이반', line: '발칸 내륙에서 들여온 비단과 포도주입니다.' },
@@ -657,7 +657,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'leith', name: '리스', country: 'SC', pos: project(-3.17, 55.98), built: true, layout: 'plaza',
+    id: 'leith', name: '리스', country: 'SC', pos: project(-3.17, 55.98), built: true, capital: true, layout: 'plaza',
     desc: '스코틀랜드 에든버러의 관문항. 양모와 청어 무역이 활발하다.',
     npcs: [
       { role: 'merchant', name: '모직물 상인 던컨', line: '스코틀랜드산 양모와 모피, 좋은 값에 넘깁니다.' },
@@ -675,7 +675,7 @@ export const CITIES = [
     ],
   },
   {
-    id: 'muscat', name: '무스카트', country: 'OM', pos: project(58.59, 23.61), built: true, layout: 'fortress',
+    id: 'muscat', name: '무스카트', country: 'OM', pos: project(58.59, 23.61), built: true, capital: true, layout: 'fortress',
     desc: '오만 술탄국의 수도. 인도양 서부 교역로의 요충지.',
     npcs: [
       { role: 'merchant', name: '상인 사이드', line: '페르시아산 비단과 후추, 좋은 값에 넘깁니다.' },
@@ -694,6 +694,7 @@ export const NPC_ROLE_LABELS = {
   shipwright: '조선소 직원',
   harbormaster: '출항 관리인',
   citizen: '주민',
+  governor: '총독',
 };
 
 export const NPC_ROLE_COLORS = {
@@ -701,4 +702,5 @@ export const NPC_ROLE_COLORS = {
   shipwright: '#7a5230',
   harbormaster: '#2c6e9e',
   citizen: '#6b6b6b',
+  governor: '#8a1f3d',
 };

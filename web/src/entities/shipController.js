@@ -3,10 +3,12 @@
 import { Vec2, clamp } from '../util/math2d.js';
 import { SHIP_CLASSES } from '../data/ships.js';
 
-// 전세계 지도로 확장하며 SCALE(coastline.js)을 45→140으로 키웠다. 순항 속도도 어느 정도
-// 함께 올리되(4.2→7.0) 거리만큼 다 따라가진 않게 해, 인접 항구는 적당히 길어지고
-// 대륙을 넘나드는 항로는 확실히 "긴 항해"로 느껴지도록 했다.
-const NOTCH_SPEED = 7.0;
+// 선박마다 다른 ships.js의 speed 스탯(7~19)이 실제 항해 속도에 그대로 비례하도록 계산한다
+// (예전엔 speed가 조선소 비교용 표시값일 뿐 실제 이동 물리에는 전혀 반영되지 않았다).
+// 가장 빠른 배(클리퍼 테르모필레, speed 19)가 최대속력으로 리스본↔나가사키 직선거리
+// (project() 기준 약 19,480유닛)를 약 12분(720초)에 주파하도록 역산한 상수 —
+// SPEED_STAT_TO_UNIT = (거리/720초) / (MAX_FWD * 19).
+const SPEED_STAT_TO_UNIT = 0.2848;
 const MAX_FWD = 5;
 const MAX_REV = -3;
 const ACCEL_BASE = 4.5;
@@ -39,7 +41,8 @@ export class ShipController {
   throttleDown() { this.notch = Math.max(MAX_REV, this.notch - 1); }
 
   get speedRatio() { return this.notch >= 0 ? this.notch / MAX_FWD : this.notch / Math.abs(MAX_REV); }
-  get maxSpeedMs() { return NOTCH_SPEED * MAX_FWD * this.speedMul * this.windMul; }
+  get notchSpeed() { return this.shipDef.speed * SPEED_STAT_TO_UNIT; }
+  get maxSpeedMs() { return this.notchSpeed * MAX_FWD * this.speedMul * this.windMul; }
 
   update(delta, t, isBlocked, wind) {
     if (wind) {
@@ -52,8 +55,9 @@ export class ShipController {
       this.windMul = 1;
     }
 
+    const notchSpeed = this.notchSpeed;
     const turnRateBase = degToRad(this.shipDef.turnRate);
-    const maxSpeed = NOTCH_SPEED * MAX_FWD * this.speedMul * this.windMul;
+    const maxSpeed = notchSpeed * MAX_FWD * this.speedMul * this.windMul;
     const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.curSpeed) / maxSpeed);
     const dir = this.curSpeed < 0 ? -1 : 1;
     const targetTurnRate = this.turnInput * turnRateBase * speedFactor * dir;
@@ -61,7 +65,7 @@ export class ShipController {
     this.curTurnRate += clamp(targetTurnRate - this.curTurnRate, -maxTurnStep, maxTurnStep);
     this.heading += this.curTurnRate * delta;
 
-    const targetSpeed = this.notch * NOTCH_SPEED * this.speedMul * this.windMul;
+    const targetSpeed = this.notch * notchSpeed * this.speedMul * this.windMul;
     const maxSpeedStep = this.accel * delta;
     this.curSpeed += clamp(targetSpeed - this.curSpeed, -maxSpeedStep, maxSpeedStep);
 

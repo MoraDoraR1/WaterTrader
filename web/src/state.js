@@ -14,6 +14,7 @@ export const state = {
   shipParts: {}, // { cannon, armor, sail, hull } — 슬롯별 장착 부품 id (조선소에서 구매/장착)
   shipPos: project(-11.0, 38.5), // 리스본 서쪽 대서양 공해 — 실제 경위도 기반이라 지도 축척이 바뀌어도 항상 안전한 시작 위치
   shipHeading: 0,
+  dayTimer: 0, // 가상 항해 시간(초) — WeatherSystem이 갱신, 항해일자(voyageDay) 계산에 쓰인다.
   dockedCityId: null,
   inCombat: false,
   playerHp: 100,

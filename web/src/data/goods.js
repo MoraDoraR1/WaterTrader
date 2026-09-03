@@ -1,5 +1,21 @@
-// 교역품 데이터 — 대항해시대 실제 무역로를 참고한 8개 항구 간 시세차익 구조.
+// 교역품 데이터 — 대항해시대 실제 무역로를 참고한 전세계 항구 간 시세차익 구조.
 // basePrice: 품목 자체의 기준가(참고용, 실제 매매가는 도시별 CITY_MARKET 항목이 우선한다).
+//
+// ---- 국가별 주력 교역품(정리) ----
+// 같은 나라 안에서도 도시마다 취급 품목 조합이 겹치지 않도록 배정했다(69개 항구 전수 검증).
+//   PT 포르투갈: 후추·향신료 항로(리스본) + 금(엘미나) + 설탕(상투메·사우바도르) + 인도양 중계(모잠비크)
+//   ES 스페인: 신대륙 은(세비야·카디스·아바나·카야오) + 설탕/카카오(신대륙) + 지중해 올리브유(카디스)
+//   EN 잉글랜드: 모직물·주석(런던·브리스톨) + 클리퍼 차 무역(19세기) + 카리브해 사략(포트로열)
+//   NL 네덜란드: VOC 아시아 비단·도자기(암스테르담) + 희망봉 중계(케이프타운)
+//   HAN 한자동맹: 발트해 호박·모피(함부르크·단치히)
+//   IT 이탈리아 도시국가: 비단(제노바)·유리공예(베네치아)
+//   SE 스웨덴: 발트해 주석·모피(스톡홀름)
+//   FR 프랑스: 프로방스 올리브유(마르세유) + 보르도 포도주 + 신대륙 모피(뉴올리언스)
+//   OT 오스만: 육로 향신료·비단(이스탄불) + 이집트 향신료·유리(알렉산드리아)
+//   DK 덴마크: 발트해 호박·모피(코펜하겐)
+//   KR/JP/CN 한국·일본·중국: 물물교환 전용(barter) — 인삼·도자기·비단·차 등, 두캇 매매 없음
+//   기타 동남아·신대륙·군소국: 각 지역 실제 원산지 특산품(정향=잔지바르, 후추=아체, 은=카야오 등)
+//     을 최저가로 배정해 "멀리 실어 나를수록 남는다"는 거리 프리미엄 구조가 자연히 성립한다.
 export const GOODS = [
   { id: 'pepper', name: '후추', category: 'spice', basePrice: 45 },
   { id: 'cinnamon', name: '계피', category: 'spice', basePrice: 60 },
@@ -190,7 +206,7 @@ export const CITY_MARKET = {
   },
   mombasa: {
     gold: { buy: 50, sell: 38 },
-    pepper: { buy: 22, sell: 17 },
+    porcelain: { buy: 58, sell: 44 }, // 스와힐리 해안 유적에서 다량 출토되는 인도양 항로 중국 도자기
   },
   luanda: {
     gold: { buy: 48, sell: 37 },
@@ -260,7 +276,7 @@ export const CITY_MARKET = {
   cebu: { gold: { buy: 44, sell: 34 } },
   antwerp: { wool: { buy: 14, sell: 11 }, silk: { buy: 80, sell: 60 } },
   stockholm: { tin: { buy: 28, sell: 22 }, fur: { buy: 18, sell: 14 } },
-  cadiz: { silver: { buy: 20, sell: 15 } },
+  cadiz: { silver: { buy: 20, sell: 15 }, wine: { buy: 11, sell: 9 } },
   valletta: { olive_oil: { buy: 11, sell: 8 }, glass: { buy: 58, sell: 44 } },
   dubrovnik: { wine: { buy: 16, sell: 13 }, silk: { buy: 75, sell: 57 } },
   zanzibar: { clove: { buy: 18, sell: 14 } },

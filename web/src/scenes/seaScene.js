@@ -49,7 +49,7 @@ export class SeaScene {
     this.camera = new Camera2D();
     this.iso = new IsoProjection(BASE_PX_PER_UNIT, 0.55);
 
-    this.weather = new WeatherSystem();
+    this.weather = new WeatherSystem(state.dayTimer);
     this.rain = new RainEffect(logicalW, logicalH);
     this.wind = new Wind();
 
@@ -182,6 +182,7 @@ export class SeaScene {
         pos: new Vec2(city.pos[0], city.pos[1]),
         dockPos: new Vec2(city.pos[0] - dirX * outDist, city.pos[1] - dirZ * outDist),
         country: city.country,
+        capital: !!city.capital,
       });
     }
     return markers;
@@ -369,6 +370,7 @@ export class SeaScene {
   update(delta, elapsed) {
     this.t = elapsed;
     this.weather.update(delta);
+    state.dayTimer = this.weather.dayTimer;
     this.wind.stormActive = this.weather.stormActive;
     this.wind.update(delta);
 
@@ -407,7 +409,7 @@ export class SeaScene {
     this._updateWake(delta);
     for (const escort of this.escorts) escort.update(delta, this.ship);
     this.rain.update(delta, this.weather.stormIntensity);
-    hud.setWeather(this.weather.label, this.weather.stormIntensity > 0.1);
+    hud.setWeather(`${this.weather.label} · 항해 ${this.weather.voyageDay}일차`, this.weather.stormIntensity > 0.1);
     audio.updateOcean(this.weather.stormIntensity);
 
     const hostileNear = this.npcShips.some((n) => !n.dead && n.def.hostile && n.state === 'attack');
@@ -586,7 +588,9 @@ export class SeaScene {
     const p = this.iso.toScreen(this.camera, marker.pos.x, marker.pos.y, w, h);
     if (p.x < -20 || p.x > w + 20 || p.y < -20 || p.y > h + 20) return;
     const icon = cityIconSprite(marker.country);
-    ctx.drawImage(icon, p.x - icon.width / 2, p.y - icon.height + 4);
+    // 국가별 대도시는 바다에서도 아이콘을 더 크게 그려 눈에 띄게 한다.
+    const s = marker.capital ? 1.5 : 1;
+    ctx.drawImage(icon, p.x - (icon.width * s) / 2, p.y - icon.height * s + 4, icon.width * s, icon.height * s);
   }
 
   _drawWake(ctx, w, h) {

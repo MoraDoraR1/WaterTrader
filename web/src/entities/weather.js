@@ -3,7 +3,7 @@ import { clamp, lerp } from '../util/math2d.js';
 
 // 낮/밤 사이클 + 폭풍 상태를 함께 관리한다. 매 프레임 update()를 부르면 하늘/바다 틴트 색상과
 // 밝기, 폭풍 세기(0~1, 부드럽게 전환)를 갱신해 둔다 — seaScene은 이 값을 화면 오버레이/틴트로 쓴다.
-const DAY_CYCLE_SECONDS = 600; // 게임 내 하루 = 실제 10분
+const DAY_CYCLE_SECONDS = 60; // 게임 내 하루(항해일자 1일) = 실제 1분
 const STORM_CLEAR_MIN = 100, STORM_CLEAR_MAX = 220;
 const STORM_DURATION_MIN = 45, STORM_DURATION_MAX = 95;
 const STORM_TRANSITION_RATE = 0.15;
@@ -14,8 +14,9 @@ const SKY_DAY = new Color('#bcd6e0');
 const STORM_SKY = new Color('#3c454c');
 
 export class WeatherSystem {
-  constructor() {
-    this.dayTimer = DAY_CYCLE_SECONDS * 0.3; // 아침 시간대 근처에서 시작
+  constructor(initialDayTimer) {
+    // 저장된 값이 있으면 이어서(세이브에 담긴 state.dayTimer), 없으면 아침 시간대 근처에서 시작.
+    this.dayTimer = typeof initialDayTimer === 'number' ? initialDayTimer : DAY_CYCLE_SECONDS * 0.3;
     this.stormActive = false;
     this.stormIntensity = 0;
     this._stormTimer = STORM_CLEAR_MIN + Math.random() * (STORM_CLEAR_MAX - STORM_CLEAR_MIN);
@@ -28,6 +29,8 @@ export class WeatherSystem {
 
   get dayPhase() { return (this.dayTimer % DAY_CYCLE_SECONDS) / DAY_CYCLE_SECONDS; }
   get isNight() { return this.sunElevation < 0.05; }
+  // 항해일자 — 정수로 1일차부터 표시(가상 시간, 1일 = 실제 1분).
+  get voyageDay() { return 1 + Math.floor(this.dayTimer / DAY_CYCLE_SECONDS); }
 
   update(delta) {
     this.dayTimer += delta;

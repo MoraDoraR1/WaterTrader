@@ -111,7 +111,7 @@ function goToCity(cityId) {
 // ---- 전체 지도(월드맵): M키로 토글, 화살표로 해역 페이지 전환 ----
 // 이제 모든 페이지가 전세계 대륙/도시 데이터를 공유하고, 페이지별 위경도 범위(bounds)만
 // 다르게 잡아 확대해 보여주는 "지도책" 방식이다(placeholder 페이지는 더 이상 없음).
-const worldMapCities = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], name: c.name, color: COUNTRY_COLORS[c.country] || '#e6c15a' }));
+const worldMapCities = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], name: c.name, color: COUNTRY_COLORS[c.country] || '#e6c15a', capital: !!c.capital }));
 let worldMapIndex = 0;
 
 function regionBoundsToWorld(b) {
