@@ -27,6 +27,7 @@ import { audio } from '../systems/audio.js';
 const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
 const RESPAWN_CITY = 'lisboa';
+const SHIPWRECK_GOLD_LOSS_PCT = 0.35; // 침몰 시 휴대금(bankGold 제외) 손실 비율 — 은행에 맡길 이유를 만든다.
 const COLLISION_DAMAGE = 30;
 const COLLISION_COOLDOWN = 2.5;
 const MELEE_CHANCE = 0.25;
@@ -449,11 +450,15 @@ export class SeaScene {
     });
 
     if (state.shipHp <= 0) {
-      hud.toast('배가 침몰했습니다! 항구로 예인됩니다.');
       const home = CITIES.find((c) => c.id === RESPAWN_CITY);
       this.ship.pos.set(home.pos[0] - 70, home.pos[1]);
       this.ship.notch = 0;
-      state.gold = Math.max(0, state.gold - 100);
+      // 침몰 시 "휴대 중인" 두캇만 일부 잃는다 — 은행(state.bankGold)에 맡긴 돈은 안전하다.
+      const lost = Math.round(state.gold * SHIPWRECK_GOLD_LOSS_PCT);
+      state.gold = Math.max(0, state.gold - lost);
+      hud.toast(lost > 0
+        ? `배가 침몰했습니다! 휴대금 중 ${lost.toLocaleString('ko-KR')} 두캇을 잃고 항구로 예인됩니다. (은행 예치금은 안전합니다)`
+        : '배가 침몰했습니다! 항구로 예인됩니다.');
       initShipHp();
       if (this.meleeState) { this.meleeState = null; hud.setCombatBannerText('⚔ 전투 상황'); }
     }

@@ -233,7 +233,10 @@ export const hud = {
   isMarketOpen() { return !$('market-panel').classList.contains('hidden'); },
 
   // rows: [{ name, sub, actions: [{ label, disabled?, onAction }] }]
-  renderMarket({ title, gold, cargo, rows }) {
+  // headerTitle/cargoLabel: 시장(기본값) 외에 은행 등 같은 패널을 재사용하는 화면에서 문구를 바꿔 쓴다.
+  renderMarket({ title, gold, cargo, rows, headerTitle, cargoLabel }) {
+    $('market-header-title').textContent = headerTitle || '🏺 시장';
+    $('market-cargo-label').textContent = cargoLabel || '적재';
     $('market-title').textContent = title;
     $('market-gold-amount').textContent = gold.toLocaleString('ko-KR');
     $('market-cargo').textContent = cargo;

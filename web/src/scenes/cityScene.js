@@ -9,6 +9,7 @@ import { state } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { openShipyard } from '../ui/shipyardPanel.js';
 import { openMarket } from '../ui/marketPanel.js';
+import { openBank } from '../ui/bankPanel.js';
 import { openQuestBoard } from '../ui/questPanel.js';
 
 const BOUNDS = { minX: -85, maxX: 85, minZ: -85, maxZ: 85 };
@@ -82,6 +83,8 @@ export class CityScene {
     if (this.isCapital) {
       this.city.npcs = [
         { role: 'governor', name: '총독', line: `이곳은 ${COUNTRY_NAMES[city.country] || city.country}에서 손꼽히는 대도시입니다. 상단도, 함대도 이곳에서 가장 크게 모입니다.` },
+        // 은행은 대도시에만 있다 — 침몰해도 잃지 않도록 두캇을 맡아둔다(교역품은 취급하지 않는다).
+        { role: 'banker', name: '은행원', line: '두캇을 맡아드립니다. 배가 침몰해도 이곳에 맡긴 돈은 안전합니다.' },
         ...this.city.npcs,
       ];
     }
@@ -177,6 +180,13 @@ export class CityScene {
     if (npc.role === 'merchant') {
       hud.showDialogue(npc.name, npc.line, [
         { label: '거래', onClick: () => { hud.hideDialogue(); openMarket(this.city.id); } },
+        { label: '닫기', onClick: () => hud.hideDialogue() },
+      ]);
+      return;
+    }
+    if (npc.role === 'banker') {
+      hud.showDialogue(npc.name, npc.line, [
+        { label: '은행', onClick: () => { hud.hideDialogue(); openBank(this.city.id); } },
         { label: '닫기', onClick: () => hud.hideDialogue() },
       ]);
       return;

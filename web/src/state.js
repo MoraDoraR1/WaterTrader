@@ -15,6 +15,7 @@ export const state = {
   shipPos: project(-11.0, 38.5), // 리스본 서쪽 대서양 공해 — 실제 경위도 기반이라 지도 축척이 바뀌어도 항상 안전한 시작 위치
   shipHeading: 0,
   dayTimer: 0, // 가상 항해 시간(초) — WeatherSystem이 갱신, 항해일자(voyageDay) 계산에 쓰인다.
+  bankGold: 0, // 대도시 은행에 맡겨둔 두캇 — 휴대금(gold)과 분리되어 난파해도 잃지 않는다.
   dockedCityId: null,
   inCombat: false,
   playerHp: 100,

@@ -26,6 +26,7 @@ export function saveGame() {
     shipPos: state.shipPos,
     shipHeading: state.shipHeading,
     dayTimer: state.dayTimer,
+    bankGold: state.bankGold,
     inventory: state.inventory,
     quests: state.quests,
     reputation: state.reputation,
@@ -65,6 +66,7 @@ export function applySave(data) {
   if (Array.isArray(data.shipPos)) state.shipPos = data.shipPos;
   if (typeof data.shipHeading === 'number') state.shipHeading = data.shipHeading;
   if (typeof data.dayTimer === 'number') state.dayTimer = data.dayTimer;
+  if (typeof data.bankGold === 'number') state.bankGold = data.bankGold;
   if (Array.isArray(data.inventory)) state.inventory = data.inventory;
   state.quests = data.quests || {};
   state.reputation = data.reputation || {};

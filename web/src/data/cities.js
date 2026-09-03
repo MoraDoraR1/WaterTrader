@@ -695,6 +695,7 @@ export const NPC_ROLE_LABELS = {
   harbormaster: '출항 관리인',
   citizen: '주민',
   governor: '총독',
+  banker: '은행원',
 };
 
 export const NPC_ROLE_COLORS = {
@@ -703,4 +704,5 @@ export const NPC_ROLE_COLORS = {
   harbormaster: '#2c6e9e',
   citizen: '#6b6b6b',
   governor: '#8a1f3d',
+  banker: '#2f6b4f',
 };
