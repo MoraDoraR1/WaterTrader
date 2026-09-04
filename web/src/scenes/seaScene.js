@@ -84,7 +84,7 @@ export class SeaScene {
     this.ship.heading = state.shipHeading || 0;
     this.camera.snapTo(this.ship.pos.x, this.ship.pos.y);
 
-    this.cannonPool = new CannonballPool();
+    this.cannonPool = new CannonballPool(160); // 최상급 함선(140문급)의 일제사격(최대 36발)이 NPC 포화와 겹쳐도 조기 재활용(shift)되지 않도록 여유를 둔다.
     this.npcShips = SEA_NPC_SHIPS.map((d) => new NpcShip(d));
     this.escorts = [];
     this.rebuildEscorts();
@@ -393,6 +393,9 @@ export class SeaScene {
   fireCannon() {
     if (this.meleeState) { hud.toast('백병전 중에는 포격할 수 없습니다.'); return; }
     if (this.fireTimer > 0) return;
+    // 로마 데케레스처럼 대포가 아예 없는(cannons=0) 배는 애초에 포격 자체가 불가능하다 —
+    // 예전엔 발사수 하한(2)에 걸려 대포 없는 배도 2발이 나가는 모순이 있었다(실측으로 확인).
+    if (this.ship.shipDef.cannons <= 0) { hud.toast('이 배는 대포가 없습니다 — 충돌이나 백병전으로 싸우세요.'); return; }
     if (state.cannonballs <= 0) { hud.toast('포탄이 없습니다! 항구 관리인에게 보급받으세요.'); return; }
     const target = this._nearestHostile();
     if (!target || target.pos.distanceTo(this.ship.pos) > 60) {
@@ -405,11 +408,17 @@ export class SeaScene {
     const toTarget = { x: target.pos.x - this.ship.pos.x, y: target.pos.y - this.ship.pos.y };
     const len = Math.hypot(toTarget.x, toTarget.y) || 1;
     const dir = { x: toTarget.x / len, y: toTarget.y / len };
-    const shotCount = clamp(Math.round(this.ship.shipDef.cannons / 4), 2, 9);
+    // 상한을 9->36으로 올려(140문급 최상급 함선까지 대포 수가 그대로 발사 수에 반영되게)
+    // 화력 투자가 낭비되지 않게 했다(실측: 예전엔 38문 이상인 7척이 전부 9발로 동일했음).
+    const shotCount = clamp(Math.round(this.ship.shipDef.cannons / 4), 2, 36);
+    // 다만 산탄 퍼짐 각도까지 발사수에 비례해 키우면(예전 방식) 36발일 때 부채꼴이 180도 가까이
+    // 벌어져 옆·뒤로도 쏘는 꼴이 된다 — 총 퍼짐각에 상한(약 40도)을 둬서, 발사수가 많을수록
+    // 그 안에 더 촘촘히 들어차도록만 한다.
     const spread = 0.09;
+    const totalSpread = Math.min(0.7, spread * (shotCount - 1));
     for (let i = 0; i < shotCount; i++) {
       const tt = shotCount === 1 ? 0 : i / (shotCount - 1) - 0.5;
-      const a = tt * spread * (shotCount - 1);
+      const a = tt * totalSpread;
       const cos = Math.cos(a), sin = Math.sin(a);
       const rd = { x: dir.x * cos - dir.y * sin, y: dir.x * sin + dir.y * cos };
       this.cannonPool.fire(this.ship.pos, rd, 46, 'player');
