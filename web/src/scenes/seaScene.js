@@ -504,6 +504,13 @@ export class SeaScene {
     hud.setShipHp(state.shipHp / this.ship.shipDef.hp);
     hud.setGold(state.gold);
     hud.setCrewMorale(state.crewMorale ?? 100);
+    // low: 아직 바닥나진 않았어도 미리 경고(식량/식수 3일분, 자재 1개=수리 1회분, 포탄 3발 미만).
+    hud.setSupplies([
+      { icon: '🍖', qty: state.food, low: state.food <= 3 },
+      { icon: '💧', qty: state.water, low: state.water <= 3 },
+      { icon: '🪵', qty: state.materials, low: state.materials < 1 },
+      { icon: '💣', qty: state.cannonballs, low: state.cannonballs <= 2 },
+    ]);
 
     const windPct = Math.round((this.ship.windMul - 1) * 100);
     const windLabel = windPct > 3 ? `순풍 +${windPct}%` : windPct < -3 ? `역풍 ${windPct}%` : `무풍 ${windPct >= 0 ? '+' : ''}${windPct}%`;

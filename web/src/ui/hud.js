@@ -78,11 +78,18 @@ export const hud = {
     $('ship-hp-box').classList.toggle('hidden', !v);
     $('nav-panel').classList.toggle('hidden', !v);
     $('weather-badge').classList.toggle('hidden', !v);
+    $('supplies-badge').classList.toggle('hidden', !v);
   },
   setWeather(label, isStorm) {
     const el = $('weather-badge');
     el.textContent = label;
     el.classList.toggle('storm', !!isStorm);
+  },
+  // supplies: [{icon,label,qty,low}] — low(부족 경고 임계치 이하)면 강조 색으로 표시한다.
+  setSupplies(supplies) {
+    $('supplies-badge').innerHTML = supplies
+      .map((s) => `<span${s.low ? ' class="low"' : ''}>${s.icon}${s.qty}</span>`)
+      .join('');
   },
   showCombatBanner(v) { $('combat-banner').classList.toggle('hidden', !v); },
   setCombatBannerText(text) { $('combat-banner').textContent = text; },
