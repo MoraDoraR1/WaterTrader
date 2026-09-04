@@ -8,7 +8,7 @@ export const SUPPLY_DEFS = {
   food: { id: 'food', name: '식량', icon: '🍖', price: 2 },
   water: { id: 'water', name: '식수', icon: '💧', price: 1 },
   materials: { id: 'materials', name: '자재', icon: '🪵', price: 8 },
-  cannonballs: { id: 'cannonballs', name: '포탄', icon: '💣', price: 5 },
+  cannonballs: { id: 'cannonballs', name: '포탄', icon: '💣', price: 4 },
 };
 
 export function buySupply(type, qty) {

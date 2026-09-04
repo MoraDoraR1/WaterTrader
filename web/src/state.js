@@ -22,7 +22,7 @@ export const state = {
   food: 10,
   water: 10,
   materials: 3,
-  cannonballs: 10,
+  cannonballs: 18, // 시작 화력 3~5회 교전분 — 초기 배(포 4문)는 일제사격 1회에 2발을 쏘지만 소모는 1개뿐이다.
   suppliesLastDay: 1, // 마지막으로 식량/식수 소모를 처리한 항해일자 — 날짜가 넘어갈 때마다 갱신.
   dockedCityId: null,
   inCombat: false,
