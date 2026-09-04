@@ -14,7 +14,7 @@ import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 import { payWagesOnDock, getCurrentMinCrew } from './systems/crew.js';
 import { openCrew } from './ui/crewPanel.js';
-import { repairAtSea } from './systems/shipyard.js';
+import { repairAtSea, getCannonSlotCount } from './systems/shipyard.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent } from './systems/market.js';
@@ -245,6 +245,12 @@ function openShipInfo() {
     turnRatio: shipDef.turnRate / STAT_MAX.turnRate, turnVal: `${shipDef.turnRate}°/s`,
     speedRatio: shipDef.speed / STAT_MAX.speed, speedVal: `${shipDef.speed}`,
     parts: Object.entries(PART_SLOTS).map(([slot, meta]) => {
+      if (slot === 'cannon') {
+        const arr = Array.isArray(state.shipParts.cannon) ? state.shipParts.cannon : (state.shipParts.cannon ? [state.shipParts.cannon] : []);
+        const names = arr.filter(Boolean).map((id) => getPart(id)?.name).filter(Boolean);
+        const slotCount = getCannonSlotCount(getShip(state.currentShipId));
+        return { icon: meta.icon, label: `${meta.label} (${names.length}/${slotCount})`, name: names.join(', ') || undefined };
+      }
       const part = state.shipParts[slot] ? getPart(state.shipParts[slot]) : null;
       return { icon: meta.icon, label: meta.label, name: part?.name };
     }),

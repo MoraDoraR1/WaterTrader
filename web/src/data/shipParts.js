@@ -1,5 +1,8 @@
 // 배 부품(장비) 데이터 — 조선소에서 구매해 장착하는 업그레이드.
-// slot: cannon(대포) / armor(장갑판) / sail(돛) / hull(선체 보강) — 슬롯당 하나만 장착 가능,
+// slot: cannon(대포) / armor(장갑판) / sail(돛) / hull(선체 보강). armor/sail/hull은 슬롯당
+// 하나만 장착 가능. cannon만 예외로 배 등급(class)에 따라 슬롯을 여러 개(1~6개, 최대 6개
+// 한도) 가지며, state.shipParts.cannon은 슬롯별로 배열([슬롯0, 슬롯1, ...])로 저장된다
+// (systems/shipyard.js의 getCannonSlotCount 참고 — 소형선 1개부터 초대형선 6개까지).
 // 교체 시 기존 부품은 환불 없이 해제된다(장착 부품은 실물 선체에 딸린 개장으로 취급 — 배를
 // 갈아타면 함께 이전되지 않는다).
 // effects: cannonsAdd(화력) / hpAdd(최대 내구도) / cargoAdd(적재량) — 가산.
@@ -12,17 +15,24 @@ export const PART_SLOTS = {
   hull: { label: '선체 보강', icon: '🪵' },
 };
 
+// 대포 부품 가격 사다리 — "하위 단계 가격의 1.6배 / 2.4배 / 3배"로 순차 배수 적용
+// (500 -> 800 -> 1920 -> 5760). 예전엔 최고 등급이 +9문뿐이라, 슬롯을 여러 개 가진
+// 대형선에서조차 화력 증가폭이 미미했다(9문짜리를 여러 개 꽂아야 했음) — 그 대신 상위 두
+// 단계를 +16/+32로 크게 올려, 슬롯 몇 개만으로도 큰 함선다운 화력 도약이 나도록 했다.
 export const SHIP_PARTS = [
-  // ── 대포: 현측 포열 증설로 화력을 직접 끌어올린다 ──
+  // ── 대포: 슬롯 하나당 이 중 하나를 장착 — 슬롯 수는 배 등급이 정한다(소형 1 ~ 초대형 6) ──
   { id: 'cannon_swivel', slot: 'cannon', tier: 1, name: '회전식 소형포', price: 500,
     effects: { cannonsAdd: 2 },
     desc: '갑판 난간에 다는 소형 선회포. 가벼워 다른 능력치에 영향이 없다.' },
-  { id: 'cannon_culverin', slot: 'cannon', tier: 2, name: '컬버린 함포', price: 1400,
+  { id: 'cannon_culverin', slot: 'cannon', tier: 2, name: '컬버린 함포', price: 800,
     effects: { cannonsAdd: 5 },
     desc: '사거리와 관통력을 겸비한 표준 함포. 현측 포열을 실질적으로 증강한다.' },
-  { id: 'cannon_demicannon', slot: 'cannon', tier: 3, name: '데미캐논 중포', price: 3200,
-    effects: { cannonsAdd: 9, turnRateMul: 0.95 },
-    desc: '가장 강력한 중포. 화력은 압도적이지만 무게 탓에 선회가 살짝 둔해진다.' },
+  { id: 'cannon_longrange', slot: 'cannon', tier: 3, name: '장사정 캐논 포열', price: 1920,
+    effects: { cannonsAdd: 16, turnRateMul: 0.95 },
+    desc: '사거리와 파괴력을 크게 늘린 중포열. 무게 탓에 선회가 살짝 둔해진다.' },
+  { id: 'cannon_decisive', slot: 'cannon', tier: 4, name: '결전 캐논 포열', price: 5760,
+    effects: { cannonsAdd: 32, turnRateMul: 0.90 },
+    desc: '함대전의 승패를 가르는 최중량 포열. 압도적 화력이지만 선회가 눈에 띄게 둔해진다.' },
 
   // ── 장갑판: 내구도를 크게 올리되 무게로 기동성을 깎는다 ──
   { id: 'armor_oak_planking', slot: 'armor', tier: 1, name: '참나무 보강판', price: 700,
@@ -66,9 +76,26 @@ export function getPart(id) {
   return SHIP_PARTS.find((p) => p.id === id);
 }
 
+// cannon 슬롯은 배열([슬롯0, 슬롯1, ...] — 빈 슬롯은 null/undefined)로 여러 개 담기고,
+// armor/sail/hull은 예전처럼 문자열 하나다. 배열이든 문자열이든 그대로 펼쳐서 실제 장착된
+// 부품 목록을 만든다(과거 세이브에 남아있는 cannon: '문자열' 형태도 그대로 호환된다).
 export function getEquippedParts(shipParts) {
   if (!shipParts) return [];
-  return Object.values(shipParts).filter(Boolean).map(getPart).filter(Boolean);
+  const result = [];
+  for (const value of Object.values(shipParts)) {
+    if (!value) continue;
+    if (Array.isArray(value)) {
+      for (const id of value) {
+        if (!id) continue;
+        const p = getPart(id);
+        if (p) result.push(p);
+      }
+    } else {
+      const p = getPart(value);
+      if (p) result.push(p);
+    }
+  }
+  return result;
 }
 
 // 장착 부품 효과를 반영한 "실효 스탯" 선박 정의를 만든다(원본 SHIPS 데이터는 건드리지 않는다).

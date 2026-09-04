@@ -120,23 +120,59 @@ export function repairAtSea() {
   return { ok: true, healed, materialsUsed };
 }
 
-export function equipPart(slot, partId) {
+// 대포 슬롯 수는 배 등급(class)이 정한다 — 소형선 1개부터 최대 6개(초대형선)까지, "140문급
+// 배를 9문짜리로 도배하려면 슬롯이 15개나 필요해지는" 낭비를 막기 위해 6개를 상한으로 못
+// 박았다. 대신 상위 대포 부품 자체를 +16/+32로 크게 키워, 적은 슬롯으로도 대형선다운 화력
+// 도약이 나도록 두 값을 맞춰뒀다(슬롯 수 자체를 늘리거나 부품 화력을 줄이는 대신, 이 조합이
+// 서로 맞아떨어지도록 설계).
+const CANNON_SLOTS_BY_CLASS = { small: 1, medium: 2, large: 4, xlarge: 6 };
+
+export function getCannonSlotCount(shipDef) {
+  return CANNON_SLOTS_BY_CLASS[shipDef?.class] || 1;
+}
+
+function cannonSlotsArray() {
+  return Array.isArray(state.shipParts.cannon) ? state.shipParts.cannon : (state.shipParts.cannon ? [state.shipParts.cannon] : []);
+}
+
+// slotIndex는 cannon 슬롯에서만 쓰인다(armor/sail/hull은 여전히 슬롯당 1개뿐이라 무시).
+export function equipPart(slot, partId, slotIndex = 0) {
   const part = getPart(partId);
   if (!part || part.slot !== slot) return { ok: false, reason: '장착할 수 없는 부품입니다.' };
-  if (state.shipParts[slot] === partId) return { ok: false, reason: '이미 장착 중입니다.' };
-  if (state.gold < part.price) return { ok: false, reason: '골드가 부족합니다.' };
 
-  state.gold -= part.price;
-  state.shipParts = { ...state.shipParts, [slot]: partId };
+  if (slot === 'cannon') {
+    const slotCount = getCannonSlotCount(getShip(state.currentShipId));
+    if (slotIndex < 0 || slotIndex >= slotCount) return { ok: false, reason: '이 배에는 그 자리에 대포 슬롯이 없습니다.' };
+    const current = cannonSlotsArray();
+    if (current[slotIndex] === partId) return { ok: false, reason: '이미 장착 중입니다.' };
+    if (state.gold < part.price) return { ok: false, reason: '골드가 부족합니다.' };
+    state.gold -= part.price;
+    const next = current.slice();
+    next[slotIndex] = partId;
+    state.shipParts = { ...state.shipParts, cannon: next };
+  } else {
+    if (state.shipParts[slot] === partId) return { ok: false, reason: '이미 장착 중입니다.' };
+    if (state.gold < part.price) return { ok: false, reason: '골드가 부족합니다.' };
+    state.gold -= part.price;
+    state.shipParts = { ...state.shipParts, [slot]: partId };
+  }
   const newMax = getCurrentEffectiveShipDef().hp;
   state.shipHp = state.shipHp == null ? newMax : Math.min(state.shipHp, newMax);
   notify({ shipChanged: true });
   return { ok: true };
 }
 
-export function unequipPart(slot) {
-  if (!state.shipParts[slot]) return { ok: false, reason: '장착된 부품이 없습니다.' };
-  state.shipParts = { ...state.shipParts, [slot]: null };
+export function unequipPart(slot, slotIndex = 0) {
+  if (slot === 'cannon') {
+    const current = cannonSlotsArray();
+    if (!current[slotIndex]) return { ok: false, reason: '장착된 부품이 없습니다.' };
+    const next = current.slice();
+    next[slotIndex] = null;
+    state.shipParts = { ...state.shipParts, cannon: next };
+  } else {
+    if (!state.shipParts[slot]) return { ok: false, reason: '장착된 부품이 없습니다.' };
+    state.shipParts = { ...state.shipParts, [slot]: null };
+  }
   const newMax = getCurrentEffectiveShipDef().hp;
   state.shipHp = state.shipHp == null ? newMax : Math.min(state.shipHp, newMax);
   notify({ shipChanged: true });
