@@ -13,6 +13,7 @@ import { getEffectiveShipDef, PART_SLOTS, getPart } from './data/shipParts.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 import { payWagesOnDock, getCurrentMinCrew } from './systems/crew.js';
+import { openCrew } from './ui/crewPanel.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent } from './systems/market.js';
@@ -83,7 +84,14 @@ function goToSea(fromCityId) {
     const minCrew = getCurrentMinCrew();
     const crew = state.crewCount ?? minCrew;
     if (crew < minCrew) {
-      hud.toast(`선원이 부족해 출항할 수 없습니다! 최소 ${minCrew}명 필요 (현재 ${crew}명) — 급여를 지급하면 선원이 충원됩니다.`);
+      hud.showDialogue(
+        '항구 관리인',
+        `선원이 부족해 출항할 수 없습니다! 최소 ${minCrew}명 필요한데 지금은 ${crew}명뿐입니다. 항구에서 선원을 고용해 채우시겠습니까?`,
+        [
+          { label: '선원 고용하기', onClick: () => { hud.hideDialogue(); openCrew(fromCityId); } },
+          { label: '닫기', onClick: () => hud.hideDialogue() },
+        ]
+      );
       return;
     }
   }

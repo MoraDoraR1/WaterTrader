@@ -20,6 +20,8 @@ const CREW_LOSS_PCT_PER_HIT = 0.03; // 전투 피격(포격 피탄/백병전 패
 const CREW_LOSS_PCT_STARVED = 0.05; // 식량 고갈 1일당 정원의 5%
 const CREW_LOSS_PCT_DEHYDRATED = 0.07; // 식수 고갈 1일당 정원의 7%(갈증이 더 치명적)
 const CREW_RECOVER_PCT_ON_DOCK = 0.2; // 급여를 낼 수 있으면 입항할 때마다 정원의 20%만큼 새로 충원
+const HIRE_COST_PER_CREW = 4; // 항구에서 선원을 새로 고용할 때 1명당 드는 두캇(항해 전 정원을 채우는 용도)
+export const RESCUE_CREW_MIN = 1, RESCUE_CREW_MAX = 3; // 전투 승리(격침·나포 불문) 시 적선에서 구조/편입되는 인원 — 항구 없이도 바다에서 소폭 보충 가능
 
 // 지금 배의 정원 대비 최소 필요 선원 수(반올림 올림 — 최소 1명).
 export function getMinCrew(shipDef) {
@@ -78,6 +80,44 @@ export function loseCrewFromSupplies(starvedDays, dehydratedDays) {
   if (loss <= 0) return;
   state.crewCount = Math.max(0, (state.crewCount ?? maxCrew) - loss);
   notify({ crewChanged: true });
+}
+
+// 항구에서 두캇을 내고 선원을 고용해 정원까지 채운다 — 출항 전 부족한 선원을 능동적으로
+// 보충하는 수단(급여 지급 시 자동으로 조금씩 차는 것과 별개). 정원을 넘겨 고용할 순 없고,
+// 요청한 수보다 빈자리가 적으면 빈자리만큼만 고용해 그만큼만 돈을 받는다.
+export function getHireCost(count) {
+  return Math.round(Math.max(0, count) * HIRE_COST_PER_CREW);
+}
+
+export function hireCrew(count) {
+  const shipDef = getShip(state.currentShipId);
+  const maxCrew = shipDef?.crew || 20;
+  const cur = state.crewCount ?? maxCrew;
+  const room = maxCrew - cur;
+  if (room <= 0) return { ok: false, reason: '이미 선원이 정원까지 가득 찼습니다.' };
+  const actualCount = Math.max(0, Math.min(count, room));
+  if (actualCount <= 0) return { ok: false, reason: '고용할 인원을 확인해주세요.' };
+  const cost = getHireCost(actualCount);
+  if (state.gold < cost) return { ok: false, reason: '골드가 부족합니다.' };
+  state.gold -= cost;
+  state.crewCount = cur + actualCount;
+  notify({ crewChanged: true });
+  return { ok: true, count: actualCount, cost };
+}
+
+// 전투에서 이겼을 때(격침·나포 불문) 적선에서 소수의 선원을 구조/편입한다 — 항구까지 가지
+// 않고도 바다 한복판에서 소폭 보충할 수 있는 유일한 수단이라, 일부러 다수가 아니라
+// 1~3명으로 작게 잡았다(요청한 대로 대량 보충 수단은 아님).
+export function rescueCrewFromVictory() {
+  const shipDef = getShip(state.currentShipId);
+  const maxCrew = shipDef?.crew || 20;
+  const before = state.crewCount ?? maxCrew;
+  if (before >= maxCrew) return 0;
+  const gain = Math.floor(Math.random() * (RESCUE_CREW_MAX - RESCUE_CREW_MIN + 1)) + RESCUE_CREW_MIN;
+  state.crewCount = Math.min(maxCrew, before + gain);
+  const actual = state.crewCount - before;
+  if (actual > 0) notify({ crewChanged: true });
+  return actual;
 }
 
 // 백병전 전투력 배율 — 사기 0%면 절반, 100%면 그대로.

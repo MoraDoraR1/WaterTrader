@@ -20,7 +20,7 @@ import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { checkBountyKill } from '../systems/quests.js';
-import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies } from '../systems/crew.js';
+import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory } from '../systems/crew.js';
 import { FLEET_CAP } from '../systems/shipyard.js';
 import { audio } from '../systems/audio.js';
 import { formatCityEventBadge } from '../systems/market.js';
@@ -274,9 +274,7 @@ export class SeaScene {
       this.addShake(0.6);
       hud.toast(`충돌! 양측 선체가 ${dmg} 손상되었습니다.`);
       if (npc.dead) {
-        hud.toast(`${npc.def.name}을(를) 격침했습니다!`);
-        const bounty = checkBountyKill(npc.owner);
-        if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+        this._victoryToast(`${npc.def.name}을(를) 격침했습니다!`, npc.owner);
         continue;
       }
       // 충돌 즉시 백병전으로 이어지지 않는다 — F를 눌러야 승선한다(플레이어의 선택).
@@ -341,15 +339,25 @@ export class SeaScene {
     }
   }
 
+  // 전투 승리(격침/나포/충돌격침/포격격침 어디서든) 메시지들을 한 토스트로 합쳐 띄운다 —
+  // hud.toast()는 큐 없이 즉시 덮어써서 따로따로 부르면 마지막 것만 남으므로, 구조 인원·
+  // 의뢰 완료 문구가 묻히지 않게 항상 한 번에 합쳐서 보여준다.
+  _victoryToast(baseMsg, npcOwner) {
+    const rescued = rescueCrewFromVictory();
+    const bounty = checkBountyKill(npcOwner);
+    const bits = [baseMsg];
+    if (rescued > 0) bits.push(`표류하던 선원 ${rescued}명을 구조해 편입했습니다.`);
+    if (bounty) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+    hud.toast(bits.join(' '));
+  }
+
   _confirmSink(npc, prefix = '') {
     this.pendingCapture = null;
     hud.hideDialogue();
     const loot = Math.round(80 + Math.random() * 160);
     state.gold += loot;
     npc.takeDamage(npc.maxHp);
-    hud.toast(`${prefix}백병전 승리! 적선을 격침하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`);
-    const bounty = checkBountyKill(npc.owner);
-    if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+    this._victoryToast(`${prefix}백병전 승리! 적선을 격침하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`, npc.owner);
   }
 
   _confirmCapture(npc) {
@@ -362,9 +370,7 @@ export class SeaScene {
     state.captureCount = (state.captureCount || 0) + 1;
     npc.takeDamage(npc.maxHp);
     notify({ fleetChanged: true });
-    hud.toast(`나포 성공! ${npc.def.name}을(를) 함대에 편입했습니다 (손상 상태 — 조선소에서 수리 필요).`);
-    const bounty = checkBountyKill(npc.owner);
-    if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+    this._victoryToast(`나포 성공! ${npc.def.name}을(를) 함대에 편입했습니다 (손상 상태 — 조선소에서 수리 필요).`, npc.owner);
   }
 
   _updateWake(delta) {
@@ -525,9 +531,7 @@ export class SeaScene {
         this.addShake(0.18);
         target.ref.takeDamage(22);
         if (target.ref.dead) {
-          hud.toast(`${target.ref.def.name}을(를) 격침했습니다!`);
-          const bounty = checkBountyKill(target.ref.owner);
-          if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+          this._victoryToast(`${target.ref.def.name}을(를) 격침했습니다!`, target.ref.owner);
         }
       }
     });

@@ -12,6 +12,7 @@ import { openMarket } from '../ui/marketPanel.js';
 import { openBank } from '../ui/bankPanel.js';
 import { openSupplies } from '../ui/suppliesPanel.js';
 import { openQuestBoard } from '../ui/questPanel.js';
+import { openCrew } from '../ui/crewPanel.js';
 import { formatCityEventBadge } from '../systems/market.js';
 
 const BOUNDS = { minX: -85, maxX: 85, minZ: -85, maxZ: 85 };
@@ -198,6 +199,7 @@ export class CityScene {
         { label: '출항', onClick: () => { hud.hideDialogue(); this.onExit(); } },
         { label: '의뢰', onClick: () => { hud.hideDialogue(); openQuestBoard(this.city.id); } },
         { label: '보급', onClick: () => { hud.hideDialogue(); openSupplies(this.city.id); } },
+        { label: '선원', onClick: () => { hud.hideDialogue(); openCrew(this.city.id); } },
         { label: '닫기', onClick: () => hud.hideDialogue() },
       ]);
       return;
