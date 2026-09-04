@@ -120,15 +120,20 @@ export function repairAtSea() {
   return { ok: true, healed, materialsUsed };
 }
 
-// 대포 슬롯 수는 배 등급(class)이 정한다 — 소형선 1개부터 최대 6개(초대형선)까지, "140문급
-// 배를 9문짜리로 도배하려면 슬롯이 15개나 필요해지는" 낭비를 막기 위해 6개를 상한으로 못
-// 박았다. 대신 상위 대포 부품 자체를 +16/+32로 크게 키워, 적은 슬롯으로도 대형선다운 화력
-// 도약이 나도록 두 값을 맞춰뒀다(슬롯 수 자체를 늘리거나 부품 화력을 줄이는 대신, 이 조합이
-// 서로 맞아떨어지도록 설계).
-const CANNON_SLOTS_BY_CLASS = { small: 1, medium: 2, large: 4, xlarge: 6 };
-
+// 대포는 조선소에서 부품(SHIP_PARTS의 cannon 슬롯 부품)을 사서 직접 장착해야만 화력이
+// 생긴다 — 배를 구매한 시점의 shipParts는 항상 빈 채로 시작하므로(buyShip 참고), 대포를
+// 하나도 안 달면 cannons가 0이 되어 포격 자체가 불가능하다(seaScene.js fireCannon 참고).
+// 대포 슬롯 수·슬롯별 최대 등급은 배마다 data/ships.js의 cannonSlotTiers 배열이 직접 정한다
+// (배열 길이 = 슬롯 수, 각 원소 = 그 슬롯에 허용되는 최대 부품 등급). 이 배열 값들의 합이 곧
+// shipDef.cannons(그 배가 대포로 도달할 수 있는 절대 최대치)와 정확히 일치하도록 데이터가
+// 짜여 있다 — 슬롯을 전부 채워도 고증 화력을 벗어나지 않는다. 대포 슬롯이 아예 없는 배(로마
+// 데케레스)는 cannonSlotTiers가 빈 배열이라 슬롯 수 0을 돌려준다.
 export function getCannonSlotCount(shipDef) {
-  return CANNON_SLOTS_BY_CLASS[shipDef?.class] || 1;
+  return Array.isArray(shipDef?.cannonSlotTiers) ? shipDef.cannonSlotTiers.length : 0;
+}
+
+export function getCannonSlotMaxTier(shipDef, slotIndex) {
+  return shipDef?.cannonSlotTiers?.[slotIndex] ?? 0;
 }
 
 function cannonSlotsArray() {
@@ -141,8 +146,10 @@ export function equipPart(slot, partId, slotIndex = 0) {
   if (!part || part.slot !== slot) return { ok: false, reason: '장착할 수 없는 부품입니다.' };
 
   if (slot === 'cannon') {
-    const slotCount = getCannonSlotCount(getShip(state.currentShipId));
+    const shipDef = getShip(state.currentShipId);
+    const slotCount = getCannonSlotCount(shipDef);
     if (slotIndex < 0 || slotIndex >= slotCount) return { ok: false, reason: '이 배에는 그 자리에 대포 슬롯이 없습니다.' };
+    if (part.tier > getCannonSlotMaxTier(shipDef, slotIndex)) return { ok: false, reason: '이 슬롯에는 장착할 수 없는 등급입니다.' };
     const current = cannonSlotsArray();
     if (current[slotIndex] === partId) return { ok: false, reason: '이미 장착 중입니다.' };
     if (state.gold < part.price) return { ok: false, reason: '골드가 부족합니다.' };

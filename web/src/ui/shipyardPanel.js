@@ -6,7 +6,7 @@ import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_NAMES, getShip } from '../data
 import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef } from '../data/shipParts.js';
 import {
   buyShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
-  setActiveShip, sellFleetShip, FLEET_CAP, getCannonSlotCount,
+  setActiveShip, sellFleetShip, FLEET_CAP, getCannonSlotCount, getCannonSlotMaxTier,
 } from '../systems/shipyard.js';
 
 function fmt(n) { return n.toLocaleString('ko-KR'); }
@@ -63,7 +63,7 @@ function renderBuyTab() {
     return {
       name: s.name,
       badge: role.label, badgeColor: role.color,
-      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 화력 ${s.cannons} · 적재 ${s.cargo}t · 속도 ${s.speed}`,
+      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed}`,
       priceLabel: isOwned ? '보유 중' : `${fmt(s.price)} 두캇`,
       actionLabel: isOwned ? '보유 중' : fleetFull ? '함대 만석' : '구매',
       disabled,
@@ -152,9 +152,18 @@ function renderPartsOverview() {
     if (slot === 'cannon') {
       const slotCount = getCannonSlotCount(baseShip);
       const equipped = cannonSlotsArray().filter(Boolean).map(getPart).filter(Boolean);
+      if (slotCount === 0) {
+        return {
+          name: `${meta.icon} ${meta.label} (장착 불가)`,
+          sub: '이 배는 대포 슬롯이 없습니다 — 충각·백병전으로 싸우는 함종입니다.',
+          actionLabel: '변경',
+          disabled: true,
+          onAction: null,
+        };
+      }
       return {
-        name: `${meta.icon} ${meta.label} (${equipped.length}/${slotCount}칸)`,
-        sub: equipped.length ? equipped.map((p) => p.name).join(', ') : '미장착',
+        name: `${meta.icon} ${meta.label} (${equipped.length}/${slotCount}칸, 최대 화력 ${baseShip.cannons})`,
+        sub: equipped.length ? equipped.map((p) => p.name).join(', ') : '미장착 — 대포가 없으면 포격할 수 없습니다.',
         actionLabel: '변경',
         onAction: () => (slotCount === 1 ? renderCannonSlot(0) : renderCannonSlots()),
       };
@@ -181,7 +190,7 @@ function renderCannonSlots() {
   for (let i = 0; i < slotCount; i++) {
     const part = equipped[i] ? getPart(equipped[i]) : null;
     rows.push({
-      name: `대포 슬롯 ${i + 1}`,
+      name: `대포 슬롯 ${i + 1} (최대 Tier ${getCannonSlotMaxTier(baseShip, i)})`,
       sub: part ? `${part.name} — ${effectSummary(part)}` : '미장착',
       actionLabel: '선택',
       onAction: () => renderCannonSlot(i),
@@ -193,19 +202,21 @@ function renderCannonSlots() {
 function renderCannonSlot(slotIndex) {
   const baseShip = getShip(state.currentShipId);
   const slotCount = getCannonSlotCount(baseShip);
+  const maxTier = getCannonSlotMaxTier(baseShip, slotIndex);
   const backTarget = slotCount === 1 ? renderPartsOverview : renderCannonSlots;
   const equippedId = cannonSlotsArray()[slotIndex];
   const rows = [{ name: '← 뒤로', sub: '', actionLabel: '뒤로', onAction: backTarget }];
   for (const p of partsBySlot('cannon')) {
     const isEquipped = equippedId === p.id;
+    const overCap = p.tier > maxTier;
     rows.push({
       name: `${p.name} (Tier ${p.tier})`,
-      sub: `${p.desc} · ${effectSummary(p)}`,
+      sub: overCap ? `이 슬롯은 Tier ${maxTier}까지만 장착 가능합니다.` : `${p.desc} · ${effectSummary(p)}`,
       priceLabel: `${fmt(p.price)} 두캇`,
-      actionLabel: isEquipped ? '장착됨' : '장착',
-      disabled: isEquipped,
+      actionLabel: isEquipped ? '장착됨' : overCap ? '장착 불가' : '장착',
+      disabled: isEquipped || overCap,
       highlight: isEquipped,
-      onAction: isEquipped ? null : () => {
+      onAction: (isEquipped || overCap) ? null : () => {
         const res = equipPart('cannon', p.id, slotIndex);
         if (res.ok) { hud.toast(`${p.name} 장착 완료 (슬롯 ${slotIndex + 1}).`); renderCannonSlot(slotIndex); }
         else hud.toast(res.reason);

@@ -104,8 +104,9 @@ export function getEquippedParts(shipParts) {
 export function getEffectiveShipDef(shipDef, shipParts) {
   if (!shipDef) return shipDef;
   const parts = getEquippedParts(shipParts);
-  if (!parts.length) return shipDef;
-  let hp = shipDef.hp, cargo = shipDef.cargo, cannons = shipDef.cannons;
+  // cannons는 shipDef.cannons(슬롯을 전부 채웠을 때의 "최대치")와 무관하게 실제로 장착한
+  // 대포 부품의 합으로만 정해진다 — 슬롯이 비어 있으면 0(대포 없이는 포격 자체가 불가능).
+  let hp = shipDef.hp, cargo = shipDef.cargo, cannons = 0;
   let speedMul = 1, turnRateMul = 1;
   for (const p of parts) {
     const e = p.effects;
