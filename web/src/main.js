@@ -14,6 +14,7 @@ import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 import { payWagesOnDock, getCurrentMinCrew } from './systems/crew.js';
 import { openCrew } from './ui/crewPanel.js';
+import { repairAtSea } from './systems/shipyard.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent } from './systems/market.js';
@@ -105,7 +106,7 @@ function goToSea(fromCityId) {
   hud.showSeaHud(true);
   const role = SHIP_ROLES[seaScene.ship.shipDef.role] || SHIP_ROLES.trade;
   hud.setShipRoleBadge(role.label, role.color);
-  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', '충돌 후 F 승선', 'M 전체지도', 'T 선박정보']);
+  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', '충돌 후 F 승선', 'R 자재로 응급수리', 'M 전체지도', 'T 선박정보']);
 }
 
 function goToCity(cityId) {
@@ -332,6 +333,13 @@ function animate(now) {
     if (consumeJustPressed('KeyF')) {
       if (state.screen === 'city') citySceneObj?.handleInteract();
       else if (state.screen === 'sea') seaScene?.handleBoardKey();
+    }
+    // 바다 위 응급 수리 — 자재 1개를 써서 내구도를 조금 채운다(항구 조선소의 즉시 전액
+    // 수리와 달리 부분 수리라 여러 번 눌러 자재를 계속 소모할 수 있다).
+    if (consumeJustPressed('KeyR') && state.screen === 'sea' && seaScene) {
+      const res = repairAtSea();
+      if (res.ok) hud.toast(`자재 1개로 선체를 ${res.healed} 복구했습니다. (내구도 ${Math.round(state.shipHp)}/${seaScene.ship.shipDef.hp})`);
+      else hud.toast(res.reason);
     }
     if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
       const priceMap = state.screen === 'city' && citySceneObj

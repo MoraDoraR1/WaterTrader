@@ -70,25 +70,40 @@ export function sellFleetShip(uid) {
   return { ok: true, credit };
 }
 
-export const REPAIR_MATERIAL_COST = 1; // 수리 1회(완전 수리)당 자재 소모량 — 배의 창고(화물칸)에서 차감된다.
-
 export function repairCost() {
   const shipDef = getCurrentEffectiveShipDef();
   const missing = Math.max(0, shipDef.hp - state.shipHp);
   return Math.round((missing / shipDef.hp) * shipDef.price * REPAIR_RATE);
 }
 
+// 항구 조선소 수리 — 골드만 들고(자재는 안 씀), 대신 항상 전액(100%)까지 완전히 고친다.
+// 바다 위에서 자재로 하는 응급 수리(repairAtSea, 아래)와 역할을 나눴다: 조선소는 목수를
+// 고용해 제대로 뜯어고치는 것이라 자재 소모가 없고, 대신 항구에 있어야만 가능하다.
 export function repairShip() {
   const shipDef = getCurrentEffectiveShipDef();
   if (state.shipHp >= shipDef.hp) return { ok: false, reason: '이미 완전한 상태입니다.' };
-  if (state.materials < REPAIR_MATERIAL_COST) return { ok: false, reason: `자재가 부족합니다 (${REPAIR_MATERIAL_COST}개 필요 — 항구 관리인에게 보급받으세요).` };
   const cost = repairCost();
   if (state.gold < cost) return { ok: false, reason: '골드가 부족합니다.' };
   state.gold -= cost;
-  state.materials -= REPAIR_MATERIAL_COST;
   state.shipHp = shipDef.hp;
   notify({ hpChanged: true });
   return { ok: true };
+}
+
+export const SEA_REPAIR_PCT_PER_MATERIAL = 0.10; // 자재 1개당 채워지는 내구도 비율(그 배의 최대 내구도 기준)
+
+// 바다 위에서 화물칸의 자재를 소모해 응급 수리한다 — 항구까지 갈 여유가 없을 때 쓰는 부분
+// 수리 수단이라, 조선소처럼 골드는 안 들지만 한 번에 자재 1개당 최대 내구도의 10%만 채운다
+// (조선소의 "골드만으로 즉시 전액 수리"와 역할이 겹치지 않게 일부러 완전 수리는 못 하게 뒀다).
+export function repairAtSea() {
+  const shipDef = getCurrentEffectiveShipDef();
+  if (state.shipHp >= shipDef.hp) return { ok: false, reason: '이미 완전한 상태입니다.' };
+  if (state.materials < 1) return { ok: false, reason: '자재가 부족합니다 (항구 관리인에게 보급받으세요).' };
+  state.materials -= 1;
+  const healed = Math.min(shipDef.hp - state.shipHp, Math.round(shipDef.hp * SEA_REPAIR_PCT_PER_MATERIAL));
+  state.shipHp += healed;
+  notify({ hpChanged: true });
+  return { ok: true, healed };
 }
 
 export function equipPart(slot, partId) {
