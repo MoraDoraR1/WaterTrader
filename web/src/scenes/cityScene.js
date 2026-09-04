@@ -10,6 +10,7 @@ import { hud } from '../ui/hud.js';
 import { openShipyard } from '../ui/shipyardPanel.js';
 import { openMarket } from '../ui/marketPanel.js';
 import { openBank } from '../ui/bankPanel.js';
+import { openSupplies } from '../ui/suppliesPanel.js';
 import { openQuestBoard } from '../ui/questPanel.js';
 
 const BOUNDS = { minX: -85, maxX: 85, minZ: -85, maxZ: 85 };
@@ -195,6 +196,7 @@ export class CityScene {
       hud.showDialogue(npc.name, npc.line, [
         { label: '출항', onClick: () => { hud.hideDialogue(); this.onExit(); } },
         { label: '의뢰', onClick: () => { hud.hideDialogue(); openQuestBoard(this.city.id); } },
+        { label: '보급', onClick: () => { hud.hideDialogue(); openSupplies(this.city.id); } },
         { label: '닫기', onClick: () => hud.hideDialogue() },
       ]);
       return;

@@ -16,6 +16,14 @@ export const state = {
   shipHeading: 0,
   dayTimer: 0, // 가상 항해 시간(초) — WeatherSystem이 갱신, 항해일자(voyageDay) 계산에 쓰인다.
   bankGold: 0, // 대도시 은행에 맡겨둔 두캇 — 휴대금(gold)과 분리되어 난파해도 잃지 않는다.
+  // 배의 창고(화물칸)는 교역품과 함께 이 넷도 같은 적재량을 나눠 쓴다 — 각각 역할이 다르다:
+  // food/water(생존 물품, 매일 소모되며 떨어지면 사기·선체가 상한다) / materials(수리 1회당 1 소모)
+  // / cannonballs(포격 1회당 1 소모).
+  food: 10,
+  water: 10,
+  materials: 3,
+  cannonballs: 10,
+  suppliesLastDay: 1, // 마지막으로 식량/식수 소모를 처리한 항해일자 — 날짜가 넘어갈 때마다 갱신.
   dockedCityId: null,
   inCombat: false,
   playerHp: 100,

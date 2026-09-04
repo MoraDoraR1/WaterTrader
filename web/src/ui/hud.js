@@ -368,16 +368,23 @@ export const hud = {
   },
   hideDialogue() { $('dialogue-box').classList.add('hidden'); },
 
-  toggleInventory(items, priceMap) {
+  // supplies: [{icon,name,qty}] — 식량/식수/자재/포탄(화물칸을 교역품과 함께 나눠 쓴다).
+  // cargo: { used, cap } — 전체 화물칸 사용량(교역품+보급품 합산).
+  toggleInventory(items, priceMap, supplies, cargo) {
     const panel = $('inventory-panel');
     const willShow = panel.classList.contains('hidden');
     if (willShow) {
+      $('inventory-cargo').textContent = cargo ? `화물칸 ${cargo.used} / ${cargo.cap} t` : '';
       const grid = $('inventory-grid');
-      grid.innerHTML = items.map((it) => {
+      const supplySlots = (supplies || []).map((s) =>
+        `<div class="inv-slot inv-slot-supply">${s.icon} ${s.name}<span class="qty">x${s.qty}</span></div>`
+      );
+      const goodSlots = items.map((it) => {
         const price = priceMap && priceMap[it.id];
         const priceLine = price ? `<span class="inv-price">매도가 ${price.sell}/t · 총액 ${(price.sell * it.qty).toLocaleString('ko-KR')}</span>` : '';
         return `<div class="inv-slot">${it.name}<span class="qty">x${it.qty}</span>${priceLine}</div>`;
-      }).join('');
+      });
+      grid.innerHTML = [...supplySlots, ...goodSlots].join('');
     }
     panel.classList.toggle('hidden', !willShow);
     return willShow;

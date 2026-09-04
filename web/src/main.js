@@ -15,7 +15,8 @@ import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './system
 import { payWagesOnDock } from './systems/crew.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
-import { getMarketRows } from './systems/market.js';
+import { getMarketRows, getCargoCapacity, getCargoUsed } from './systems/market.js';
+import { SUPPLY_DEFS } from './systems/supplies.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const displayCanvas = document.createElement('canvas');
@@ -305,7 +306,8 @@ function animate(now) {
       const priceMap = state.screen === 'city' && citySceneObj
         ? Object.fromEntries(getMarketRows(citySceneObj.city.id).map((r) => [r.good.id, r.price]))
         : null;
-      hud.toggleInventory(state.inventory, priceMap);
+      const supplies = Object.values(SUPPLY_DEFS).map((def) => ({ icon: def.icon, name: def.name, qty: state[def.id] }));
+      hud.toggleInventory(state.inventory, priceMap, supplies, { used: getCargoUsed(), cap: getCargoCapacity() });
     }
     if (consumeJustPressed('Escape')) {
       hud.hideDialogue();

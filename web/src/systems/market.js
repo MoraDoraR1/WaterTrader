@@ -70,8 +70,10 @@ export function getCargoCapacity() {
   return getEffectiveShipDef(getShip(state.currentShipId), state.shipParts).cargo;
 }
 
+// 화물칸은 교역품뿐 아니라 식량·식수·자재·포탄도 함께 나눠 쓴다(systems/supplies.js).
 export function getCargoUsed() {
-  return state.inventory.reduce((sum, it) => sum + it.qty, 0);
+  const goodsQty = state.inventory.reduce((sum, it) => sum + it.qty, 0);
+  return goodsQty + state.food + state.water + state.materials + state.cannonballs;
 }
 
 // ---- 원산지 거리 프리미엄 ----

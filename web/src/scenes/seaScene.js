@@ -28,6 +28,8 @@ const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
 const RESPAWN_CITY = 'lisboa';
 const SHIPWRECK_GOLD_LOSS_PCT = 0.35; // 침몰 시 휴대금(bankGold 제외) 손실 비율 — 은행에 맡길 이유를 만든다.
+const FOOD_PER_DAY = 1; // 항해일자 하루당 식량 소모(화물칸 공유 — systems/supplies.js)
+const WATER_PER_DAY = 1; // 항해일자 하루당 식수 소모
 const COLLISION_DAMAGE = 30;
 const COLLISION_COOLDOWN = 2.5;
 const MELEE_CHANCE = 0.25;
@@ -347,12 +349,14 @@ export class SeaScene {
   fireCannon() {
     if (this.meleeState) { hud.toast('백병전 중에는 포격할 수 없습니다.'); return; }
     if (this.fireTimer > 0) return;
+    if (state.cannonballs <= 0) { hud.toast('포탄이 없습니다! 항구 관리인에게 보급받으세요.'); return; }
     const target = this._nearestHostile();
     if (!target || target.pos.distanceTo(this.ship.pos) > 60) {
       hud.toast('사거리 내에 목표가 없습니다.');
       return;
     }
     this.fireTimer = FIRE_COOLDOWN;
+    state.cannonballs -= 1; // 일제 사격(현측 포열 전체) 1회 = 포탄 1개 소모(게임적 추상화)
     audio.playCannon();
     const toTarget = { x: target.pos.x - this.ship.pos.x, y: target.pos.y - this.ship.pos.y };
     const len = Math.hypot(toTarget.x, toTarget.y) || 1;
@@ -368,10 +372,36 @@ export class SeaScene {
     }
   }
 
+  // 항해일자가 넘어갈 때마다(voyageDay 증가) 식량·식수를 소모한다. 둘 중 하나라도 바닥나면
+  // 선원이 지쳐 사기가 크게 깎이고 선체도 상한다 — 방치하면 결국 state.shipHp<=0(침몰) 분기로
+  // 이어져, 전투로 인한 침몰과 똑같이 휴대금 손실 페널티를 받는다(은행에 맡겨둔 돈은 안전하다).
+  _processSupplies() {
+    const day = this.weather.voyageDay;
+    if (day <= state.suppliesLastDay) return;
+    const daysPassed = day - state.suppliesLastDay;
+    state.suppliesLastDay = day;
+    let starved = false, dehydrated = false;
+    for (let i = 0; i < daysPassed; i++) {
+      state.food = Math.max(0, state.food - FOOD_PER_DAY);
+      state.water = Math.max(0, state.water - WATER_PER_DAY);
+      if (state.food <= 0) starved = true;
+      if (state.water <= 0) dehydrated = true;
+    }
+    if (!starved && !dehydrated) return;
+    const maxHp = this.ship.shipDef.hp;
+    let dmgPct = 0;
+    if (starved) { state.crewMorale = Math.max(0, (state.crewMorale ?? 100) - 15); dmgPct += 0.08; }
+    if (dehydrated) { state.crewMorale = Math.max(0, (state.crewMorale ?? 100) - 20); dmgPct += 0.12; }
+    state.shipHp = Math.max(0, state.shipHp - Math.round(maxHp * dmgPct));
+    const reason = starved && dehydrated ? '식량과 식수가' : starved ? '식량이' : '식수가';
+    hud.toast(`${reason} 바닥나 선원들이 지쳐갑니다! 선체가 상하고 사기가 떨어집니다. (항구에서 보급하세요)`);
+  }
+
   update(delta, elapsed) {
     this.t = elapsed;
     this.weather.update(delta);
     state.dayTimer = this.weather.dayTimer;
+    this._processSupplies();
     this.wind.stormActive = this.weather.stormActive;
     this.wind.update(delta);
 

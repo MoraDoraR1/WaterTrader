@@ -27,6 +27,11 @@ export function saveGame() {
     shipHeading: state.shipHeading,
     dayTimer: state.dayTimer,
     bankGold: state.bankGold,
+    food: state.food,
+    water: state.water,
+    materials: state.materials,
+    cannonballs: state.cannonballs,
+    suppliesLastDay: state.suppliesLastDay,
     inventory: state.inventory,
     quests: state.quests,
     reputation: state.reputation,
@@ -67,6 +72,11 @@ export function applySave(data) {
   if (typeof data.shipHeading === 'number') state.shipHeading = data.shipHeading;
   if (typeof data.dayTimer === 'number') state.dayTimer = data.dayTimer;
   if (typeof data.bankGold === 'number') state.bankGold = data.bankGold;
+  if (typeof data.food === 'number') state.food = data.food;
+  if (typeof data.water === 'number') state.water = data.water;
+  if (typeof data.materials === 'number') state.materials = data.materials;
+  if (typeof data.cannonballs === 'number') state.cannonballs = data.cannonballs;
+  if (typeof data.suppliesLastDay === 'number') state.suppliesLastDay = data.suppliesLastDay;
   if (Array.isArray(data.inventory)) state.inventory = data.inventory;
   state.quests = data.quests || {};
   state.reputation = data.reputation || {};

@@ -6,7 +6,7 @@ import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_NAMES, getShip } from '../data
 import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef } from '../data/shipParts.js';
 import {
   buyShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
-  setActiveShip, sellFleetShip, FLEET_CAP,
+  setActiveShip, sellFleetShip, FLEET_CAP, REPAIR_MATERIAL_COST,
 } from '../systems/shipyard.js';
 
 function fmt(n) { return n.toLocaleString('ko-KR'); }
@@ -126,14 +126,15 @@ function renderRepairTab() {
   const shipDef = getCurrentEffectiveShipDef();
   const cost = repairCost();
   const full = state.shipHp >= shipDef.hp;
+  const lackMaterials = !full && state.materials < REPAIR_MATERIAL_COST;
   const rows = [{
     name: getShip(state.currentShipId).name,
-    sub: `현재 내구도 ${Math.round(state.shipHp)} / ${shipDef.hp}`,
-    priceLabel: full ? '-' : `${fmt(cost)} 두캇`,
-    actionLabel: full ? '완전한 상태' : '수리',
-    disabled: full,
+    sub: `현재 내구도 ${Math.round(state.shipHp)} / ${shipDef.hp} · 보유 자재 ${state.materials}개 (수리 1회당 ${REPAIR_MATERIAL_COST}개 소모)`,
+    priceLabel: full ? '-' : `${fmt(cost)} 두캇 + 자재 ${REPAIR_MATERIAL_COST}개`,
+    actionLabel: full ? '완전한 상태' : lackMaterials ? '자재 부족' : '수리',
+    disabled: full || lackMaterials,
     highlight: full,
-    onAction: full ? null : () => {
+    onAction: full || lackMaterials ? null : () => {
       const res = repairShip();
       if (res.ok) { hud.toast('선체를 완전히 수리했습니다.'); renderRepairTab(); }
       else hud.toast(res.reason);

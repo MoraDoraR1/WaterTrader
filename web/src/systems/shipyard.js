@@ -67,6 +67,8 @@ export function sellFleetShip(uid) {
   return { ok: true, credit };
 }
 
+export const REPAIR_MATERIAL_COST = 1; // 수리 1회(완전 수리)당 자재 소모량 — 배의 창고(화물칸)에서 차감된다.
+
 export function repairCost() {
   const shipDef = getCurrentEffectiveShipDef();
   const missing = Math.max(0, shipDef.hp - state.shipHp);
@@ -76,9 +78,11 @@ export function repairCost() {
 export function repairShip() {
   const shipDef = getCurrentEffectiveShipDef();
   if (state.shipHp >= shipDef.hp) return { ok: false, reason: '이미 완전한 상태입니다.' };
+  if (state.materials < REPAIR_MATERIAL_COST) return { ok: false, reason: `자재가 부족합니다 (${REPAIR_MATERIAL_COST}개 필요 — 항구 관리인에게 보급받으세요).` };
   const cost = repairCost();
   if (state.gold < cost) return { ok: false, reason: '골드가 부족합니다.' };
   state.gold -= cost;
+  state.materials -= REPAIR_MATERIAL_COST;
   state.shipHp = shipDef.hp;
   notify({ hpChanged: true });
   return { ok: true };
