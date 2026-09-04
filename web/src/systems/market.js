@@ -24,9 +24,45 @@ function repFactor(cityId) {
 // (2) 공급/수요 기반: 플레이어가 같은 품목을 사들이면(공급 감소) 값이 오르고, 팔면(공급 증가)
 //     값이 내린다. 이 변동은 시간이 지나며(반감기 기준) 원래 시세로 서서히 되돌아온다.
 const SUPPLY_HALF_LIFE_SEC = 90;
-const SUPPLY_ELASTICITY = 0.006; // 거래 1t당 배율 변화
-const SUPPLY_MUL_MIN = 0.7, SUPPLY_MUL_MAX = 1.5;
+const SUPPLY_ELASTICITY = 0.006; // 거래 1t당 배율 변화 — 시간에 따라 되돌아오는 "체감" 변동용
+const SUPPLY_MUL_MIN = 0.75, SUPPLY_MUL_MAX = 1.3;
 const AMBIENT_AMPLITUDE = 0.06;
+// 한 번의 매매를 이 단위로 잘게 쪼개 체결한다 — 매 조각마다 직전 조각이 반영된 최신 가격을
+// 다시 조회한다(화물칸 전체를 단일가로 후려치듯 사고파는 걸 막는다).
+const TRADE_CHUNK_SIZE = 5;
+
+// ---- 항구별 즉시 소화 물량 한도("시장 깊이") ----
+// 위의 supply-mul은 "값이 서서히 변한다"는 체감용이지, 그 자체로는 배가 커질수록 무제한으로
+// 퍼갈 수 있는 문제를 못 막는다(마진이 아무리 낮아져도 톤수를 늘리면 절대 이문은 그대로 비례
+// 해서 커진다 — 실측: 700t급 배로 리스본↔세비야만 반복했더니 30분 만에 30만 두캇, 최고가
+// 배(22,000두캇)의 13배). 그래서 "이 항구가 이 품목을 한 번에 소화할 수 있는 물량" 자체에
+// 하드캡을 둔다 — 배가 아무리 커도 한 항구·한 품목에서 이 이상은 거래가 안 되고, 시간이
+// 지나야(다른 도시를 돌고 오는 정도) 다시 채워진다. 큰 배는 여러 품목·여러 항구로 분산해야
+// 화물칾을 다 채울 수 있게 되어, "한 항로만 무한 반복"이 성립하지 않는다.
+const VOLUME_CAP = 70; // 항구 1곳·품목 1개당 한 번에 소화 가능한 최대 물량(t)
+const VOLUME_REGEN_SEC = 480; // 이 시간에 걸쳐 물량이 완전히 다시 찬다(선형 회복)
+
+function getVolumeEntry(cityId, goodId) {
+  state.marketVolume = state.marketVolume || {};
+  const cityState = state.marketVolume[cityId] || (state.marketVolume[cityId] = {});
+  return cityState[goodId] || (cityState[goodId] = { remaining: VOLUME_CAP, updatedAt: Date.now() });
+}
+
+// 지난 시간만큼 회복시킨 뒤 현재 남은 소화 물량을 돌려준다(다른 물량은 전부 정수 톤이라
+// 여기도 내림해서 맞춘다 — 안 그러면 "0.017t 구매" 같은 부스러기 거래가 생긴다).
+function availableVolume(cityId, goodId) {
+  const entry = getVolumeEntry(cityId, goodId);
+  const elapsedSec = Math.max(0, (Date.now() - entry.updatedAt) / 1000);
+  entry.remaining = Math.min(VOLUME_CAP, entry.remaining + elapsedSec * (VOLUME_CAP / VOLUME_REGEN_SEC));
+  entry.updatedAt = Date.now();
+  return Math.floor(entry.remaining);
+}
+
+function consumeVolume(cityId, goodId, qty) {
+  const entry = getVolumeEntry(cityId, goodId);
+  entry.remaining = Math.max(0, entry.remaining - qty);
+  entry.updatedAt = Date.now();
+}
 
 function hashSeed(str) {
   let h = 0;
@@ -118,31 +154,44 @@ export function getMarketRows(cityId) {
     const dynMul = decayedSupplyMul(cityId, goodId) * ambientMul(cityId, goodId);
     const effBuy = Math.max(1, Math.round(price.buy * (1 - f * REP_PRICE_EFFECT_MAX) * dynMul));
     const premium = distancePremium(cityId, goodId);
-    const effSell = Math.max(1, Math.round(price.sell * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul) + premium);
+    // 거리 프리미엄도 dynMul(공급/수요 압박)에 함께 물린다 — 예전엔 프리미엄을 dynMul 적용
+    // "이후"에 더해서 아무리 대량으로 팔아 시세를 짓눌러도 프리미엄만큼은 절대 안 깎이는
+    // 구멍이 있었다(실측: 팔면 팔수록 마진률이 바닥을 쳐야 하는데 79→67로 15%밖에 안 빠짐).
+    const effSell = Math.max(1, Math.round((price.sell + premium) * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul));
     const trend = dynMul > 1.04 ? 'up' : dynMul < 0.96 ? 'down' : 'flat';
     return { good: getGood(goodId), price: { buy: effBuy, sell: effSell }, heldQty: held ? held.qty : 0, trend };
   });
 }
 
 export function buyGood(cityId, goodId, qty) {
-  const rows = getMarketRows(cityId);
-  const row = rows.find((r) => r.good.id === goodId);
-  if (!row) return { ok: false, reason: '이 도시에서는 거래할 수 없는 품목입니다.' };
-  const spaceLeft = getCargoCapacity() - getCargoUsed();
-  const affordable = Math.floor(state.gold / row.price.buy);
-  const actualQty = Math.max(0, Math.min(qty, spaceLeft, affordable));
-  if (actualQty <= 0) {
-    if (spaceLeft <= 0) return { ok: false, reason: '화물칸이 가득 찼습니다.' };
+  if (!CITY_MARKET[cityId]?.[goodId]) return { ok: false, reason: '이 도시에서는 거래할 수 없는 품목입니다.' };
+  let remaining = Math.max(0, qty);
+  let totalQty = 0, totalCost = 0;
+  while (remaining > 0) {
+    const row = getMarketRows(cityId).find((r) => r.good.id === goodId);
+    const spaceLeft = getCargoCapacity() - getCargoUsed();
+    const affordable = Math.floor(state.gold / row.price.buy);
+    const volumeLeft = availableVolume(cityId, goodId);
+    const chunk = Math.max(0, Math.min(remaining, TRADE_CHUNK_SIZE, spaceLeft, affordable, volumeLeft));
+    if (chunk <= 0) break;
+    const cost = chunk * row.price.buy;
+    state.gold -= cost;
+    const item = state.inventory.find((it) => it.id === goodId);
+    if (item) item.qty += chunk;
+    else state.inventory.push({ id: goodId, name: getGood(goodId).name, qty: chunk });
+    nudgeSupply(cityId, goodId, chunk, 1);
+    consumeVolume(cityId, goodId, chunk);
+    totalQty += chunk;
+    totalCost += cost;
+    remaining -= chunk;
+  }
+  if (totalQty <= 0) {
+    if (getCargoCapacity() - getCargoUsed() <= 0) return { ok: false, reason: '화물칸이 가득 찼습니다.' };
+    if (availableVolume(cityId, goodId) <= 0) return { ok: false, reason: '이 항구에 남은 물량이 없습니다. 시간이 지나면 다시 채워집니다.' };
     return { ok: false, reason: '골드가 부족합니다.' };
   }
-  const cost = actualQty * row.price.buy;
-  state.gold -= cost;
-  const item = state.inventory.find((it) => it.id === goodId);
-  if (item) item.qty += actualQty;
-  else state.inventory.push({ id: goodId, name: getGood(goodId).name, qty: actualQty });
-  nudgeSupply(cityId, goodId, actualQty, 1);
   notify({ inventoryChanged: true });
-  return { ok: true, qty: actualQty, cost };
+  return { ok: true, qty: totalQty, cost: totalCost };
 }
 
 // ---- 아시아(한국·일본·중국) 물물교환 ----
@@ -180,18 +229,32 @@ export function barterGoods(cityId, giveGoodId, giveQty, receiveGoodId) {
 }
 
 export function sellGood(cityId, goodId, qty) {
-  const rows = getMarketRows(cityId);
-  const row = rows.find((r) => r.good.id === goodId);
-  if (!row) return { ok: false, reason: '이 도시에서는 거래할 수 없는 품목입니다.' };
-  const item = state.inventory.find((it) => it.id === goodId);
-  const held = item ? item.qty : 0;
-  const actualQty = Math.min(qty, held);
-  if (actualQty <= 0) return { ok: false, reason: '보유한 물량이 없습니다.' };
-  const revenue = actualQty * row.price.sell;
-  state.gold += revenue;
-  item.qty -= actualQty;
-  if (item.qty <= 0) state.inventory = state.inventory.filter((it) => it.id !== goodId);
-  nudgeSupply(cityId, goodId, actualQty, -1);
+  if (!CITY_MARKET[cityId]?.[goodId]) return { ok: false, reason: '이 도시에서는 거래할 수 없는 품목입니다.' };
+  let remaining = Math.max(0, qty);
+  let totalQty = 0, totalRevenue = 0;
+  while (remaining > 0) {
+    const item = state.inventory.find((it) => it.id === goodId);
+    const held = item ? item.qty : 0;
+    const volumeLeft = availableVolume(cityId, goodId);
+    const chunk = Math.min(remaining, TRADE_CHUNK_SIZE, held, volumeLeft);
+    if (chunk <= 0) break;
+    const row = getMarketRows(cityId).find((r) => r.good.id === goodId);
+    const revenue = chunk * row.price.sell;
+    state.gold += revenue;
+    item.qty -= chunk;
+    if (item.qty <= 0) state.inventory = state.inventory.filter((it) => it.id !== goodId);
+    nudgeSupply(cityId, goodId, chunk, -1);
+    consumeVolume(cityId, goodId, chunk);
+    totalQty += chunk;
+    totalRevenue += revenue;
+    remaining -= chunk;
+  }
+  if (totalQty <= 0) {
+    if (state.inventory.find((it) => it.id === goodId)?.qty > 0 && availableVolume(cityId, goodId) <= 0) {
+      return { ok: false, reason: '이 항구가 더 받아줄 수 없습니다. 시간이 지나면 다시 받아줍니다.' };
+    }
+    return { ok: false, reason: '보유한 물량이 없습니다.' };
+  }
   notify({ inventoryChanged: true });
-  return { ok: true, qty: actualQty, revenue };
+  return { ok: true, qty: totalQty, revenue: totalRevenue };
 }
