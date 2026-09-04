@@ -87,13 +87,14 @@ function goToSea(fromCityId) {
   hud.showSeaHud(true);
   const role = SHIP_ROLES[seaScene.ship.shipDef.role] || SHIP_ROLES.trade;
   hud.setShipRoleBadge(role.label, role.color);
-  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', 'M 전체지도', 'T 선박정보']);
+  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', '충돌 후 F 승선', 'M 전체지도', 'T 선박정보']);
 }
 
 function goToCity(cityId) {
   hud.showSeaHud(false);
   hud.showTargetHp(false);
   hud.showCombatBanner(false);
+  hud.showInteractPrompt(false);
   citySceneObj = new CityScene(cityId, () => goToSea(cityId), LOGICAL_W, LOGICAL_H);
   setScreen('city');
   audio.startHarbor();
@@ -301,6 +302,7 @@ function animate(now) {
     }
     if (consumeJustPressed('KeyF')) {
       if (state.screen === 'city') citySceneObj?.handleInteract();
+      else if (state.screen === 'sea') seaScene?.handleBoardKey();
     }
     if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
       const priceMap = state.screen === 'city' && citySceneObj

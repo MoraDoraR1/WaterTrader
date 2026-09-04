@@ -30,10 +30,17 @@ const RESPAWN_CITY = 'lisboa';
 const SHIPWRECK_GOLD_LOSS_PCT = 0.35; // 침몰 시 휴대금(bankGold 제외) 손실 비율 — 은행에 맡길 이유를 만든다.
 const FOOD_PER_DAY = 1; // 항해일자 하루당 식량 소모(화물칸 공유 — systems/supplies.js)
 const WATER_PER_DAY = 1; // 항해일자 하루당 식수 소모
-const COLLISION_DAMAGE = 30;
+// 충돌 피해는 충돌 순간 속도에 비례한다 — 제자리에서 스치듯 부딪히면 가볍게, 전속력으로
+// 들이받으면(충각 전술) 양측 모두 크게 상한다.
+const COLLISION_DAMAGE_BASE = 18;
+const COLLISION_DAMAGE_SPEED_BONUS = 24;
 const COLLISION_COOLDOWN = 2.5;
-const MELEE_CHANCE = 0.25;
+// 충돌해도 곧바로 백병전으로 이어지지 않는다 — 이 시간 안에 F를 눌러야 승선(백병전 돌입)한다
+// (예전엔 25% 확률로 자동 발생해 플레이어가 개입할 여지가 전혀 없었다).
+const BOARDING_WINDOW = 3.0;
 const MELEE_DURATION = 4.5;
+const MELEE_CLICK_CAP = 24; // 백병전 중 연타로 얻는 최대 기세 횟수
+const MELEE_CLICK_POWER = 0.02; // 연타 1회당 전투력 +2%(최대 시 +48%)
 const BASE_PX_PER_UNIT = 3.2; // 줌 1배 기준, 월드 1단위당 논리 픽셀 수
 const MINIMAP_RADIUS = 260; // 미니맵이 배 주위로 항상 보여주는 반경(월드 단위)
 const WAYPOINT_ARRIVE_DIST = 12;
@@ -86,6 +93,7 @@ export class SeaScene {
     this.collisionTimers = new Map();
     this.meleeState = null;
     this.pendingCapture = null;
+    this._boardable = null; // 충돌 직후 F로 승선(백병전)할 수 있는 짧은 창구 — { npc, timer }
     this.shakeTrauma = 0;
     this.wakeTrail = new WakeTrail();
     this._wakeTimer = 0;
@@ -136,8 +144,18 @@ export class SeaScene {
 
   handleLeftClick() {
     if (this.pendingCapture) return;
+    if (this.meleeState) { this._meleeMash(); return; }
     if (state.inCombat) this.fireCannon();
     else if (this.hoveredCity && this.onDock) this.onDock(this.hoveredCity.id);
+  }
+
+  // 충돌 후 짧은 승선 창구(this._boardable) 안에 F를 누르면 백병전이 시작된다.
+  handleBoardKey() {
+    if (!this._boardable || this.meleeState || this.pendingCapture) return;
+    const npc = this._boardable.npc;
+    this._boardable = null;
+    if (npc.dead) return;
+    this._startMelee(npc);
   }
 
   // 실제 해안선(coastline.js)을 검사해 "확실히 뭍이 아닌" 방향으로 정박지를 찾는다 — 3D 시절과
@@ -244,39 +262,55 @@ export class SeaScene {
 
       if (this.collisionTimers.has(npc.owner)) continue;
       this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
-      state.shipHp = Math.max(0, state.shipHp - COLLISION_DAMAGE);
+      const speedRatio = Math.min(1, Math.abs(this.ship.curSpeed) / this.ship.maxSpeedMs);
+      const dmg = Math.round(COLLISION_DAMAGE_BASE + COLLISION_DAMAGE_SPEED_BONUS * speedRatio);
+      state.shipHp = Math.max(0, state.shipHp - dmg);
       loseMoraleFromCombat();
-      npc.takeDamage(COLLISION_DAMAGE);
+      npc.takeDamage(dmg);
       audio.playHit();
       this.addShake(0.6);
-      hud.toast('충돌! 양측 선체가 손상되었습니다.');
+      hud.toast(`충돌! 양측 선체가 ${dmg} 손상되었습니다.`);
       if (npc.dead) {
         hud.toast(`${npc.def.name}을(를) 격침했습니다!`);
         const bounty = checkBountyKill(npc.owner);
         if (bounty) hud.toast(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
         continue;
       }
-      if (Math.random() < MELEE_CHANCE) this._startMelee(npc);
+      // 충돌 즉시 백병전으로 이어지지 않는다 — F를 눌러야 승선한다(플레이어의 선택).
+      this._boardable = { npc, timer: BOARDING_WINDOW };
       break;
     }
   }
 
   _startMelee(npc) {
-    this.meleeState = { npc, timer: MELEE_DURATION };
-    hud.setCombatBannerText('⚔ 백병전 중!');
-    hud.toast(`${npc.def.name}과(와) 백병전이 시작되었습니다!`);
+    this._boardable = null;
+    hud.showInteractPrompt(false);
+    this.meleeState = { npc, timer: MELEE_DURATION, clicks: 0 };
+    hud.setCombatBannerText(`⚔ 백병전 중! 스페이스바 연타로 기세를 올리세요 (0/${MELEE_CLICK_CAP})`);
+    hud.toast(`${npc.def.name}에 승선했습니다! 백병전 시작!`);
+  }
+
+  // 백병전 중 스페이스바(또는 좌클릭)를 누를 때마다 호출 — 플레이어의 실제 입력이 승패에 반영된다.
+  _meleeMash() {
+    if (!this.meleeState) return;
+    this.meleeState.clicks = Math.min(MELEE_CLICK_CAP, this.meleeState.clicks + 1);
+    hud.setCombatBannerText(`⚔ 백병전 중! 스페이스바 연타로 기세를 올리세요 (${this.meleeState.clicks}/${MELEE_CLICK_CAP})`);
   }
 
   _resolveMelee() {
-    const { npc } = this.meleeState;
+    const { npc, clicks } = this.meleeState;
     this.meleeState = null;
     hud.setCombatBannerText('⚔ 전투 상황');
     if (npc.dead) return;
 
     const playerCrew = this.ship.shipDef.crew || 20;
     const npcCrew = npc.shipDef.crew || 20;
-    const playerPower = playerCrew * (0.75 + Math.random() * 0.5) * getMoralePowerMul();
-    const npcPower = npcCrew * (0.75 + Math.random() * 0.5);
+    const clickBonus = 1 + Math.min(MELEE_CLICK_CAP, clicks || 0) * MELEE_CLICK_POWER;
+    // 상대가 이미 포격으로 많이 상해 있었다면(내구도 비율 낮음) 백병전에서도 약하게 싸운다 —
+    // 승선 전에 함포로 충분히 두들겨 놓는 게 실제로 이득이 되도록 한다.
+    const npcHpRatio = npc.maxHp > 0 ? npc.hp / npc.maxHp : 1;
+    const playerPower = playerCrew * (0.75 + Math.random() * 0.5) * getMoralePowerMul() * clickBonus;
+    const npcPower = npcCrew * (0.75 + Math.random() * 0.5) * (0.5 + 0.5 * npcHpRatio);
     this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
 
     if (playerPower >= npcPower) {
@@ -406,11 +440,21 @@ export class SeaScene {
     this.wind.update(delta);
 
     if (this.meleeState) {
+      if (consumeJustPressed('Space')) this._meleeMash();
       this.meleeState.timer -= delta;
       if (this.meleeState.timer <= 0) this._resolveMelee();
     } else if (this.pendingCapture) {
       // 대기
     } else {
+      if (this._boardable) {
+        this._boardable.timer -= delta;
+        if (this._boardable.timer <= 0 || this._boardable.npc.dead) {
+          this._boardable = null;
+          hud.showInteractPrompt(false);
+        } else {
+          hud.showInteractPrompt(true, `F: ${this._boardable.npc.def.name}에 승선(백병전 돌입)`);
+        }
+      }
       const wPressed = consumeJustPressed('KeyW');
       const sPressed = consumeJustPressed('KeyS');
       const manualTurn = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
@@ -456,7 +500,7 @@ export class SeaScene {
     }
 
     this.fireTimer = Math.max(0, this.fireTimer - delta);
-    if (state.inCombat && isDown('Space') && this.fireTimer <= 0 && !this.pendingCapture) this.fireCannon();
+    if (state.inCombat && isDown('Space') && this.fireTimer <= 0 && !this.pendingCapture && !this.meleeState) this.fireCannon();
 
     const targets = [
       { owner: 'player', position: this.ship.pos, radius: worldSizeFor(this.ship.shipDef).length * 0.55, ref: 'player' },
@@ -491,6 +535,7 @@ export class SeaScene {
         : '배가 침몰했습니다! 항구로 예인됩니다.');
       initShipHp();
       if (this.meleeState) { this.meleeState = null; hud.setCombatBannerText('⚔ 전투 상황'); }
+      if (this._boardable) { this._boardable = null; hud.showInteractPrompt(false); }
     }
 
     state.shipPos = [this.ship.pos.x, this.ship.pos.y];
@@ -532,13 +577,16 @@ export class SeaScene {
       this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.def.hostile })),
       this.wind.towardDirection
     );
-    if (nearest.marker && nearest.dist < DOCK_RANGE) {
-      const city = CITIES.find((c) => c.id === nearest.marker.cityId);
-      hud.showInteractPrompt(true, `[좌클릭] ${city.name}에 정박하기`);
-      this.hoveredCity = city;
-    } else {
-      hud.showInteractPrompt(false);
-      this.hoveredCity = null;
+    // 승선(백병전 돌입) 안내가 떠 있는 동안은 정박 안내가 매 프레임 덮어쓰지 않도록 양보한다.
+    if (!this._boardable) {
+      if (nearest.marker && nearest.dist < DOCK_RANGE) {
+        const city = CITIES.find((c) => c.id === nearest.marker.cityId);
+        hud.showInteractPrompt(true, `[좌클릭] ${city.name}에 정박하기`);
+        this.hoveredCity = city;
+      } else {
+        hud.showInteractPrompt(false);
+        this.hoveredCity = null;
+      }
     }
 
     const combatTarget = this._nearestHostile();
