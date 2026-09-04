@@ -144,9 +144,12 @@ export const SHIPS = [
 
   // ── 초대형 갤리 (화약 이전 시대, 고대 지중해 노젓는 대형 전함) ──
   // 함포가 없는 대신(화약 자체가 없던 시대) 압도적인 내구도·승무원·충각 공격력으로 맞선다.
+  // 대포가 아예 없는 유일한 배인 만큼(고증상 화약 이전 시대), 그 공백을 메우려고 내구도·
+  // 선회력을 전 함선 통틀어 최고치로, 속도도 클리퍼 계열(속도 특화 선종)을 제외한 모든
+  // 배보다 높게 잡았다 — 포격전은 못 하지만 맷집과 기동성으로 밀어붙여 들이받는 배.
   { id: 'roman_deceres', name: '로마 데케레스 (Roman Deceres)', class: 'xlarge', role: 'combat', type: 'galley',
-    country: 'IT', era: '기원전 1세기', speed: 11, turnRate: 50, hp: 1600, cargo: 40, cannons: 0, cannonSlotTiers: [], crew: 450, price: 6000,
-    desc: '악티움 해전급 로마 최대 등급 다단 노선(데케레스). 청동 충각과 압도적인 노잡이·해병 승선 인원으로 들이받고 백병전을 벌이는 고대 해전의 정점(대포 슬롯 없음).' },
+    country: 'IT', era: '기원전 1세기', speed: 15, turnRate: 95, hp: 3400, cargo: 40, cannons: 0, cannonSlotTiers: [], crew: 450, price: 6000,
+    desc: '악티움 해전급 로마 최대 등급 다단 노선(데케레스). 청동 충각과 압도적인 노잡이·해병 승선 인원으로 들이받고 백병전을 벌이는 고대 해전의 정점(대포 슬롯 없음). 화력이 없는 대신 전 함선 중 최고의 내구도·선회력을 갖춰 들이받고 버티는 데 특화됐다.' },
 
   // ── 초대형선 (기함급 전열함) ──
   { id: 'henry_grace_a_dieu', name: '헨리 그레이스 어 듀 (Henry Grace à Dieu)', class: 'xlarge', role: 'combat', type: 'shipline',
