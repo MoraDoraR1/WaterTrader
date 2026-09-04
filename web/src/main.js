@@ -334,11 +334,12 @@ function animate(now) {
       if (state.screen === 'city') citySceneObj?.handleInteract();
       else if (state.screen === 'sea') seaScene?.handleBoardKey();
     }
-    // 바다 위 응급 수리 — 자재 1개를 써서 내구도를 조금 채운다(항구 조선소의 즉시 전액
-    // 수리와 달리 부분 수리라 여러 번 눌러 자재를 계속 소모할 수 있다).
+    // 바다 위 응급 수리 — 보유한 자재를(부족분을 채우는 데 필요한 만큼만) 소모해 내구도를
+    // 채운다. 항구 조선소의 즉시 전액 수리보다 항상 비효율적이라 완전 수리는 사실상 안 되고,
+    // 부족하면 계속 눌러 남은 자재를 더 쓸 수 있다.
     if (consumeJustPressed('KeyR') && state.screen === 'sea' && seaScene) {
       const res = repairAtSea();
-      if (res.ok) hud.toast(`자재 1개로 선체를 ${res.healed} 복구했습니다. (내구도 ${Math.round(state.shipHp)}/${seaScene.ship.shipDef.hp})`);
+      if (res.ok) hud.toast(`자재 ${res.materialsUsed}개로 선체를 ${res.healed} 복구했습니다. (내구도 ${Math.round(state.shipHp)}/${seaScene.ship.shipDef.hp})`);
       else hud.toast(res.reason);
     }
     if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {

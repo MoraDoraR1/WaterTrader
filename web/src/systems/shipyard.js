@@ -3,6 +3,7 @@
 import { state, notify, initShipHp } from '../state.js';
 import { getShip } from '../data/ships.js';
 import { getPart, getEffectiveShipDef } from '../data/shipParts.js';
+import { SUPPLY_DEFS } from './supplies.js';
 
 const TRADE_IN_RATE = 0.4; // 기존 배를 넘길 때 받는 가치 비율(조선비 대비)
 const REPAIR_RATE = 0.6; // 완전 파손 상태에서 전액 수리할 때 드는 비용 = 조선비 * 이 비율
@@ -90,20 +91,33 @@ export function repairShip() {
   return { ok: true };
 }
 
-export const SEA_REPAIR_PCT_PER_MATERIAL = 0.10; // 자재 1개당 채워지는 내구도 비율(그 배의 최대 내구도 기준)
+// 자재 1골드어치가 갖는 수리 "가치"를 조선소 수리 단가 대비 이 비율로만 쳐준다(<1). 자재를
+// 아무리 사재기해도 조선소 전액 수리보다 항상 비싸게 먹히도록 만드는 핵심 값 — 예전엔 배
+// 최대 내구도의 고정 비율(예: 10%)을 자재 1개당 채웠는데, 그러면 배가 커도 항상 "자재
+// 10개=완전 수리"가 성립해 화물칸 10칸(80골드)이면 22,000골드짜리 전함도 다 고쳐지는
+// 심각한 구멍이 있었다(실측 확인). 조선소 수리비는 배 값에 비례해 커지는데 자재는 배 크기와
+// 무관한 정액이라, 큰 배일수록 자재의 상대적 가성비가 터무니없이 좋아졌던 것 — 자재의
+// 수리 가치를 "조선소 hp당 단가"에 연동시켜 배가 크든 작든 조선소가 항상 더 싸게 유지된다.
+export const SEA_REPAIR_VALUE_MUL = 0.7;
 
 // 바다 위에서 화물칸의 자재를 소모해 응급 수리한다 — 항구까지 갈 여유가 없을 때 쓰는 부분
-// 수리 수단이라, 조선소처럼 골드는 안 들지만 한 번에 자재 1개당 최대 내구도의 10%만 채운다
-// (조선소의 "골드만으로 즉시 전액 수리"와 역할이 겹치지 않게 일부러 완전 수리는 못 하게 뒀다).
+// 수리 수단이라 조선소처럼 골드는 안 들지만, 위 이유로 완전 수리는 사실상 불가능한 정도로만
+// 채워진다(작은 배는 그럭저럭 쓸 만하고, 큰 배일수록 자재 몇 개로는 티도 안 난다). 한 번에
+// 부족분을 다 채우는 데 필요한 만큼만(보유량 한도 내에서) 자재를 소모한다.
 export function repairAtSea() {
   const shipDef = getCurrentEffectiveShipDef();
-  if (state.shipHp >= shipDef.hp) return { ok: false, reason: '이미 완전한 상태입니다.' };
+  const missing = shipDef.hp - state.shipHp;
+  if (missing <= 0) return { ok: false, reason: '이미 완전한 상태입니다.' };
   if (state.materials < 1) return { ok: false, reason: '자재가 부족합니다 (항구 관리인에게 보급받으세요).' };
-  state.materials -= 1;
-  const healed = Math.min(shipDef.hp - state.shipHp, Math.round(shipDef.hp * SEA_REPAIR_PCT_PER_MATERIAL));
+  const shipyardRatePerHp = (shipDef.price * REPAIR_RATE) / shipDef.hp; // 조선소라면 이 배 1hp를 고치는 데 드는 골드
+  const valuePerMaterial = SUPPLY_DEFS.materials.price * SEA_REPAIR_VALUE_MUL;
+  const materialsNeeded = Math.max(1, Math.ceil((missing * shipyardRatePerHp) / valuePerMaterial));
+  const materialsUsed = Math.min(state.materials, materialsNeeded);
+  const healed = Math.min(missing, Math.floor((materialsUsed * valuePerMaterial) / shipyardRatePerHp));
+  state.materials -= materialsUsed;
   state.shipHp += healed;
   notify({ hpChanged: true });
-  return { ok: true, healed };
+  return { ok: true, healed, materialsUsed };
 }
 
 export function equipPart(slot, partId) {
