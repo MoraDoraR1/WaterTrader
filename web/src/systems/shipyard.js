@@ -30,7 +30,8 @@ export function buyShip(shipId) {
   if (state.gold < target.price) return { ok: false, reason: '골드가 부족합니다.' };
 
   state.gold -= target.price;
-  state.fleet = [...state.fleet, { uid: makeUid(), shipId, shipHp: target.hp, shipParts: {}, name: null }];
+  // 새로 산 배는 정원 그대로(선원 만실) 함대에 합류한다.
+  state.fleet = [...state.fleet, { uid: makeUid(), shipId, shipHp: target.hp, crewCount: target.crew, shipParts: {}, name: null }];
   notify({ fleetChanged: true });
   return { ok: true };
 }
@@ -40,7 +41,7 @@ export function setActiveShip(uid) {
   const idx = state.fleet.findIndex((f) => f.uid === uid);
   if (idx < 0) return { ok: false, reason: '함대에 없는 배입니다.' };
   const incoming = state.fleet[idx];
-  const outgoing = { uid: makeUid(), shipId: state.currentShipId, shipHp: state.shipHp, shipParts: state.shipParts, name: null };
+  const outgoing = { uid: makeUid(), shipId: state.currentShipId, shipHp: state.shipHp, crewCount: state.crewCount, shipParts: state.shipParts, name: null };
 
   const nextFleet = state.fleet.filter((f) => f.uid !== uid);
   nextFleet.push(outgoing);
@@ -49,6 +50,8 @@ export function setActiveShip(uid) {
   state.currentShipId = incoming.shipId;
   state.shipParts = incoming.shipParts || {};
   state.shipHp = incoming.shipHp;
+  // 예전 세이브 등 crewCount가 없던 함대 항목은 그 배의 정원 그대로 채워 갈아탄다.
+  state.crewCount = incoming.crewCount != null ? incoming.crewCount : (getShip(incoming.shipId)?.crew || 20);
   notify({ shipChanged: true, fleetChanged: true });
   return { ok: true };
 }

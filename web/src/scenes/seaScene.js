@@ -17,10 +17,10 @@ import { LAND_POLYGONS, pointOnAnyLand, project } from '../data/coastline.js';
 import { seaRegionAt } from '../data/seaRegions.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
-import { state, initShipHp, notify } from '../state.js';
+import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { checkBountyKill } from '../systems/quests.js';
-import { loseMoraleFromCombat, getMoralePowerMul } from '../systems/crew.js';
+import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies } from '../systems/crew.js';
 import { FLEET_CAP } from '../systems/shipyard.js';
 import { audio } from '../systems/audio.js';
 import { formatCityEventBadge } from '../systems/market.js';
@@ -68,6 +68,7 @@ export class SeaScene {
     this.cityMarkers = this._computeCityMarkers();
 
     if (!state.shipHp) initShipHp();
+    if (state.crewCount == null) initCrewCount();
     const shipDef = getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
     this.ship = new ShipController(shipDef);
     // 저장 데이터의 shipPos가 예전 지도 축척(또는 이후 지형 변경) 기준이라 지금은 뭍/마운드에
@@ -304,7 +305,7 @@ export class SeaScene {
     hud.setCombatBannerText('⚔ 전투 상황');
     if (npc.dead) return;
 
-    const playerCrew = this.ship.shipDef.crew || 20;
+    const playerCrew = state.crewCount ?? this.ship.shipDef.crew ?? 20;
     const npcCrew = npc.shipDef.crew || 20;
     const clickBonus = 1 + Math.min(MELEE_CLICK_CAP, clicks || 0) * MELEE_CLICK_POWER;
     // 상대가 이미 포격으로 많이 상해 있었다면(내구도 비율 낮음) 백병전에서도 약하게 싸운다 —
@@ -355,7 +356,8 @@ export class SeaScene {
     hud.hideDialogue();
     audio.playCaptureFanfare();
     const capturedHp = Math.round(npc.shipDef.hp * (0.3 + Math.random() * 0.25));
-    state.fleet = [...state.fleet, { uid: `fleet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, shipId: npc.shipDef.id, shipHp: capturedHp, shipParts: {}, name: null }];
+    const capturedCrew = Math.round((npc.shipDef.crew || 20) * (0.3 + Math.random() * 0.25));
+    state.fleet = [...state.fleet, { uid: `fleet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, shipId: npc.shipDef.id, shipHp: capturedHp, crewCount: capturedCrew, shipParts: {}, name: null }];
     state.captureCount = (state.captureCount || 0) + 1;
     npc.takeDamage(npc.maxHp);
     notify({ fleetChanged: true });
@@ -415,21 +417,25 @@ export class SeaScene {
     if (day <= state.suppliesLastDay) return;
     const daysPassed = day - state.suppliesLastDay;
     state.suppliesLastDay = day;
-    let starved = false, dehydrated = false;
+    let starvedDays = 0, dehydratedDays = 0;
     for (let i = 0; i < daysPassed; i++) {
       state.food = Math.max(0, state.food - FOOD_PER_DAY);
       state.water = Math.max(0, state.water - WATER_PER_DAY);
-      if (state.food <= 0) starved = true;
-      if (state.water <= 0) dehydrated = true;
+      if (state.food <= 0) starvedDays++;
+      if (state.water <= 0) dehydratedDays++;
     }
-    if (!starved && !dehydrated) return;
+    if (starvedDays <= 0 && dehydratedDays <= 0) return;
+    const starved = starvedDays > 0, dehydrated = dehydratedDays > 0;
     const maxHp = this.ship.shipDef.hp;
     let dmgPct = 0;
     if (starved) { state.crewMorale = Math.max(0, (state.crewMorale ?? 100) - 15); dmgPct += 0.08; }
     if (dehydrated) { state.crewMorale = Math.max(0, (state.crewMorale ?? 100) - 20); dmgPct += 0.12; }
     state.shipHp = Math.max(0, state.shipHp - Math.round(maxHp * dmgPct));
+    // 식량/식수가 완전히 떨어진 날수만큼 선원도 실제로 줄어든다(아사·탈영) — 사기/선체 손상과
+    // 별개로, 방치할수록 배를 몰 사람 자체가 부족해져 속도가 깎이는 실질적 페널티로 이어진다.
+    loseCrewFromSupplies(starvedDays, dehydratedDays);
     const reason = starved && dehydrated ? '식량과 식수가' : starved ? '식량이' : '식수가';
-    hud.toast(`${reason} 바닥나 선원들이 지쳐갑니다! 선체가 상하고 사기가 떨어집니다. (항구에서 보급하세요)`);
+    hud.toast(`${reason} 바닥나 선원들이 지쳐갑니다! 선체가 상하고 선원이 줄어듭니다. (항구에서 보급하세요)`);
   }
 
   update(delta, elapsed) {
@@ -480,6 +486,7 @@ export class SeaScene {
       } else {
         this.ship.turnInput = manualTurn;
       }
+      this.ship.crewSpeedMul = getCrewSpeedMul();
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
     }
     this._updateWake(delta);
@@ -535,6 +542,7 @@ export class SeaScene {
         ? `배가 침몰했습니다! 휴대금 중 ${lost.toLocaleString('ko-KR')} 두캇을 잃고 항구로 예인됩니다. (은행 예치금은 안전합니다)`
         : '배가 침몰했습니다! 항구로 예인됩니다.');
       initShipHp();
+      initCrewCount();
       if (this.meleeState) { this.meleeState = null; hud.setCombatBannerText('⚔ 전투 상황'); }
       if (this._boardable) { this._boardable = null; hud.showInteractPrompt(false); }
     }
@@ -550,6 +558,7 @@ export class SeaScene {
     hud.setShipHp(state.shipHp / this.ship.shipDef.hp);
     hud.setGold(state.gold);
     hud.setCrewMorale(state.crewMorale ?? 100);
+    hud.setCrewCount(state.crewCount ?? this.ship.shipDef.crew, this.ship.shipDef.crew, getCurrentMinCrew());
     // low: 아직 바닥나진 않았어도 미리 경고(식량/식수 3일분, 자재 1개=수리 1회분, 포탄 3발 미만).
     hud.setSupplies([
       { icon: '🍖', qty: state.food, low: state.food <= 3 },

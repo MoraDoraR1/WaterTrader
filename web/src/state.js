@@ -11,6 +11,7 @@ export const state = {
   gold: 1500,
   currentShipId: 'caravela_lateen',
   shipHp: null,
+  crewCount: null, // 현재 배에 실제로 타고 있는 선원 수(정원 shipDef.crew 이하) — 전투/기아로 줄고, 입항 시 일부 충원된다.
   shipParts: {}, // { cannon, armor, sail, hull } — 슬롯별 장착 부품 id (조선소에서 구매/장착)
   shipPos: project(-11.0, 38.5), // 리스본 서쪽 대서양 공해 — 실제 경위도 기반이라 지도 축척이 바뀌어도 항상 안전한 시작 위치
   shipHeading: 0,
@@ -49,6 +50,11 @@ export const state = {
 export function initShipHp() {
   const shipDef = getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
   state.shipHp = shipDef ? shipDef.hp : 500;
+}
+
+export function initCrewCount() {
+  const shipDef = getShip(state.currentShipId);
+  state.crewCount = shipDef ? shipDef.crew : 20;
 }
 
 export function subscribe(fn) {

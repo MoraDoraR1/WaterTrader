@@ -2,7 +2,7 @@ import { LOGICAL_W, LOGICAL_H, PixelSurface } from './render/canvas2d.js';
 import { consumeJustPressed, clearFrame } from './controls/keys.js';
 import { SeaScene } from './scenes/seaScene.js';
 import { CityScene } from './scenes/cityScene.js';
-import { state, setScreen, initShipHp, subscribe, notify } from './state.js';
+import { state, setScreen, initShipHp, initCrewCount, subscribe, notify } from './state.js';
 import { hud } from './ui/hud.js';
 import { wireShipyardTabs } from './ui/shipyardPanel.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
@@ -12,7 +12,7 @@ import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip
 import { getEffectiveShipDef, PART_SLOTS, getPart } from './data/shipParts.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
-import { payWagesOnDock } from './systems/crew.js';
+import { payWagesOnDock, getCurrentMinCrew } from './systems/crew.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent } from './systems/market.js';
@@ -77,6 +77,16 @@ displayCanvas.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 function goToSea(fromCityId) {
+  // 최소 선원 정원(정원의 50%)을 못 채우면 항구에서 출항 자체가 막힌다 — fromCityId가 없는
+  // 최초 게임 시작 호출(타이틀 화면 -> 첫 항해)은 아직 도시가 없으니 대상에서 제외한다.
+  if (fromCityId) {
+    const minCrew = getCurrentMinCrew();
+    const crew = state.crewCount ?? minCrew;
+    if (crew < minCrew) {
+      hud.toast(`선원이 부족해 출항할 수 없습니다! 최소 ${minCrew}명 필요 (현재 ${crew}명) — 급여를 지급하면 선원이 충원됩니다.`);
+      return;
+    }
+  }
   hud.hideDialogue();
   hud.closeInventory();
   if (!seaScene) { seaScene = new SeaScene(LOGICAL_W, LOGICAL_H); seaScene.setOnDock(goToCity); }
@@ -257,6 +267,7 @@ function enterGame() {
   hud.showTopBar(true);
   hud.showLocationBanner(true);
   if (state.shipHp == null) initShipHp();
+  if (state.crewCount == null) initCrewCount();
   audio.ensureContext();
   audio.resume();
   audio.setMuted(!!state.audioMuted);

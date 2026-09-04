@@ -115,6 +115,11 @@ export const hud = {
     const el = $('morale-box');
     el.classList.toggle('morale-low', v < 40);
   },
+  setCrewCount(count, max, minCrew) {
+    $('crew-amount').textContent = Math.round(count);
+    $('crew-max').textContent = Math.round(max);
+    $('crew-box').classList.toggle('crew-low', count < minCrew);
+  },
   setRank(label) { $('rank-label').textContent = label; },
 
   showEnding(stats) {

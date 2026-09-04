@@ -37,6 +37,7 @@ export function saveGame() {
     reputation: state.reputation,
     pirateBounty: state.pirateBounty,
     crewMorale: state.crewMorale,
+    crewCount: state.crewCount,
     fleet: state.fleet,
     captureCount: state.captureCount,
     marketState: state.marketState,
@@ -84,6 +85,7 @@ export function applySave(data) {
   state.reputation = data.reputation || {};
   if (typeof data.pirateBounty === 'number') state.pirateBounty = data.pirateBounty;
   if (typeof data.crewMorale === 'number') state.crewMorale = data.crewMorale;
+  if (typeof data.crewCount === 'number') state.crewCount = data.crewCount;
   state.fleet = Array.isArray(data.fleet) ? data.fleet : [];
   state.captureCount = typeof data.captureCount === 'number' ? data.captureCount : 0;
   state.marketState = data.marketState && typeof data.marketState === 'object' ? data.marketState : {};

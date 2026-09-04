@@ -35,6 +35,9 @@ export class ShipController {
     this.speedMul = shipDef.speedMul || 1;
     this.windSensitivity = shipDef.type === 'galley' ? 0.25 : 1;
     this.windMul = 1;
+    // 선원이 최소 정원에 못 미치면 곱해지는 배율(1=정상) — seaScene이 매 프레임 crew.js의
+    // getCrewSpeedMul()로 갱신해준다(선원 수는 게임 상태라 이 순수 물리 클래스는 직접 모른다).
+    this.crewSpeedMul = 1;
   }
 
   throttleUp() { this.notch = Math.min(MAX_FWD, this.notch + 1); }
@@ -42,7 +45,7 @@ export class ShipController {
 
   get speedRatio() { return this.notch >= 0 ? this.notch / MAX_FWD : this.notch / Math.abs(MAX_REV); }
   get notchSpeed() { return this.shipDef.speed * SPEED_STAT_TO_UNIT; }
-  get maxSpeedMs() { return this.notchSpeed * MAX_FWD * this.speedMul * this.windMul; }
+  get maxSpeedMs() { return this.notchSpeed * MAX_FWD * this.speedMul * this.windMul * this.crewSpeedMul; }
 
   update(delta, t, isBlocked, wind) {
     if (wind) {
@@ -57,7 +60,7 @@ export class ShipController {
 
     const notchSpeed = this.notchSpeed;
     const turnRateBase = degToRad(this.shipDef.turnRate);
-    const maxSpeed = notchSpeed * MAX_FWD * this.speedMul * this.windMul;
+    const maxSpeed = notchSpeed * MAX_FWD * this.speedMul * this.windMul * this.crewSpeedMul;
     const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.curSpeed) / maxSpeed);
     const dir = this.curSpeed < 0 ? -1 : 1;
     const targetTurnRate = this.turnInput * turnRateBase * speedFactor * dir;
@@ -65,7 +68,7 @@ export class ShipController {
     this.curTurnRate += clamp(targetTurnRate - this.curTurnRate, -maxTurnStep, maxTurnStep);
     this.heading += this.curTurnRate * delta;
 
-    const targetSpeed = this.notch * notchSpeed * this.speedMul * this.windMul;
+    const targetSpeed = this.notch * notchSpeed * this.speedMul * this.windMul * this.crewSpeedMul;
     const maxSpeedStep = this.accel * delta;
     this.curSpeed += clamp(targetSpeed - this.curSpeed, -maxSpeedStep, maxSpeedStep);
 
