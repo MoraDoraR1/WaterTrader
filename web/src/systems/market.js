@@ -26,10 +26,29 @@ function repFactor(cityId) {
 const SUPPLY_HALF_LIFE_SEC = 90;
 const SUPPLY_ELASTICITY = 0.006; // 거래 1t당 배율 변화 — 시간에 따라 되돌아오는 "체감" 변동용
 const SUPPLY_MUL_MIN = 0.75, SUPPLY_MUL_MAX = 1.3;
-const AMBIENT_AMPLITUDE = 0.06;
 // 한 번의 매매를 이 단위로 잘게 쪼개 체결한다 — 매 조각마다 직전 조각이 반영된 최신 가격을
 // 다시 조회한다(화물칸 전체를 단일가로 후려치듯 사고파는 걸 막는다).
 const TRADE_CHUNK_SIZE = 5;
+
+// ---- 항해일자 기반 시세 사이클("주식처럼") ----
+// 예전엔 실시간 초 단위 사인파(ambientMul)로 시세가 늘 미세하게 흔들렸는데, 그러면 "왜
+// 지금 가격이 바뀌었는지"를 플레이어가 납득할 기준이 없었다. 대신 이미 화면에 표시되는
+// 항해일자(voyageDay, 1일=실제 1분)를 그대로 시세 갱신 주기로 쓴다 — 5항해일(=실제 5분)이
+// 지날 때마다 도시·품목별로 "한 걸음"씩만 오르내리고, 그 사이엔 값이 고정된다(주식 종가
+// 개념). 걸음의 크기는 품목 카테고리별로 달리해서(향신료·명품은 원래도 흉작/원산지 정세에
+// 따라 값이 크게 출렁였다는 고증), 실제 대항해시대 무역품의 가격 변동성 차이를 재현한다.
+// 다만 완전 랜덤워크로 두면 여러 사이클이 지나며 한쪽으로 계속 쏠려(디플레/인플레) 밸런스가
+// 무너지므로, 매 걸음마다 100%(원래 시세) 쪽으로 살짝 되돌리는 평균회귀 항을 더하고 상하한
+// (85%~120%)을 하드 클램프한다 — 거래량 자체엔 이미 VOLUME_CAP이 별도의 하드 상한을
+// 걸어두었으니, 이 사이클은 절대적 이득 규모가 아니라 "가격이 오르내리는 재미"만 담당한다.
+const CYCLE_DAYS = 5;
+const CYCLE_SECONDS = CYCLE_DAYS * 60; // 항해일자 1일 = 실제 60초(weather.js DAY_CYCLE_SECONDS와 동일 기준)
+const CYCLE_STEP_BASE = 0.045; // 사이클 1회당 기본 변동폭(±4.5%) — 아래 카테고리 배율로 조정
+const CYCLE_REVERSION = 0.25; // 매 걸음마다 100% 쪽으로 되돌리는 비율 — 상하한에 오래 눌러붙지 않고 계속 출렁이도록(디플레/인플레 누적 방지 겸용)
+const CYCLE_MUL_MIN = 0.85, CYCLE_MUL_MAX = 1.2;
+// 향신료(후추·정향·육두구 등)는 흉작·산지 정세로 값이 크게 뛰던 실제 사료를 반영해 가장
+// 변동성이 크고, 포도주·모직물·주석 같은 대량 생산 벌크 상품(goods)은 가장 안정적이다.
+const CATEGORY_VOLATILITY = { spice: 1.3, luxury: 1.1, goods: 0.7 };
 
 // ---- 항구별 즉시 소화 물량 한도("시장 깊이") ----
 // 위의 supply-mul은 "값이 서서히 변한다"는 체감용이지, 그 자체로는 배가 커질수록 무제한으로
@@ -70,11 +89,36 @@ function hashSeed(str) {
   return (((h % 1000) + 1000) % 1000) / 1000; // 0..1
 }
 
-function ambientMul(cityId, goodId) {
-  const seed = hashSeed(`${cityId}:${goodId}`);
-  const periodMs = 240000 + seed * 180000; // 4~6분 주기
-  const phase = seed * Math.PI * 2;
-  return 1 + Math.sin(((Date.now() / periodMs) * Math.PI * 2) + phase) * AMBIENT_AMPLITUDE;
+function cycleBucket() {
+  return Math.floor(state.dayTimer / CYCLE_SECONDS);
+}
+
+function getCycleEntry(cityId, goodId) {
+  state.marketCycle = state.marketCycle || {};
+  const cityState = state.marketCycle[cityId] || (state.marketCycle[cityId] = {});
+  return cityState[goodId] || (cityState[goodId] = { mul: 1, bucket: cycleBucket() });
+}
+
+// 사이클(5항해일)이 넘어간 만큼만 걸음을 걷는다 — 같은 사이클 안에서 몇 번을 조회하든
+// 값은 그대로다(종가 개념). 오래 항해해 여러 사이클을 한 번에 건너뛰어도(예: 장시간 항해)
+// 지나간 사이클 수만큼 순차로 걸어가되, 과도한 연산을 막기 위해 최대 24걸음(120항해일)까지만
+// 반영한다 — 그 이상은 어차피 상하한에 수렴해 있을 값이라 결과가 같다.
+function cycleMul(cityId, goodId) {
+  const entry = getCycleEntry(cityId, goodId);
+  const bucket = cycleBucket();
+  const steps = Math.min(24, Math.max(0, bucket - entry.bucket));
+  if (steps > 0) {
+    const vol = CATEGORY_VOLATILITY[getGood(goodId)?.category] || 1;
+    for (let i = 0; i < steps; i++) {
+      const stepBucket = entry.bucket + i + 1;
+      const seed = hashSeed(`${cityId}:${goodId}:${stepBucket}`);
+      const randStep = (seed * 2 - 1) * CYCLE_STEP_BASE * vol;
+      const reversion = (1 - entry.mul) * CYCLE_REVERSION;
+      entry.mul = Math.max(CYCLE_MUL_MIN, Math.min(CYCLE_MUL_MAX, entry.mul + randStep + reversion));
+    }
+    entry.bucket = bucket;
+  }
+  return entry.mul;
 }
 
 function getSupplyEntry(cityId, goodId) {
@@ -151,15 +195,18 @@ export function getMarketRows(cityId) {
   const f = repFactor(cityId);
   return Object.entries(market).map(([goodId, price]) => {
     const held = state.inventory.find((it) => it.id === goodId);
-    const dynMul = decayedSupplyMul(cityId, goodId) * ambientMul(cityId, goodId);
+    const dynMul = decayedSupplyMul(cityId, goodId) * cycleMul(cityId, goodId);
     const effBuy = Math.max(1, Math.round(price.buy * (1 - f * REP_PRICE_EFFECT_MAX) * dynMul));
     const premium = distancePremium(cityId, goodId);
-    // 거리 프리미엄도 dynMul(공급/수요 압박)에 함께 물린다 — 예전엔 프리미엄을 dynMul 적용
-    // "이후"에 더해서 아무리 대량으로 팔아 시세를 짓눌러도 프리미엄만큼은 절대 안 깎이는
-    // 구멍이 있었다(실측: 팔면 팔수록 마진률이 바닥을 쳐야 하는데 79→67로 15%밖에 안 빠짐).
+    // 거리 프리미엄도 dynMul(공급/수요 압박 + 항해일자 사이클)에 함께 물린다 — 예전엔 프리미엄을
+    // dynMul 적용 "이후"에 더해서 아무리 대량으로 팔아 시세를 짓눌러도 프리미엄만큼은 절대 안
+    // 깎이는 구멍이 있었다(실측: 팔면 팔수록 마진률이 바닥을 쳐야 하는데 79→67로 15%밖에 안 빠짐).
     const effSell = Math.max(1, Math.round((price.sell + premium) * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul));
-    const trend = dynMul > 1.04 ? 'up' : dynMul < 0.96 ? 'down' : 'flat';
-    return { good: getGood(goodId), price: { buy: effBuy, sell: effSell }, heldQty: held ? held.qty : 0, trend };
+    // pct: "원래 설정된 가격(도시별 매입/매도가)을 100%로 뒀을 때 지금이 몇 %인지" — 주식
+    // 현재가/기준가처럼, 이 도시 이 품목의 시세가 그동안 얼마나 오르내렸는지 그대로 보여준다.
+    const pct = Math.round(dynMul * 100);
+    const trend = pct > 100 ? 'up' : pct < 100 ? 'down' : 'flat';
+    return { good: getGood(goodId), price: { buy: effBuy, sell: effSell }, heldQty: held ? held.qty : 0, trend, pct };
   });
 }
 

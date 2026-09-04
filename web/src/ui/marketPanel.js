@@ -12,13 +12,17 @@ let barterGiveGood = null;
 
 function renderMarket(cityId) {
   const city = getCity(cityId);
-  const trendLabel = { up: ' ▲시세상승', down: ' ▼시세하락', flat: '' };
-  const rows = getMarketRows(cityId).map(({ good, price, heldQty, trend }) => {
+  // 한국 주식창처럼 상승은 빨강, 하락은 파랑으로 — 원래 설정된(도시별 기본) 가격을 100%로 두고
+  // 항해일자 5일 사이클로 지금 몇 %인지를 그대로 보여준다(systems/market.js의 pct).
+  const trendColor = { up: '#e0645a', down: '#6fc8e0', flat: '#9fb8c9' };
+  const trendArrow = { up: '▲', down: '▼', flat: '' };
+  const rows = getMarketRows(cityId).map(({ good, price, heldQty, trend, pct }) => {
     const marginPct = Math.round((price.sell / good.basePrice - 1) * 100);
     const marginLabel = ` · 기준가대비 ${marginPct >= 0 ? '+' : ''}${marginPct}%`;
+    const cycleLabel = ` · <span style="color:${trendColor[trend]}">시세 ${pct}% ${trendArrow[trend]}</span>`;
     return {
       name: good.name,
-      sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${marginLabel}${trendLabel[trend] || ''}`,
+      sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${cycleLabel}${marginLabel}`,
       actions: [
         {
           label: `${STEP}t 구매`,

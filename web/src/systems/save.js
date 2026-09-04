@@ -40,6 +40,7 @@ export function saveGame() {
     fleet: state.fleet,
     captureCount: state.captureCount,
     marketState: state.marketState,
+    marketCycle: state.marketCycle,
     audioMuted: state.audioMuted,
     endingShown: state.endingShown,
   };
@@ -85,6 +86,7 @@ export function applySave(data) {
   state.fleet = Array.isArray(data.fleet) ? data.fleet : [];
   state.captureCount = typeof data.captureCount === 'number' ? data.captureCount : 0;
   state.marketState = data.marketState && typeof data.marketState === 'object' ? data.marketState : {};
+  state.marketCycle = data.marketCycle && typeof data.marketCycle === 'object' ? data.marketCycle : {};
   state.audioMuted = !!data.audioMuted;
   state.endingShown = !!data.endingShown;
 }
