@@ -77,10 +77,13 @@ export function getCargoUsed() {
 }
 
 // ---- 원산지 거리 프리미엄 ----
-// 실제 교역이 그랬듯, 어떤 상품이든 그 상품을 가장 싸게 파는(=원산지) 항구에서 멀리 떨어질수록
-// 매도가가 자연히 더 붙는다. 수작업 가격표가 아니라 실제 지도 좌표 간 거리에서 그대로 계산되므로,
-// 새 항구를 추가해도 "먼 곳까지 실어 나를수록 남는다"는 구조가 저절로 성립한다.
-const DISTANCE_PREMIUM_K = 1.6; // 두캇 = K * sqrt(원산지까지 거리)
+// 실제 교역이 그랬듯, 원산지에서 멀리 떨어질수록 매도가에 프리미엄이 붙는다 — 다만 그 크기는
+// 반드시 "원산지 매입가에 비례한 배율"이어야 한다. 예전엔 거리만으로 정해지는 정액 보너스라,
+// 후추·포도주 같은 값싼 벌크 상품의 마진률(300%대)이 정향·육두구 같은 진짜 귀중품(60~130%대)
+// 보다 오히려 커지는 역전 현상이 실측으로 확인됐다(가격 밸런스 폴리싱의 의도와 정반대).
+// 배율 기반으로 바꾸면 "비싼 물건일수록 멀리 실어 날랐을 때 절대 이문도 크다"가 자연히 성립한다.
+const DISTANCE_PREMIUM_K = 1.8; // 배율 = K * sqrt(거리) / 100
+const DISTANCE_PREMIUM_MAX_MUL = 3.0; // 아무리 멀어도 원산지 매입가의 이 배수를 넘지 않는다
 
 let originCache = null;
 function findOrigin(goodId) {
@@ -101,7 +104,9 @@ function distancePremium(cityId, goodId) {
   const a = getCity(cityId)?.pos, b = getCity(origin)?.pos;
   if (!a || !b) return 0;
   const dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
-  return Math.round(DISTANCE_PREMIUM_K * Math.sqrt(dist));
+  const originBuy = CITY_MARKET[origin]?.[goodId]?.buy || 1;
+  const mul = Math.min(DISTANCE_PREMIUM_MAX_MUL, (DISTANCE_PREMIUM_K * Math.sqrt(dist)) / 100);
+  return Math.round(originBuy * mul);
 }
 
 export function getMarketRows(cityId) {
