@@ -27,8 +27,9 @@ import { formatCityEventBadge } from '../systems/market.js';
 
 const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
-const RESPAWN_CITY = 'lisboa';
-const SHIPWRECK_GOLD_LOSS_PCT = 0.35; // 침몰 시 휴대금(bankGold 제외) 손실 비율 — 은행에 맡길 이유를 만든다.
+const RESPAWN_CITY = 'lisboa'; // _findNearestCityMarker()가 실패하는 극단적 예외 상황에서만 쓰는 최후 폴백
+const SHIPWRECK_GOLD_LOSS_PCT = 0.3; // 난파 시 휴대금(bankGold 제외) 손실 비율 — 은행에 맡길 이유를 만든다.
+const SHIPWRECK_GOODS_LOSS_PCT = 0.7; // 난파 시 화물칸의 교역품(inventory) 손실 비율 — 식량/식수/자재/포탄은 별도 자원이라 영향 없음
 const FOOD_PER_DAY = 1; // 항해일자 하루당 식량 소모(화물칸 공유 — systems/supplies.js)
 const WATER_PER_DAY = 1; // 항해일자 하루당 식수 소모
 // 충돌 피해는 충돌 순간 속도에 비례한다 — 제자리에서 스치듯 부딪히면 가볍게, 전속력으로
@@ -531,20 +532,56 @@ export class SeaScene {
       }
     });
 
-    if (state.shipHp <= 0) {
-      const home = CITIES.find((c) => c.id === RESPAWN_CITY);
-      this.ship.pos.set(home.pos[0] - 70, home.pos[1]);
-      this.ship.notch = 0;
-      // 침몰 시 "휴대 중인" 두캇만 일부 잃는다 — 은행(state.bankGold)에 맡긴 돈은 안전하다.
-      const lost = Math.round(state.gold * SHIPWRECK_GOLD_LOSS_PCT);
-      state.gold = Math.max(0, state.gold - lost);
-      hud.toast(lost > 0
-        ? `배가 침몰했습니다! 휴대금 중 ${lost.toLocaleString('ko-KR')} 두캇을 잃고 항구로 예인됩니다. (은행 예치금은 안전합니다)`
-        : '배가 침몰했습니다! 항구로 예인됩니다.');
+    // 난파 조건: 선체 내구도 0 또는 선원 0 — 둘 중 하나만 충족돼도 즉시 난파한다(선체는
+    // 멀쩡해도 배를 몰 사람이 아무도 없으면 항해 불능인 건 마찬가지). 최소 정원(50%) 밑으로만
+    // 떨어진 상태는 속도 페널티로 끝나고, "선원이 완전히 0"이 됐을 때만 난파로 이어진다.
+    if (state.shipHp <= 0 || state.crewCount === 0) {
+      const wreckedByCrew = state.crewCount === 0;
+      const wreckedByHull = state.shipHp <= 0;
+      const nearest = this._findNearestCityMarker();
+      const destCity = (nearest.marker && CITIES.find((c) => c.id === nearest.marker.cityId)) || CITIES.find((c) => c.id === RESPAWN_CITY);
+
+      // 휴대 중인 두캇 일부를 잃는다(은행에 맡긴 돈은 안전).
+      const goldLost = Math.round(state.gold * SHIPWRECK_GOLD_LOSS_PCT);
+      state.gold = Math.max(0, state.gold - goldLost);
+
+      // 화물칸의 교역품도 70%를 잃는다(30%만 건짐) — 식량/식수/자재/포탄은 별도 자원이라 그대로 남는다.
+      let goodsLostTons = 0;
+      state.inventory = state.inventory
+        .map((it) => {
+          const kept = Math.floor(it.qty * (1 - SHIPWRECK_GOODS_LOSS_PCT));
+          goodsLostTons += it.qty - kept;
+          return { ...it, qty: kept };
+        })
+        .filter((it) => it.qty > 0);
+
+      const reason = wreckedByCrew && wreckedByHull ? '선원을 모두 잃고 선체마저 완전히 부서져'
+        : wreckedByCrew ? '선원을 모두 잃어 더 이상 배를 몰 수 없어져'
+        : '선체가 완전히 부서져';
+      const lossBits = [];
+      if (goldLost > 0) lossBits.push(`휴대금 ${goldLost.toLocaleString('ko-KR')} 두캇`);
+      if (goodsLostTons > 0) lossBits.push(`교역품 ${goodsLostTons}t`);
+      const lossNote = lossBits.length ? `${lossBits.join('과 ')}을 잃고 ` : '';
+      const wreckMsg = `${reason} 난파했습니다! ${lossNote}가장 가까운 항구 ${destCity.name}(으)로 옮겨졌습니다. (은행 예치금은 안전합니다)`;
+
       initShipHp();
       initCrewCount();
       if (this.meleeState) { this.meleeState = null; hud.setCombatBannerText('⚔ 전투 상황'); }
       if (this._boardable) { this._boardable = null; hud.showInteractPrompt(false); }
+      notify({ inventoryChanged: true });
+
+      // 배를 그 도시 근처로 옮겨두고(다음에 다시 바다로 나올 때의 위치), 곧바로 도시 내부로
+      // 이동시킨다 — 도킹 버튼을 눌러야 하는 절차 없이 난파와 동시에 항구에 옮겨진 것으로 처리.
+      this.ship.pos.set(destCity.pos[0] - 70, destCity.pos[1]);
+      this.ship.notch = 0;
+      if (this.onDock) {
+        // onDock(goToCity)이 내부에서 "OO에 정박했습니다" 토스트를 자체적으로 띄운다 —
+        // toast()는 큐 없이 즉시 덮어쓰므로, 난파 메시지를 그 뒤에 불러야 화면에 남는다.
+        this.onDock(destCity.id);
+        hud.toast(wreckMsg);
+        return;
+      }
+      hud.toast(wreckMsg);
     }
 
     state.shipPos = [this.ship.pos.x, this.ship.pos.y];
