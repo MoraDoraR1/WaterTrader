@@ -83,10 +83,21 @@ function consumeVolume(cityId, goodId, qty) {
   entry.updatedAt = Date.now();
 }
 
+// 문자열 -> [0,1) 결정적 의사난수. 대호황/대폭락처럼 "1.2% 확률" 같은 희귀 이벤트를 이
+// 값 하나로 판정하다 보니, 단순 다항 해시(* 31 + charCode)는 "event:도시명:연속된정수" 같은
+// 비슷한 입력에서 눈사태 효과(avalanche)가 약해 도시별로 당첨 버킷이 심하게 뭉치거나
+// 아예 안 나오는 문제가 실측으로 확인됐다(세비야·이스탄불이 3000항해일 동안 단 한 번도
+// 이벤트가 안 뜸). murmur3 fmix32 마무리 단계를 더해 입력이 조금만 달라져도 출력이 크게
+// 흩어지게 했다 — cycleMul 등 기존 호출부는 그대로 두되 결과 품질만 개선된다.
 function hashSeed(str) {
   let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
-  return (((h % 1000) + 1000) % 1000) / 1000; // 0..1
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x9e3779b1);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296; // 0..1
 }
 
 function cycleBucket() {
@@ -119,6 +130,81 @@ function cycleMul(cityId, goodId) {
     entry.bucket = bucket;
   }
   return entry.mul;
+}
+
+// ---- 도시 대호황/대폭락 이벤트 ----
+// 위의 5일 사이클이 "일상적인 시세 출렁임"이라면 이건 훨씬 드물고 훨씬 극단적인 "사건"이다.
+// 도시 하나가 통째로 대호황(전 품목 매입/매도가 150~170%)이나 대폭락(40~50%)에 빠져, 그
+// 도시에서 사고파는 모든 품목에 동일하게 걸린다 — 실제로 그 항구에 풍작/흉작 같은 큰 사건이
+// 터진 셈이다. 항해일자 1일마다 아주 낮은 확률로 새로 발생하고, 며칠 지속되다 사라진다.
+// 도시에 직접 있어야만 알 수 있는 게 아니라 항해 중 근처를 지나거나 전체지도를 볼 때도
+// 눈에 띄게 해서(getCityEvent), "지금 저기가 대호황이라던데 가볼까" 하는 운에 따른 기대
+// (도파민)와 "다 팔고 왔더니 폭락 중이었네" 하는 실망(리스크)을 함께 만든다.
+const EVENT_DAY_SECONDS = 60; // 항해일자 1일마다 새 이벤트 발생 여부를 굴린다
+const EVENT_TRIGGER_CHANCE = 0.012; // 이벤트가 없는 도시가 하루에 새로 이벤트를 맞을 확률(69개 항구 기준 상시 3~4곳 정도가 진행 중인 빈도)
+const EVENT_DURATION_MIN_DAYS = 3, EVENT_DURATION_MAX_DAYS = 6;
+const EVENT_CRASH_MUL_MIN = 0.40, EVENT_CRASH_MUL_MAX = 0.50;
+const EVENT_BOOM_MUL_MIN = 1.50, EVENT_BOOM_MUL_MAX = 1.70;
+
+function eventDayBucket() {
+  return Math.floor(state.dayTimer / EVENT_DAY_SECONDS);
+}
+
+function getCityEventEntry(cityId) {
+  state.cityEvents = state.cityEvents || {};
+  return state.cityEvents[cityId] || (state.cityEvents[cityId] = { type: null, mul: 1, endBucket: 0, checkedBucket: eventDayBucket() });
+}
+
+// 진행 중인 이벤트가 있으면 만료 여부만 확인하고, 없으면 지난 하루하루에 대해(최대 30일치)
+// 발생 여부를 결정적 시드로 굴려서 첫 발생을 찾는다 — cycleMul과 같은 방식이라 Math.random()
+// 없이도 재현 가능하고 저장/불러오기에도 자연스럽게 이어진다.
+function cityEventMul(cityId) {
+  const entry = getCityEventEntry(cityId);
+  const bucket = eventDayBucket();
+  if (entry.type && bucket >= entry.endBucket) {
+    entry.type = null;
+    entry.mul = 1;
+  }
+  if (!entry.type) {
+    const steps = Math.min(30, Math.max(0, bucket - entry.checkedBucket));
+    for (let i = 0; i < steps; i++) {
+      const b = entry.checkedBucket + i + 1;
+      const rollSeed = hashSeed(`event:${cityId}:${b}`);
+      if (rollSeed < EVENT_TRIGGER_CHANCE) {
+        const typeSeed = hashSeed(`eventtype:${cityId}:${b}`);
+        const magSeed = hashSeed(`eventmag:${cityId}:${b}`);
+        const durSeed = hashSeed(`eventdur:${cityId}:${b}`);
+        const isBoom = typeSeed >= 0.5;
+        entry.type = isBoom ? 'boom' : 'crash';
+        entry.mul = isBoom
+          ? EVENT_BOOM_MUL_MIN + magSeed * (EVENT_BOOM_MUL_MAX - EVENT_BOOM_MUL_MIN)
+          : EVENT_CRASH_MUL_MIN + magSeed * (EVENT_CRASH_MUL_MAX - EVENT_CRASH_MUL_MIN);
+        const duration = Math.round(EVENT_DURATION_MIN_DAYS + durSeed * (EVENT_DURATION_MAX_DAYS - EVENT_DURATION_MIN_DAYS));
+        entry.endBucket = b + duration;
+        break; // 이미 발생했으니 나머지 날짜는 다음 조회 때(만료 이후) 이어서 굴린다
+      }
+    }
+    entry.checkedBucket = bucket;
+  }
+  return entry.mul;
+}
+
+// UI(월드맵/입항 배너/시장창)에서 쓰는 조회용 — 이 도시가 지금 대호황/대폭락 중인지, 며칠
+// 남았는지. 호출할 때마다 만료 판정과 새 발생 롤을 함께 갱신하므로 어디서 불러도 최신값이다.
+export function getCityEvent(cityId) {
+  const mul = cityEventMul(cityId);
+  const entry = state.cityEvents?.[cityId];
+  if (!entry || !entry.type) return { active: false };
+  const daysLeft = Math.max(1, entry.endBucket - eventDayBucket());
+  return { active: true, type: entry.type, mul, daysLeft };
+}
+
+// 여러 UI(시장창/입항 배너/전체지도)에서 같은 문구를 그대로 재사용하기 위한 포맷터.
+export function formatCityEventBadge(cityId) {
+  const ev = getCityEvent(cityId);
+  if (!ev.active) return '';
+  const pct = Math.round(ev.mul * 100);
+  return ev.type === 'boom' ? `🔥 대호황 ${pct}% (${ev.daysLeft}일 후 종료)` : `💥 대폭락 ${pct}% (${ev.daysLeft}일 후 종료)`;
 }
 
 function getSupplyEntry(cityId, goodId) {
@@ -193,9 +279,10 @@ export function getMarketRows(cityId) {
   const market = CITY_MARKET[cityId];
   if (!market) return [];
   const f = repFactor(cityId);
+  const eventMul = cityEventMul(cityId); // 대호황/대폭락 — 도시 전체에 한 번만 굴리고 모든 품목에 동일 적용
   return Object.entries(market).map(([goodId, price]) => {
     const held = state.inventory.find((it) => it.id === goodId);
-    const dynMul = decayedSupplyMul(cityId, goodId) * cycleMul(cityId, goodId);
+    const dynMul = decayedSupplyMul(cityId, goodId) * cycleMul(cityId, goodId) * eventMul;
     const effBuy = Math.max(1, Math.round(price.buy * (1 - f * REP_PRICE_EFFECT_MAX) * dynMul));
     const premium = distancePremium(cityId, goodId);
     // 거리 프리미엄도 dynMul(공급/수요 압박 + 항해일자 사이클)에 함께 물린다 — 예전엔 프리미엄을

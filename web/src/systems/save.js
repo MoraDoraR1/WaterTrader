@@ -41,6 +41,7 @@ export function saveGame() {
     captureCount: state.captureCount,
     marketState: state.marketState,
     marketCycle: state.marketCycle,
+    cityEvents: state.cityEvents,
     audioMuted: state.audioMuted,
     endingShown: state.endingShown,
   };
@@ -87,6 +88,7 @@ export function applySave(data) {
   state.captureCount = typeof data.captureCount === 'number' ? data.captureCount : 0;
   state.marketState = data.marketState && typeof data.marketState === 'object' ? data.marketState : {};
   state.marketCycle = data.marketCycle && typeof data.marketCycle === 'object' ? data.marketCycle : {};
+  state.cityEvents = data.cityEvents && typeof data.cityEvents === 'object' ? data.cityEvents : {};
   state.audioMuted = !!data.audioMuted;
   state.endingShown = !!data.endingShown;
 }

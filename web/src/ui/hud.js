@@ -466,6 +466,21 @@ export const hud = {
       ctx.beginPath(); ctx.arc(px, py, rInner, 0, Math.PI * 2);
       ctx.fillStyle = c.color || '#e6c15a'; ctx.fill();
       ctx.strokeStyle = '#f0e6d2'; ctx.lineWidth = c.capital ? 2 : 1.4; ctx.stroke();
+      // 대호황(주황 발광 고리)/대폭락(파랑 발광 고리) 도시는 전체지도에서부터 눈에 띄게 —
+      // 도킹하지 않고도 "저기 지금 대박이다" 하는 걸 알아채고 항로를 바꿀 수 있게 한다.
+      if (c.event && c.event.active) {
+        const evColor = c.event.type === 'boom' ? '#ff8a3c' : '#5fb0e8';
+        ctx.save();
+        ctx.shadowColor = evColor;
+        ctx.shadowBlur = 9;
+        ctx.beginPath(); ctx.arc(px, py, rOuter + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = evColor; ctx.lineWidth = 2.2; ctx.stroke();
+        ctx.restore();
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(c.event.type === 'boom' ? '🔥' : '💥', px, py - rOuter - 7);
+        ctx.textAlign = 'left';
+      }
       ctx.font = c.capital ? 'bold 15px sans-serif' : 'bold 13px sans-serif';
       const tx = px + rOuter + 3, ty = py + (c.capital ? 6 : 5);
       ctx.fillStyle = 'rgba(6,10,14,0.85)';

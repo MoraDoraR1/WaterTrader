@@ -23,6 +23,7 @@ import { checkBountyKill } from '../systems/quests.js';
 import { loseMoraleFromCombat, getMoralePowerMul } from '../systems/crew.js';
 import { FLEET_CAP } from '../systems/shipyard.js';
 import { audio } from '../systems/audio.js';
+import { formatCityEventBadge } from '../systems/market.js';
 
 const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
@@ -565,7 +566,8 @@ export class SeaScene {
     const nearest = this._findNearestCityMarker();
     if (nearest.marker && nearest.dist < 300) {
       const city = CITIES.find((c) => c.id === nearest.marker.cityId);
-      hud.setLocation(regionName, `가까운 항구: ${city.name}`);
+      const eventBadge = formatCityEventBadge(city.id);
+      hud.setLocation(regionName, `가까운 항구: ${city.name}${eventBadge ? ' · ' + eventBadge : ''}`);
     } else {
       hud.setLocation(regionName);
     }

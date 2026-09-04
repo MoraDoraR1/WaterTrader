@@ -15,7 +15,7 @@ import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './system
 import { payWagesOnDock } from './systems/crew.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
-import { getMarketRows, getCargoCapacity, getCargoUsed } from './systems/market.js';
+import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent } from './systems/market.js';
 import { SUPPLY_DEFS } from './systems/supplies.js';
 
 const wrap = document.getElementById('canvas-wrap');
@@ -107,13 +107,21 @@ function goToCity(cityId) {
   const wageNote = wage <= 0 ? '' : paid
     ? ` (승무원 급여 ${wage.toLocaleString('ko-KR')} 두캇 지급)`
     : ' (급여를 지급하지 못해 사기가 크게 떨어졌습니다!)';
-  hud.toast(`${citySceneObj.city.name}에 정박했습니다.${wageNote}`);
+
+  // 입항한 도시가 대호황/대폭락 중이면 정박 토스트에 이어붙여 한 번에 강조한다(toast()는
+  // 메시지를 큐 없이 즉시 덮어써서, 따로 두 번 부르면 앞 메시지가 화면에 뜨지도 못하고
+  // 사라진다) — 운으로 맞이하는 기대(도파민)와 실망의 순간을 놓치지 않게 한다.
+  const event = getCityEvent(cityId);
+  const eventNote = !event.active ? '' : event.type === 'boom'
+    ? ` 🔥 대호황! 전 품목 시세 ${Math.round(event.mul * 100)}% (${event.daysLeft}일 후 종료)`
+    : ` 💥 대폭락! 전 품목 시세 ${Math.round(event.mul * 100)}% (${event.daysLeft}일 후 종료)`;
+  hud.toast(`${citySceneObj.city.name}에 정박했습니다.${wageNote}${eventNote}`);
 }
 
 // ---- 전체 지도(월드맵): M키로 토글, 화살표로 해역 페이지 전환 ----
 // 이제 모든 페이지가 전세계 대륙/도시 데이터를 공유하고, 페이지별 위경도 범위(bounds)만
 // 다르게 잡아 확대해 보여주는 "지도책" 방식이다(placeholder 페이지는 더 이상 없음).
-const worldMapCities = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], name: c.name, color: COUNTRY_COLORS[c.country] || '#e6c15a', capital: !!c.capital }));
+const worldMapCityBase = CITIES.map((c) => ({ id: c.id, x: c.pos[0], z: c.pos[1], name: c.name, color: COUNTRY_COLORS[c.country] || '#e6c15a', capital: !!c.capital }));
 let worldMapIndex = 0;
 
 function regionBoundsToWorld(b) {
@@ -126,6 +134,8 @@ function renderWorldMapPage() {
   const region = WORLD_REGIONS[worldMapIndex];
   hud.setWorldMapHeader(region.name, region.subtitle, worldMapIndex, WORLD_REGIONS.length);
   const ship = seaScene ? { x: seaScene.ship.pos.x, z: seaScene.ship.pos.y, heading: seaScene.ship.heading } : null;
+  // 대호황/대폭락은 실시간으로 바뀌므로 지도를 열 때마다(페이지 넘길 때도) 매번 새로 조회한다.
+  const worldMapCities = worldMapCityBase.map((c) => ({ ...c, event: getCityEvent(c.id) }));
   hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: regionBoundsToWorld(region.bounds), cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship });
 }
 

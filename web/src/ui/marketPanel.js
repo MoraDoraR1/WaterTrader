@@ -4,7 +4,7 @@ import { hud } from './hud.js';
 import { getCity } from '../data/cities.js';
 import { COUNTRY_NAMES } from '../data/ships.js';
 import { CITY_MARKET, getGood } from '../data/goods.js';
-import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed, isBarterCity, barterGoods, goodValue } from '../systems/market.js';
+import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed, isBarterCity, barterGoods, goodValue, formatCityEventBadge } from '../systems/market.js';
 import { getReputation } from '../systems/quests.js';
 
 const STEP = 10;
@@ -45,8 +45,9 @@ function renderMarket(cityId) {
     };
   });
   const rep = getReputation(city.country);
+  const eventBadge = formatCityEventBadge(cityId);
   hud.renderMarket({
-    title: `${city.name} 시장 · ${COUNTRY_NAMES[city.country] || city.country} 우호도 ${rep >= 0 ? '+' : ''}${rep}`,
+    title: `${city.name} 시장 · ${COUNTRY_NAMES[city.country] || city.country} 우호도 ${rep >= 0 ? '+' : ''}${rep}${eventBadge ? ' · ' + eventBadge : ''}`,
     gold: state.gold,
     cargo: `${getCargoUsed()} / ${getCargoCapacity()} t`,
     rows,

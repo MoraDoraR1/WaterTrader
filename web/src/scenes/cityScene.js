@@ -12,6 +12,7 @@ import { openMarket } from '../ui/marketPanel.js';
 import { openBank } from '../ui/bankPanel.js';
 import { openSupplies } from '../ui/suppliesPanel.js';
 import { openQuestBoard } from '../ui/questPanel.js';
+import { formatCityEventBadge } from '../systems/market.js';
 
 const BOUNDS = { minX: -85, maxX: 85, minZ: -85, maxZ: 85 };
 const INTERACT_RANGE = 7.5;
@@ -227,7 +228,8 @@ export class CityScene {
       hud.showInteractPrompt(false);
     }
 
-    hud.setLocation(this.city.name, `${COUNTRY_NAMES[this.city.country]} 항구도시`);
+    const eventBadge = formatCityEventBadge(this.city.id);
+    hud.setLocation(this.city.name, `${COUNTRY_NAMES[this.city.country]} 항구도시${eventBadge ? ' · ' + eventBadge : ''}`);
   }
 
   // world(cx,cz) 중심의 원을 다각형으로 근사해 그린다 — 선형 투영에서 원은 타원이 되므로,
