@@ -29,11 +29,36 @@ export function buyShip(shipId) {
   const target = getShip(shipId);
   if (!target) return { ok: false, reason: '존재하지 않는 배입니다.' };
   if (target.purchasable === false) return { ok: false, reason: '이 배는 구매할 수 없습니다.' };
+  if (target.acquire === 'build') return { ok: false, reason: '이 배는 조선소 "건조" 탭에서만 만들 수 있습니다.' };
   if (state.fleet.length + 1 >= FLEET_CAP) return { ok: false, reason: `함대가 가득 찼습니다 (최대 ${FLEET_CAP}척).` };
   if (state.gold < target.price) return { ok: false, reason: '골드가 부족합니다.' };
 
   state.gold -= target.price;
   // 새로 산 배는 정원 그대로(선원 만실) 함대에 합류한다.
+  state.fleet = [...state.fleet, { uid: makeUid(), shipId, shipHp: target.hp, crewCount: target.crew, shipParts: {}, name: null }];
+  notify({ fleetChanged: true });
+  return { ok: true };
+}
+
+// 건조 전용 선박(data/ships.js의 acquire:'build') 제작 — 골드 외에 자재/상급 조선용
+// 참나무/전설 해적기함의 철갑판 등 buildCost에 정의된 재료를 함께 소모한다. 완성된 배는
+// buyShip과 동일하게 예비 함대에 합류한다.
+export function buildShip(shipId) {
+  const target = getShip(shipId);
+  if (!target) return { ok: false, reason: '존재하지 않는 배입니다.' };
+  if (target.acquire !== 'build' || !target.buildCost) return { ok: false, reason: '이 배는 건조로 만들 수 없습니다.' };
+  if (state.fleet.length + 1 >= FLEET_CAP) return { ok: false, reason: `함대가 가득 찼습니다 (최대 ${FLEET_CAP}척).` };
+
+  const cost = target.buildCost;
+  if (state.gold < (cost.gold || 0)) return { ok: false, reason: '골드가 부족합니다.' };
+  if (state.materials < (cost.materials || 0)) return { ok: false, reason: '자재가 부족합니다.' };
+  if (state.oakTimber < (cost.oakTimber || 0)) return { ok: false, reason: '상급 조선용 참나무가 부족합니다.' };
+  if (state.ironcladPlating < (cost.ironcladPlating || 0)) return { ok: false, reason: '전설 해적기함의 철갑판이 부족합니다.' };
+
+  state.gold -= cost.gold || 0;
+  state.materials -= cost.materials || 0;
+  state.oakTimber -= cost.oakTimber || 0;
+  state.ironcladPlating -= cost.ironcladPlating || 0;
   state.fleet = [...state.fleet, { uid: makeUid(), shipId, shipHp: target.hp, crewCount: target.crew, shipParts: {}, name: null }];
   notify({ fleetChanged: true });
   return { ok: true };

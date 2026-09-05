@@ -40,6 +40,11 @@ export function saveGame() {
     crewCount: state.crewCount,
     fleet: state.fleet,
     captureCount: state.captureCount,
+    oakTimber: state.oakTimber,
+    ironcladPlating: state.ironcladPlating,
+    pirateEscalation: state.pirateEscalation,
+    pirateEscalationResetDate: state.pirateEscalationResetDate,
+    seenRespawnIntro: state.seenRespawnIntro,
     marketState: state.marketState,
     marketCycle: state.marketCycle,
     cityEvents: state.cityEvents,
@@ -88,6 +93,11 @@ export function applySave(data) {
   if (typeof data.crewCount === 'number') state.crewCount = data.crewCount;
   state.fleet = Array.isArray(data.fleet) ? data.fleet : [];
   state.captureCount = typeof data.captureCount === 'number' ? data.captureCount : 0;
+  state.oakTimber = typeof data.oakTimber === 'number' ? data.oakTimber : 0;
+  state.ironcladPlating = typeof data.ironcladPlating === 'number' ? data.ironcladPlating : 0;
+  state.pirateEscalation = data.pirateEscalation && typeof data.pirateEscalation === 'object' ? data.pirateEscalation : {};
+  state.pirateEscalationResetDate = typeof data.pirateEscalationResetDate === 'string' ? data.pirateEscalationResetDate : null;
+  state.seenRespawnIntro = !!data.seenRespawnIntro;
   state.marketState = data.marketState && typeof data.marketState === 'object' ? data.marketState : {};
   state.marketCycle = data.marketCycle && typeof data.marketCycle === 'object' ? data.marketCycle : {};
   state.cityEvents = data.cityEvents && typeof data.cityEvents === 'object' ? data.cityEvents : {};

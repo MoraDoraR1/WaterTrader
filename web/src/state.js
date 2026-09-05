@@ -39,7 +39,18 @@ export const state = {
   pirateBounty: 0, // 완료한 해적 토벌 의뢰 수
   crewMorale: 100, // 0~100 — 백병전 전투력에 반영
   fleet: [], // 예비 함대 — { uid, shipId, shipHp, shipParts, name } — 항구에 정박해 있는(현재 조종 중이 아닌) 배들
-  captureCount: 0, // 나포 성공 횟수(랭크 산정에 반영)
+  captureCount: 0, // (사용 안 함 — 나포 기능 제거로 항상 0. 랭크 점수 공식과의 호환을 위해 필드만 남겨둠)
+  // ---- 건조 전용 재료 ----
+  // 화물칸을 차지하지 않는 별도 자원(골드처럼 취급) — 오직 조선소 "건조" 탭에서만 소모된다.
+  oakTimber: 0, // 상급 조선용 참나무 — 대형/초대형 건조 재료. 엘리트 격침 시 확률 드랍.
+  ironcladPlating: 0, // 전설 해적기함의 철갑판 — 초대형 전용 재료. 보스 격침 시 확정 드랍.
+  // ---- 엘리트/보스 리스폰·강화 ----
+  // id -> { level, respawnAt } — level은 지금까지 누적된 강화 단계(회당 +25%, 무한 누적),
+  // respawnAt은 다음 리스폰 시각(state.dayTimer 기준, 아직 죽어있지 않다면 null).
+  // 매일 자정(로컬 현실 시각)에 level만 0으로 초기화된다(entities/pirate.js checkDailyEscalationReset).
+  pirateEscalation: {},
+  pirateEscalationResetDate: null, // 마지막으로 자정 초기화를 처리한 날짜 문자열(Date#toDateString)
+  seenRespawnIntro: false, // 엘리트/보스 리스폰·강화 시스템 설명을 한 번이라도 봤는지
   marketState: {}, // cityId -> goodId -> { mul, updatedAt } — 플레이어 매매로 흔들린 뒤 시간이 지나며 되돌아오는 시세 배율
   marketCycle: {}, // cityId -> goodId -> { mul, bucket } — 항해일자 5일 주기로 한 걸음씩 오르내리는 시세 사이클(주식 종가 개념)
   cityEvents: {}, // cityId -> { type: 'boom'|'crash'|null, mul, endBucket, checkedBucket } — 도시 전체에 걸리는 대호황(150~170%)/대폭락(40~50%) 사건

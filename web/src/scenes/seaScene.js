@@ -4,7 +4,7 @@ import { cityIconSprite } from '../render/pixelSprites.js';
 import { drawShipIso } from '../render/shipIso.js';
 import { ShipController } from '../entities/shipController.js';
 import { worldSizeFor } from '../entities/shipSize.js';
-import { NpcShip, getBossBounty } from '../entities/pirate.js';
+import { NpcShip, getKillGold, rollCombatLoot, checkPirateRespawns, checkDailyEscalationReset } from '../entities/pirate.js';
 import { EscortShip } from '../entities/escort.js';
 import { CannonballPool } from '../entities/cannon.js';
 import { WakeTrail } from '../entities/wake.js';
@@ -26,9 +26,9 @@ import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
 import { RANKS } from '../data/ranks.js';
 import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory } from '../systems/crew.js';
-import { FLEET_CAP } from '../systems/shipyard.js';
 import { audio } from '../systems/audio.js';
-import { formatCityEventBadge } from '../systems/market.js';
+import { formatCityEventBadge, getCargoCapacity, getCargoUsed } from '../systems/market.js';
+import { getGood } from '../data/goods.js';
 
 const DOCK_RANGE = 55;
 const FIRE_COOLDOWN = 1.5;
@@ -111,7 +111,6 @@ export class SeaScene {
     this.onDock = null;
     this.collisionTimers = new Map();
     this.meleeState = null;
-    this.pendingCapture = null;
     this._boardable = null; // 충돌 직후 F로 승선(백병전)할 수 있는 짧은 창구 — { npc, timer }
     this.selectedTarget = null; // 클릭으로 지정한 NPC — 상호작용 범위 원 + 전투/대화/종료 메뉴
     this.shakeTrauma = 0;
@@ -166,7 +165,6 @@ export class SeaScene {
   // screenX/screenY(논리 좌표)가 주어지면 먼저 NPC 함선 클릭 여부를 판정한다 — 맞으면
   // 상호작용 범위 원 + 전투/대화/종료 메뉴를 띄우고, 다른 동작(포격/도킹)은 하지 않는다.
   handleLeftClick(screenX, screenY) {
-    if (this.pendingCapture) return;
     if (this.meleeState) { this._meleeMash(); return; }
     if (typeof screenX === 'number' && typeof screenY === 'number') {
       const picked = this._pickShipAt(screenX, screenY);
@@ -226,7 +224,7 @@ export class SeaScene {
 
   // 충돌 후 짧은 승선 창구(this._boardable) 안에 F를 누르면 백병전이 시작된다.
   handleBoardKey() {
-    if (!this._boardable || this.meleeState || this.pendingCapture) return;
+    if (!this._boardable || this.meleeState) return;
     const npc = this._boardable.npc;
     this._boardable = null;
     if (npc.dead) return;
@@ -446,20 +444,8 @@ export class SeaScene {
 
     if (playerPower >= npcPower) {
       audio.playWinStinger();
-      const fleetHasRoom = state.fleet.length + 1 < FLEET_CAP;
-      if (fleetHasRoom && npc.shipDef) {
-        this.pendingCapture = npc;
-        hud.showDialogue(
-          npc.def.name,
-          '백병전에서 승리했습니다! 이 배를 격침하시겠습니까, 나포해 함대에 편입하시겠습니까?',
-          [
-            { label: '나포', onClick: () => this._confirmCapture(npc) },
-            { label: '격침', onClick: () => this._confirmSink(npc) },
-          ]
-        );
-      } else {
-        this._confirmSink(npc, fleetHasRoom ? null : '함대가 가득 차 나포할 수 없었습니다. ');
-      }
+      // 나포는 없다 — 백병전에서 이기면 항상 격침이다(배를 얻으려면 조선소에서 구매/건조).
+      this._confirmSink(npc);
     } else {
       audio.playLoseStinger();
       hud.flashCombatText('패배!', 'lose');
@@ -471,57 +457,61 @@ export class SeaScene {
   }
 
   // 전투 승리(격침/나포/충돌격침/포격격침 어디서든) 메시지들을 한 토스트로 합쳐 띄운다 —
-  // hud.toast()는 큐 없이 즉시 덮어써서 따로따로 부르면 마지막 것만 남으므로, 구조 인원·
-  // 의뢰 완료 문구가 묻히지 않게 항상 한 번에 합쳐서 보여준다.
-  // npc(NpcShip 인스턴스 그대로)를 받는다 — 잡몹/엘리트는 현상금 의뢰가 있을 때만 보상이
-  // 붙지만, 보스는 의뢰 유무와 무관하게 격침 방식(포격/백병전 격침/나포) 상관없이 항상
-  // 고정 보상이 붙는다(entities/pirate.js의 getBossBounty, 해역이 위험할수록 커진다).
+  // hud.toast()는 큐 없이 즉시 덮어써서 따로따로 부르면 마지막 것만 남으므로, 골드·노획물·
+  // 구조 인원·의뢰 완료 문구가 묻히지 않게 항상 한 번에 합쳐서 보여준다. 나포는 없다 —
+  // 백병전이든 포격이든 충돌이든, 격침은 전부 이 함수 하나로 귀결된다.
+  // npc(NpcShip 인스턴스 그대로)를 받는다 — 골드는 실효 체력 기반으로 티어와 무관하게 하나의
+  // 공식을 쓰고(entities/pirate.js getKillGold), 그 위에 지역 교역품·자재/포탄·건조 재료가
+  // 티어별 확률로 얹힌다(rollCombatLoot). 현상금 의뢰가 그 npc를 노리고 있었다면 별도로 더 붙는다.
   _victoryToast(baseMsg, npc) {
     hud.flashCombatText('승리!', 'win');
     const rescued = rescueCrewFromVictory();
     const bounty = checkBountyKill(npc.owner);
     const moraleAdd = sumSkillEffect(this.ship.shipDef, 'victoryMoraleAdd', 0);
     if (moraleAdd > 0) state.crewMorale = Math.min(100, (state.crewMorale ?? 100) + moraleAdd);
-    const bits = [baseMsg];
+
+    const gold = getKillGold(npc);
+    state.gold += gold;
+    const bits = [baseMsg, `+${gold.toLocaleString('ko-KR')} 두캇`];
+
+    const loot = rollCombatLoot(npc);
+    if (loot.cargoGoodId && loot.cargoQty > 0) {
+      const space = Math.max(0, getCargoCapacity() - getCargoUsed());
+      const qty = Math.min(loot.cargoQty, space);
+      if (qty > 0) {
+        const good = getGood(loot.cargoGoodId);
+        const item = state.inventory.find((it) => it.id === loot.cargoGoodId);
+        if (item) item.qty += qty; else state.inventory.push({ id: loot.cargoGoodId, name: good.name, qty });
+        bits.push(`${good.name} ${qty}t 노획`);
+        notify({ inventoryChanged: true });
+      }
+    }
+    if (loot.materials > 0) { state.materials += loot.materials; bits.push(`자재 +${loot.materials}`); }
+    if (loot.cannonballs > 0) { state.cannonballs += loot.cannonballs; bits.push(`포탄 +${loot.cannonballs}`); }
+    if (loot.oakTimber > 0) { state.oakTimber += loot.oakTimber; bits.push(`상급 조선용 참나무 +${loot.oakTimber}`); }
+    if (loot.ironcladPlating > 0) { state.ironcladPlating += loot.ironcladPlating; bits.push(`전설 해적기함의 철갑판 +${loot.ironcladPlating}`); }
+
     if (rescued > 0) bits.push(`표류하던 선원 ${rescued}명을 구조해 편입했습니다.`);
     if (bounty) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
-    if (npc.tier === 'boss') {
-      const bossBounty = getBossBounty(npc.region);
-      state.gold += bossBounty;
-      bits.push(`보스 격침 포상금 +${bossBounty.toLocaleString('ko-KR')} 두캇!`);
+
+    // 엘리트/보스를 처음 잡아보는 순간 딱 한 번만 리스폰·강화 시스템을 설명해준다.
+    if ((npc.tier === 'elite' || npc.tier === 'boss') && !state.seenRespawnIntro) {
+      state.seenRespawnIntro = true;
+      bits.push('📖 [엘리트/보스는 격침해도 며칠 뒤 이전보다 25% 강해진 채로 돌아옵니다(무한 누적). 강화는 매일 자정(이 기기의 현지 시각)에 초기화됩니다.]');
     }
+
     hud.toast(bits.join(' '));
   }
 
-  _confirmSink(npc, prefix = '') {
-    this.pendingCapture = null;
-    hud.hideDialogue();
-    const loot = Math.round(80 + Math.random() * 160);
-    state.gold += loot;
+  _confirmSink(npc) {
     npc.takeDamage(npc.maxHp);
-    this._victoryToast(`${prefix}백병전 승리! 적선을 격침하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`, npc);
-  }
-
-  _confirmCapture(npc) {
-    this.pendingCapture = null;
-    hud.hideDialogue();
-    audio.playCaptureFanfare();
-    // 숙련된 나포조 스킬은 나포한 배가 처음부터 갖고 시작하는 내구도·선원 비율의
-    // 최소/최대 구간을 통째로 +10%p 끌어올린다.
-    const captureBonus = sumSkillEffect(this.ship.shipDef, 'captureBonusAdd', 0);
-    const capturedHp = Math.round(npc.shipDef.hp * (0.3 + captureBonus + Math.random() * 0.25));
-    const capturedCrew = Math.round((npc.shipDef.crew || 20) * (0.3 + captureBonus + Math.random() * 0.25));
-    state.fleet = [...state.fleet, { uid: `fleet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, shipId: npc.shipDef.id, shipHp: capturedHp, crewCount: capturedCrew, shipParts: {}, name: null }];
-    state.captureCount = (state.captureCount || 0) + 1;
-    npc.takeDamage(npc.maxHp);
-    notify({ fleetChanged: true });
-    this._victoryToast(`나포 성공! ${npc.def.name}을(를) 함대에 편입했습니다 (손상 상태 — 조선소에서 수리 필요).`, npc);
+    this._victoryToast(`백병전 승리! ${npc.def.name}을(를) 격침했습니다.`, npc);
   }
 
   _updateWake(delta) {
     const size = worldSizeFor(this.ship.shipDef);
     const hl = size.length / 2;
-    const speedRatio = (this.meleeState || this.pendingCapture) ? 0 : Math.min(1, Math.abs(this.ship.curSpeed) / this.ship.maxSpeedMs);
+    const speedRatio = this.meleeState ? 0 : Math.min(1, Math.abs(this.ship.curSpeed) / this.ship.maxSpeedMs);
     const dir = this.ship.curSpeed < 0 ? -1 : 1;
     if (!this.meleeState && speedRatio > 0.12) {
       this._wakeTimer -= delta;
@@ -624,8 +614,6 @@ export class SeaScene {
       if (consumeJustPressed('Space')) this._meleeMash();
       this.meleeState.timer -= delta;
       if (this.meleeState.timer <= 0) this._resolveMelee();
-    } else if (this.pendingCapture) {
-      // 대기
     } else {
       if (this._boardable) {
         this._boardable.timer -= delta;
@@ -691,8 +679,10 @@ export class SeaScene {
       this._skipNextCombatToast = false;
     }
 
-    if (!this.meleeState && !this.pendingCapture) {
+    if (!this.meleeState) {
       for (const npc of this.npcShips) npc.update(delta, elapsed, this.ship.pos, this.cannonPool);
+      checkDailyEscalationReset(this.npcShips);
+      checkPirateRespawns(this.npcShips);
       this._resolveShipCollisions(delta);
       // 해적의 확률적 강습(ambush) — 플레이어의 선택 없이 즉시 교전이 시작된 경우, 여기서
       // 한 번만 소비해 알림을 띄운다. 마침 그 배가 선택돼 메뉴가 떠 있었다면 메뉴를 닫는다
@@ -719,16 +709,19 @@ export class SeaScene {
         const inRange = dist < npc.interactionRange;
         const npcPower = getNpcCombatPower(npc).score;
         const myPower = getCombatPower(getShip(state.currentShipId), state.shipParts).score;
+        // 엘리트/보스는 리스폰마다 강해지는 시스템이 있다는 걸 타겟팅할 때마다 알 수 있게
+        // 현재 강화 단계를 항상 같이 보여준다(0단계면 표시하지 않는다 — 아직 안 강해진 상태).
+        const escNote = npc.escalationLevel > 0 ? ` · 강화 Lv.${npc.escalationLevel}(+${npc.escalationLevel * 25}%)` : '';
         hud.updateInteractionMenu({
           inRange,
           hpRatio: npc.maxHp > 0 ? npc.hp / npc.maxHp : 1,
-          combatText: `내 전투력 ${myPower} · 상대 전투력 ${npcPower}`,
+          combatText: `내 전투력 ${myPower} · 상대 전투력 ${npcPower}${escNote}`,
         });
       }
     }
 
     this.fireTimer = Math.max(0, this.fireTimer - delta);
-    if (state.inCombat && isDown('Space') && this.fireTimer <= 0 && !this.pendingCapture && !this.meleeState) this.fireCannon();
+    if (state.inCombat && isDown('Space') && this.fireTimer <= 0 && !this.meleeState) this.fireCannon();
 
     const targets = [
       { owner: 'player', position: this.ship.pos, radius: worldSizeFor(this.ship.shipDef).length * 0.55, ref: 'player' },

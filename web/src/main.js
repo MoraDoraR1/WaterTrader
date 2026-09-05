@@ -17,7 +17,7 @@ import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 import { payWagesOnDock, getCurrentMinCrew } from './systems/crew.js';
 import { openCrew } from './ui/crewPanel.js';
-import { repairAtSea, getCannonSlotCount } from './systems/shipyard.js';
+import { repairAtSea, getCannonSlotCount, buyShip, buildShip } from './systems/shipyard.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood } from './systems/market.js';
@@ -428,4 +428,5 @@ window.__debug = {
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
   checkDiscoveryEvents, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
+  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS,
 };

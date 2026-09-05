@@ -7,7 +7,7 @@ import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef, getBaseArmor } f
 import { getShipSkills } from '../data/shipSkills.js';
 import { getCombatPower } from '../systems/combatPower.js';
 import {
-  buyShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
+  buyShip, buildShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
   setActiveShip, sellFleetShip, FLEET_CAP, getCannonSlotCount, getCannonSlotMaxTier,
 } from '../systems/shipyard.js';
 
@@ -58,7 +58,8 @@ function renderBuyTab() {
   const owned = new Set([state.currentShipId, ...state.fleet.map((f) => f.shipId)]);
   const fleetFull = state.fleet.length + 1 >= FLEET_CAP;
   // 해적 전용 선박(purchasable: false)은 조선소에서 살 수 없다 — 오직 해적 NPC로만 등장.
-  const purchasableShips = SHIPS.filter((s) => s.purchasable !== false);
+  // 건조 전용 선박(acquire: 'build')도 여기서는 제외 — '건조' 탭에서만 만들 수 있다.
+  const purchasableShips = SHIPS.filter((s) => s.purchasable !== false && s.acquire !== 'build');
   const filtered = buyRoleFilter === 'all' ? purchasableShips : purchasableShips.filter((s) => s.role === buyRoleFilter);
   const rows = [...filtered].sort(SORT_MODES[buySortMode].cmp).map((s) => {
     const isOwned = owned.has(s.id);
@@ -89,6 +90,61 @@ function renderBuyTab() {
     };
   });
   hud.renderShipyard({ title: `조선소 — 배 구매 (구매한 배는 함대에 예비로 편입됩니다, 최대 ${FLEET_CAP}척)`, gold: state.gold, rows });
+}
+
+function buildCostLabel(cost) {
+  const bits = [`${fmt(cost.gold || 0)} 두캇`];
+  if (cost.materials) bits.push(`자재 ${cost.materials}`);
+  if (cost.oakTimber) bits.push(`상급 조선용 참나무 ${cost.oakTimber}`);
+  if (cost.ironcladPlating) bits.push(`전설 해적기함의 철갑판 ${cost.ironcladPlating}`);
+  return bits.join(' + ');
+}
+
+function canAffordBuild(cost) {
+  return state.gold >= (cost.gold || 0)
+    && state.materials >= (cost.materials || 0)
+    && state.oakTimber >= (cost.oakTimber || 0)
+    && state.ironcladPlating >= (cost.ironcladPlating || 0);
+}
+
+// 건조 전용 선박(data/ships.js의 acquire:'build') 목록 — 구매가 아니라 골드+재료(자재/
+// 상급 조선용 참나무/전설 해적기함의 철갑판)를 소모해 만든다. 재료는 전투 노획으로만 얻는다.
+function renderBuildTab() {
+  const owned = new Set([state.currentShipId, ...state.fleet.map((f) => f.shipId)]);
+  const fleetFull = state.fleet.length + 1 >= FLEET_CAP;
+  const buildableShips = SHIPS.filter((s) => s.acquire === 'build' && s.buildCost);
+  const rows = [...buildableShips].sort((a, b) => (a.buildCost.gold || 0) - (b.buildCost.gold || 0)).map((s) => {
+    const isOwned = owned.has(s.id);
+    const role = SHIP_ROLES[s.role];
+    const cls = SHIP_CLASSES[s.class];
+    const afford = canAffordBuild(s.buildCost);
+    const disabled = isOwned || fleetFull || !afford;
+    const skillNames = getShipSkills(s).map((sk) => sk.name).join(', ');
+    const combatPower = getCombatPower(s, {}).score;
+    return {
+      name: s.name,
+      badge: role.label, badgeColor: role.color,
+      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 전투력 ${combatPower}(건조 직후) · 스킬: ${skillNames}`,
+      priceLabel: isOwned ? '보유 중' : buildCostLabel(s.buildCost),
+      actionLabel: isOwned ? '보유 중' : fleetFull ? '함대 만석' : afford ? '건조' : '재료 부족',
+      disabled,
+      highlight: isOwned,
+      onAction: disabled ? null : () => {
+        const res = buildShip(s.id);
+        if (res.ok) {
+          hud.toast(`${s.name}을(를) 건조해 함대에 편입했습니다. '함대' 탭에서 기함으로 교체할 수 있습니다.`);
+          renderBuildTab();
+        } else {
+          hud.toast(res.reason);
+        }
+      },
+    };
+  });
+  hud.renderShipyard({
+    title: `조선소 — 건조 (재료는 엘리트·보스 해적 격침으로 노획 — 구매 불가 최상위 함선, 최대 ${FLEET_CAP}척)`,
+    gold: state.gold,
+    rows,
+  });
 }
 
 function renderFleetTab() {
@@ -283,7 +339,7 @@ function renderPartsSlot(slot) {
   hud.renderShipyard({ title: `조선소 — 부품 · ${meta.label}`, gold: state.gold, rows });
 }
 
-const TAB_RENDERERS = { buy: renderBuyTab, fleet: renderFleetTab, repair: renderRepairTab, parts: renderPartsOverview };
+const TAB_RENDERERS = { buy: renderBuyTab, build: renderBuildTab, fleet: renderFleetTab, repair: renderRepairTab, parts: renderPartsOverview };
 
 export function openShipyard(tab) {
   hud.setShipyardActiveTab(tab);
