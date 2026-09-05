@@ -47,6 +47,8 @@ export class ShipController {
     // state.inCombat 여부를 보고 갱신해준다(평시엔 항상 1).
     this.combatSpeedMul = 1;
     this.combatTurnMul = 1;
+    // 바람과의 정렬도(-1=정면 역풍 ~ 1=완전한 순풍) — seaScene이 폭풍 항해 피해 판정에 쓴다.
+    this.windAlign = 0;
   }
 
   throttleUp() { this.notch = Math.min(MAX_FWD, this.notch + 1); }
@@ -65,8 +67,10 @@ export class ShipController {
       // 그대로 둔다(역풍 극복 스킬은 "거슬러 갈 때"만 도와주는 게 맞다).
       const bonus = (align >= 0 ? align * 0.25 : align * 0.35 * this.headwindPenaltyMul) * wind.strength * this.windSensitivity;
       this.windMul = 1 + bonus;
+      this.windAlign = align;
     } else {
       this.windMul = 1;
+      this.windAlign = 0;
     }
 
     const notchSpeed = this.notchSpeed;

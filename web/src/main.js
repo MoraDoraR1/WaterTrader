@@ -23,11 +23,11 @@ import { getRankInfo, computeScore } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood } from './systems/market.js';
 import { SUPPLY_DEFS } from './systems/supplies.js';
 import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUnlock.js';
-import { checkDiscoveryEvents, checkAmbientDiscovery } from './systems/discoveryEvents.js';
+import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
 import { RANKS } from './data/ranks.js';
 import {
   checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
-  getQuestStatus, isQuestChainReady, syncUnlockedRoutes,
+  getQuestStatus, isQuestChainReady, syncUnlockedRoutes, checkQuestRespawns, addReputation,
 } from './systems/quests.js';
 
 const wrap = document.getElementById('canvas-wrap');
@@ -448,6 +448,6 @@ window.__debug = {
   get citySceneObj() { return citySceneObj; },
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
-  checkDiscoveryEvents, checkAmbientDiscovery, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
+  checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
   buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity, computeScore,
 };

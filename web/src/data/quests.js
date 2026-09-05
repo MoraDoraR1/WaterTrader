@@ -106,6 +106,25 @@ export const QUESTS = [
     title: '[항로 개척 3/3] 케이프타운(폭풍의 곶)까지 항해', desc: '아프리카 최남단, 뱃사람들이 "폭풍의 곶"이라 부르는 곳을 돌아 케이프타운까지 항해해주십시오.',
     acceptLine: '"뱃사람들은 그곳을 폭풍의 곶이라 부르지. 그 곶을 돌아 케이프타운까지 가보게 — 거기서부터는 인도양과 극동으로 가는 길이 곧장 열릴 걸세."',
     arriveLine: '악명 높은 폭풍의 곶을 무사히 돌아 케이프타운에 닻을 내렸습니다. 남쪽 바람이 잦아들자, 동쪽 수평선 너머로 인도양과 향신료의 바다가 펼쳐집니다.' },
+
+  // ---- 항로 개척 이후의 반복 토벌 의뢰 ----
+  // 항로를 열고 나면 그 항로의 상징적 엘리트 해적(이미 리스폰 시스템으로 무한히 되살아나는
+  // 개체)을 다시 잡을 때마다 소액이지만 계속 받을 수 있는 의뢰다 — repeatable: true로
+  // 표시해, 그 npc가 리스폰할 때마다(entities/pirate.js checkPirateRespawns) 다시
+  // 게시판에 오른다(systems/quests.js reactivateRepeatableBounties). 항로 개척 3부작
+  // 자체(chain_ 접두)는 스토리 게이트라 그대로 일회성으로 남긴다.
+  { id: 'patrol_west_africa', type: 'bounty', cityId: 'canarias', targetId: 'pirate_barbary_elite', reward: 700,
+    routePrereq: 'west_africa', repeatable: true,
+    title: '[반복] 바르바리 해적 잔당 소탕', desc: '항로는 열렸지만 바르바리 해적 사령선의 잔당이 계속 되살아나 상선을 위협합니다. 볼 때마다 처치해주십시오.',
+    acceptLine: '카나리아 제도 항구 관리인이 말합니다. "그 사령선, 죽여도 죽여도 다시 나타나는 모양이더군. 볼 때마다 처리해주면 그때마다 사례하지."' },
+  { id: 'patrol_new_world', type: 'bounty', cityId: 'azores', targetId: 'pirate_elite_calicojack', reward: 650,
+    routePrereq: 'new_world', repeatable: true,
+    title: '[반복] 캘리코 잭 잔당 소탕', desc: '카리브해에서 캘리코 잭의 윌리엄호가 계속 다시 나타나 신대륙 항로를 어지럽힙니다. 볼 때마다 처치해주십시오.',
+    acceptLine: '아조레스 항구 관리인이 말합니다. "캘리코 잭, 그 배는 가라앉혀도 며칠 뒤면 또 나타난다더군. 나타날 때마다 처리해주게."' },
+  { id: 'patrol_indian_ocean', type: 'bounty', cityId: 'cape_town', targetId: 'pirate_indian_ocean', reward: 800,
+    routePrereq: 'indian_ocean', repeatable: true,
+    title: '[반복] 계절풍의 습격자호 소탕', desc: '인도양 항로가 열렸지만 계절풍의 습격자호가 계속 되살아나 향신료 무역선을 노립니다. 볼 때마다 처치해주십시오.',
+    acceptLine: '케이프타운 항구 관리인이 말합니다. "그 습격자호 말이야, 가라앉혀도 계절풍처럼 또 돌아오더군. 볼 때마다 사례할 테니 계속 처리해주게."' },
 ];
 
 export function getQuest(id) {

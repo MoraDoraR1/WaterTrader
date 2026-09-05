@@ -34,6 +34,10 @@ export const state = {
     { id: 'wine', name: '포도주', qty: 6 },
   ],
   quests: {}, // questId -> 'accepted' | 'completed' (없으면 'available'로 취급)
+  // questId -> 다음 재발행 시각(state.dayTimer 기준) — 완료된 배달 의뢰가 소진형으로
+  // 끝나지 않도록, 리스폰 시스템과 같은 절대 시각 방식으로 저장한다(systems/quests.js
+  // checkQuestRespawns). 항로 개척 3부작(chain_ 접두)은 스토리 게이트라 대상에서 제외.
+  questRespawnAt: {},
   reputation: {}, // 국가코드 -> 우호도(시장 가격에 반영)
   pirateBounty: 0, // 완료한 해적 토벌 의뢰 수
   crewMorale: 100, // 0~100 — 백병전 전투력에 반영
@@ -50,10 +54,6 @@ export const state = {
   pirateEscalation: {},
   pirateEscalationResetDate: null, // 마지막으로 자정 초기화를 처리한 날짜 문자열(Date#toDateString)
   seenRespawnIntro: false, // 엘리트/보스 리스폰·강화 시스템 설명을 한 번이라도 봤는지
-  // 평시 항해 중(항로 개척 항해 의뢰가 없어도) 가끔 뜨는 소소한 발견 이벤트의 다음 발동
-  // 시각(state.dayTimer 기준) — 새로고침으로 쿨다운을 초기화해 반복 획득하는 걸 막기 위해
-  // 카운트다운이 아니라 리스폰 시스템과 같은 방식(절대 시각)으로 저장한다.
-  nextAmbientDiscoveryAt: null,
   marketState: {}, // cityId -> goodId -> { mul, updatedAt } — 플레이어 매매로 흔들린 뒤 시간이 지나며 되돌아오는 시세 배율
   marketCycle: {}, // cityId -> goodId -> { mul, bucket } — 항해일자 5일 주기로 한 걸음씩 오르내리는 시세 사이클(주식 종가 개념)
   marketVolume: {}, // cityId -> goodId -> { remaining, updatedAt } — 한 항구에서 한 번에 소화 가능한 거래량 상한(VOLUME_CAP), 시간이 지나며 회복

@@ -12,6 +12,7 @@ import { Vec2 } from '../util/math2d.js';
 import { getShip } from '../data/ships.js';
 import { state } from '../state.js';
 import { hud } from '../ui/hud.js';
+import { reactivateRepeatableBounties } from '../systems/quests.js';
 
 const AGGRO_RANGE = 90;
 const ATTACK_RANGE = 55;
@@ -315,9 +316,10 @@ export function checkPirateRespawns(npcShips) {
     if (!entry || entry.respawnAt == null || state.dayTimer < entry.respawnAt) continue;
     state.pirateEscalation = { ...state.pirateEscalation, [npc.owner]: { ...entry, respawnAt: null } };
     npc.respawn();
-    const tierLabel = npc.tier === 'boss' ? '보스' : '엘리트';
     const pct = npc.escalationLevel * 25;
-    hud.toast(`⚔ ${npc.def.name}이(가) 다시 나타났습니다! (강화 Lv.${npc.escalationLevel} · 이전 대비 +${pct}%)`);
+    const reactivated = reactivateRepeatableBounties(npc.owner);
+    const repeatNote = reactivated.length > 0 ? ' 관련 반복 토벌 의뢰가 다시 게시됐습니다.' : '';
+    hud.toast(`⚔ ${npc.def.name}이(가) 다시 나타났습니다! (강화 Lv.${npc.escalationLevel} · 이전 대비 +${pct}%)${repeatNote}`);
   }
 }
 

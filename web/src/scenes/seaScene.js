@@ -10,7 +10,7 @@ import { CannonballPool } from '../entities/cannon.js';
 import { WakeTrail } from '../entities/wake.js';
 import { Wind } from '../entities/wind.js';
 import { WeatherSystem, RainEffect } from '../entities/weather.js';
-import { getShip, COUNTRY_COLORS } from '../data/ships.js';
+import { getShip, COUNTRY_COLORS, COUNTRY_NAMES } from '../data/ships.js';
 import { getEffectiveShipDef, armorDamageMul } from '../data/shipParts.js';
 import { getCombatants, getCombatPower, getNpcCombatPower } from '../systems/combatPower.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
@@ -21,8 +21,8 @@ import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
-import { checkBountyKill } from '../systems/quests.js';
-import { checkDiscoveryEvents, checkAmbientDiscovery } from '../systems/discoveryEvents.js';
+import { checkBountyKill, addReputation, checkQuestRespawns } from '../systems/quests.js';
+import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
 import { RANKS } from '../data/ranks.js';
 import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory } from '../systems/crew.js';
@@ -37,11 +37,17 @@ const SHIPWRECK_GOLD_LOSS_PCT = 0.3; // 난파 시 휴대금(bankGold 제외) �
 const SHIPWRECK_GOODS_LOSS_PCT = 0.7; // 난파 시 화물칸의 교역품(inventory) 손실 비율 — 식량/식수/자재/포탄은 별도 자원이라 영향 없음
 const FOOD_PER_DAY = 1; // 항해일자 하루당 식량 소모(화물칸 공유 — systems/supplies.js)
 const WATER_PER_DAY = 1; // 항해일자 하루당 식수 소모
+// 폭풍(stormIntensity>0.5) 중 순풍을 타고(align>0.5) 빠르게(speedRatio>0.3) 달릴 때, 최대
+// 조건(완전한 폭풍·정순풍·전속력)에서 초당 잃는 최대 내구도 비율 — "조금씩" 상하는 수준으로,
+// 폭풍 지속시간(45~95초) 내내 최악의 조건으로만 달려도 완파에는 크게 못 미치게 잡았다.
+const STORM_TAILWIND_DMG_PCT_PER_SEC = 0.002;
 // 충돌 피해는 충돌 순간 속도에 비례한다 — 제자리에서 스치듯 부딪히면 가볍게, 전속력으로
 // 들이받으면(충각 전술) 양측 모두 크게 상한다.
 const COLLISION_DAMAGE_BASE = 18;
 const COLLISION_DAMAGE_SPEED_BONUS = 24;
 const COLLISION_COOLDOWN = 2.5;
+const PEACEFUL_ATTACK_REP_PENALTY = 12; // 평화로운 상선/모험가/명사를 도발했을 때 그 소속국 평판 하락폭(배달 완료 1건의 +5보다 크게 잡아, 실제로 손해라고 느끼게 한다)
+const ESCORT_SHOT_DMG = 10; // 함대(예비 선박)의 보조 사격 데미지 — 플레이어 자체 사격(고정 22)보다 낮게 잡아 "최소한의 기여"로만 남긴다
 // 충돌해도 곧바로 백병전으로 이어지지 않는다 — 이 시간 안에 F를 눌러야 승선(백병전 돌입)한다
 // (예전엔 25% 확률로 자동 발생해 플레이어가 개입할 여지가 전혀 없었다).
 const BOARDING_WINDOW = 3.0;
@@ -80,6 +86,7 @@ export class SeaScene {
     this.weather = new WeatherSystem(state.dayTimer);
     this.rain = new RainEffect(logicalW, logicalH);
     this.wind = new Wind();
+    this._stormSailWarned = false; // 폭풍 속 순풍 항해 경고 토스트를 폭풍당 한 번만 띄우기 위한 플래그
 
     this.moundColliders = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], r: 30 }));
     this.cityMarkers = this._computeCityMarkers();
@@ -204,8 +211,17 @@ export class SeaScene {
   _engageTarget() {
     const npc = this.selectedTarget;
     if (!npc || npc.dead) return;
+    // 원래 평화로운 상대(상인/모험가/명사)를 플레이어가 먼저 도발하는 경우에만, 그 배의
+    // 소속국 평판에 실제 대가를 매긴다 — 이미 도발한 상태(hostileOverride)라면 중복 적용하지 않는다.
+    const provoking = !npc.def.hostile && !npc.hostileOverride;
     npc.engage();
-    hud.toast(`${npc.def.name}에 교전을 선포했습니다!`);
+    if (provoking && npc.def.country) {
+      addReputation(npc.def.country, -PEACEFUL_ATTACK_REP_PENALTY);
+      const countryName = COUNTRY_NAMES[npc.def.country] || npc.def.country;
+      hud.toast(`${npc.def.name}에 교전을 선포했습니다! (⚠ ${countryName} 평판 하락)`);
+    } else {
+      hud.toast(`${npc.def.name}에 교전을 선포했습니다!`);
+    }
     this.selectedTarget = null;
     hud.hideInteractionMenu();
   }
@@ -474,7 +490,7 @@ export class SeaScene {
   _victoryToast(baseMsg, npc) {
     hud.flashCombatText('승리!', 'win');
     const rescued = rescueCrewFromVictory();
-    const bounty = checkBountyKill(npc.owner);
+    const bounties = checkBountyKill(npc.owner);
     const moraleAdd = sumSkillEffect(this.ship.shipDef, 'victoryMoraleAdd', 0);
     if (moraleAdd > 0) state.crewMorale = Math.min(100, (state.crewMorale ?? 100) + moraleAdd);
 
@@ -511,7 +527,7 @@ export class SeaScene {
     if (loot.ironcladPlating > 0) { state.ironcladPlating += loot.ironcladPlating; bits.push(`전설 해적기함의 철갑판 +${loot.ironcladPlating}`); }
 
     if (rescued > 0) bits.push(`표류하던 선원 ${rescued}명을 구조해 편입했습니다.`);
-    if (bounty) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+    for (const bounty of bounties) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
 
     // 엘리트/보스를 처음 잡아보는 순간 딱 한 번만 리스폰·강화 시스템을 설명해준다.
     if ((npc.tier === 'elite' || npc.tier === 'boss') && !state.seenRespawnIntro) {
@@ -614,6 +630,24 @@ export class SeaScene {
     hud.toast(`${reason} 바닥나 선원들이 지쳐갑니다! 선체가 상하고 선원이 줄어듭니다. (항구에서 보급하세요)`);
   }
 
+  // 골드를 주는 발견 이벤트 대신, 날씨 자체가 위험과 보상을 함께 주는 "이벤트"다 — 폭풍
+  // 중 순풍을 타고 달리면(entities/shipController.js의 바람 시스템이 이미 자연스럽게
+  // 최대 +25%까지 속도를 올려준다) 그만큼 선체에도 무리가 간다. 역풍이나 무풍, 저속
+  // 항해, 폭풍이 아닐 때는 전혀 영향이 없다 — 순전히 "폭풍+순풍+가속"의 조합에서만 발동.
+  _processStormSailing(delta) {
+    if (this.weather.stormIntensity <= 0.5) { this._stormSailWarned = false; return; }
+    const speedRatio = Math.min(1, Math.abs(this.ship.curSpeed) / (this.ship.maxSpeedMs || 1));
+    const align = this.ship.windAlign || 0;
+    if (speedRatio < 0.3 || align < 0.5) return;
+    const alignExcess = clamp((align - 0.5) / 0.5, 0, 1);
+    const dmgPct = STORM_TAILWIND_DMG_PCT_PER_SEC * this.weather.stormIntensity * speedRatio * alignExcess;
+    state.shipHp = Math.max(0, state.shipHp - this.ship.shipDef.hp * dmgPct * delta);
+    if (!this._stormSailWarned) {
+      this._stormSailWarned = true;
+      hud.toast('⛈ 폭풍 속 순풍을 타고 있습니다 — 속도가 오르지만 선체가 서서히 상합니다!');
+    }
+  }
+
   update(delta, elapsed) {
     this.t = elapsed;
     this.weather.update(delta);
@@ -677,13 +711,19 @@ export class SeaScene {
         : this.ship.baseWindSensitivity;
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
       this._checkRouteLockWarning(delta);
-      const onSpecialVoyage = checkDiscoveryEvents(delta);
-      // 항로 개척 항해 의뢰용 발견 이벤트와 겹쳐 뜨지 않도록, 그게 진행 중이 아닐 때만
-      // 평시 발견 이벤트를 확인한다 — 전투 중에는 분위기가 안 맞으니 제외.
-      if (!onSpecialVoyage && !state.inCombat) checkAmbientDiscovery();
+      checkDiscoveryEvents(delta);
+      this._processStormSailing(delta);
     }
     this._updateWake(delta);
-    for (const escort of this.escorts) escort.update(delta, this.ship);
+    const escortTarget = state.inCombat ? this._nearestHostile() : null;
+    for (const escort of this.escorts) {
+      escort.update(delta, this.ship);
+      const dir = escort.tryFire(delta, escortTarget);
+      if (dir) {
+        audio.playCannon();
+        this.cannonPool.fire(escort.pos, dir, 46, 'player', ESCORT_SHOT_DMG);
+      }
+    }
     this.rain.update(delta, this.weather.stormIntensity);
     hud.setWeather(`${this.weather.label} · 항해 ${this.weather.voyageDay}일차`, this.weather.stormIntensity > 0.1);
     audio.updateOcean(this.weather.stormIntensity);
@@ -705,6 +745,7 @@ export class SeaScene {
       for (const npc of this.npcShips) npc.update(delta, elapsed, this.ship.pos, this.cannonPool);
       checkDailyEscalationReset(this.npcShips);
       checkPirateRespawns(this.npcShips);
+      checkQuestRespawns();
       this._resolveShipCollisions(delta);
       // 해적의 확률적 강습(ambush) — 플레이어의 선택 없이 즉시 교전이 시작된 경우, 여기서
       // 한 번만 소비해 알림을 띄운다. 마침 그 배가 선택돼 메뉴가 떠 있었다면 메뉴를 닫는다
@@ -763,7 +804,7 @@ export class SeaScene {
         // 평화로운 상대)라도 포격을 맞으면 곧바로 맞대응(engage)한다 — 쏘기만 하고
         // 아무 반응이 없는 어색함을 막는다.
         target.ref.engage();
-        target.ref.takeDamage(22);
+        target.ref.takeDamage(ball.dmg ?? 22);
         if (target.ref.dead) {
           this._victoryToast(`${target.ref.def.name}을(를) 격침했습니다!`, target.ref);
         }

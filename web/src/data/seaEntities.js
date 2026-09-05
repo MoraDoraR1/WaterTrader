@@ -22,22 +22,22 @@ export const SEA_NPC_SHIPS = [
   { id: 'pirate_2', type: 'pirate', name: '해적선 붉은깃발호', pos: project(2.61, 52.78), shipId: 'caravela_redonda',
     hp: 420, hostile: true, patrolRadius: 25, tier: 'grunt', region: 1 },
   { id: 'merchant_1', type: 'merchant', name: '상인선 카를로스호', pos: project(-11.39, 40.56), shipId: 'fluyt',
-    hp: 600, hostile: false, patrolRadius: 60 },
+    hp: 600, hostile: false, patrolRadius: 60, country: 'PT' },
   { id: 'adventurer_1', type: 'adventurer', name: '모험가 페드로의 배', pos: project(-8.50, 36.11), shipId: 'pinta',
-    hp: 350, hostile: false, patrolRadius: 20 },
+    hp: 350, hostile: false, patrolRadius: 20, country: 'PT' },
   { id: 'notable_1', type: 'notable', name: '항해가 바스코 다가마 함대', pos: project(-12.28, 41.00), shipId: 'nau_santa_maria',
-    hp: 900, hostile: false, patrolRadius: 0,
+    hp: 900, hostile: false, patrolRadius: 0, country: 'PT',
     dialogue: '"인도로 가는 항로를 처음 연 게 나일세." 노련한 함대 사령관이 자부심 가득한 얼굴로 인사를 건넵니다.' },
 
   // ── [region 1: 유럽 근해] 북해/영불해협 (런던·암스테르담·함부르크 인근) ──
   { id: 'merchant_london', type: 'merchant', name: '차 무역선 빅토리아호', pos: project(1.86, 51.82), shipId: 'tea_clipper',
-    hp: 700, hostile: false, patrolRadius: 45 },
+    hp: 700, hostile: false, patrolRadius: 45, country: 'EN' },
   { id: 'pirate_channel', type: 'pirate', name: '해적선 북해의 늑대호', pos: project(2.57, 52.36), shipId: 'topsail_schooner',
     hp: 550, hostile: true, patrolRadius: 35, tier: 'grunt', region: 1 },
   { id: 'merchant_amsterdam', type: 'merchant', name: '동인도회사 무역선 바타비아호', pos: project(3.19, 53.64), shipId: 'east_indiaman',
-    hp: 1000, hostile: false, patrolRadius: 50 },
+    hp: 1000, hostile: false, patrolRadius: 50, country: 'NL' },
   { id: 'merchant_hamburg', type: 'merchant', name: '한자동맹 코게선 그라이프호', pos: project(8.445, 53.42), shipId: 'cog',
-    hp: 600, hostile: false, patrolRadius: 40 },
+    hp: 600, hostile: false, patrolRadius: 40, country: 'HAN' },
   { id: 'pirate_baltic', type: 'pirate', name: '발트해 해적선', pos: project(15.5, 55.0), shipId: 'pirate_galliot',
     hp: 300, hostile: true, patrolRadius: 30, tier: 'grunt', region: 1 },
   // 클라우스 슈퇴르테베커 — 14세기 발트해·북해를 주름잡은 "빅투알리엔 형제단"의 실존
@@ -47,12 +47,12 @@ export const SEA_NPC_SHIPS = [
 
   // ── [region 1: 유럽 근해] 지중해(마르세유·제노바·베네치아·바르바리 인근) ──
   { id: 'notable_soleil', type: 'notable', name: '프랑스 왕실함대 솔레유 루아얄호', pos: project(5.32, 41.36), shipId: 'soleil_royal',
-    hp: 2900, hostile: false, patrolRadius: 0,
+    hp: 2900, hostile: false, patrolRadius: 0, country: 'FR',
     dialogue: '태양왕의 문장을 두른 거함이 위풍당당하게 예포를 울립니다. 함부로 대적할 상대는 아닌 듯합니다.' },
   { id: 'adventurer_genova', type: 'adventurer', name: '항해가 콜롬보의 배', pos: project(7.66, 42.69), shipId: 'caravel_pinnace',
-    hp: 450, hostile: false, patrolRadius: 30 },
+    hp: 450, hostile: false, patrolRadius: 30, country: 'IT' },
   { id: 'merchant_venezia', type: 'merchant', name: '베네치아 갈레온 레온도로호', pos: project(13.32, 43.44), shipId: 'galeone_veneziano',
-    hp: 1100, hostile: false, patrolRadius: 45 },
+    hp: 1100, hostile: false, patrolRadius: 45, country: 'IT' },
   { id: 'pirate_med', type: 'pirate', name: '바르바리 해적선 붉은수염호', pos: project(7.12, 41.98), shipId: 'baltimore_schooner',
     hp: 380, hostile: true, patrolRadius: 35, tier: 'grunt', region: 1 },
   { id: 'pirate_barbary_grunt', type: 'pirate', name: '바르바리 해적선', pos: project(2.2, 37.3), shipId: 'pirate_xebec',
@@ -66,7 +66,7 @@ export const SEA_NPC_SHIPS = [
   { id: 'pirate_caribbean', type: 'pirate', name: '해적선 카리브의 유령호', pos: project(-75.87, 21.0), shipId: 'baltimore_schooner',
     hp: 480, hostile: true, patrolRadius: 40, tier: 'grunt', region: 2 },
   { id: 'merchant_havana', type: 'merchant', name: '은 함대 산타클라라호', pos: project(-79.5, 19.0), shipId: 'fluyt',
-    hp: 800, hostile: false, patrolRadius: 40 },
+    hp: 800, hostile: false, patrolRadius: 40, country: 'ES' },
   { id: 'pirate_caribbean_2', type: 'pirate', name: '해적선 죽음의 산호호', pos: project(-78.5, 20.0), shipId: 'pirate_sloop',
     hp: 320, hostile: true, patrolRadius: 40, tier: 'grunt', region: 2 },
   // 존 "캘리코 잭" 랙엄 — 앤 보니·메리 리드와 함께 활동한 실존 해적. 그의 배 "윌리엄호"는
@@ -78,7 +78,7 @@ export const SEA_NPC_SHIPS = [
 
   // ── [region 3: 인도양·동남아 향신료 항로] 캘리컷 이후 육두구 등 향신료 무역권 ──
   { id: 'merchant_goa', type: 'merchant', name: '동인도 무역선 상투메호', pos: project(72.5, 16.5), shipId: 'east_indiaman',
-    hp: 900, hostile: false, patrolRadius: 45 },
+    hp: 900, hostile: false, patrolRadius: 45, country: 'PT' },
   // 말라바르 해안(캘리컷·고아 인근)의 실제 역사 그대로 — 칸호지 앙그리아의 마라타 해군이
   // 유럽 상선을 위협했다. "구랍(Grab)"은 플레이어도 구매 가능한 정규 선박이지만, 판옥선/
   // 거북선과 달리 침략자에 맞선 단일 "정의의 상징"이 아니라 실제로 유럽 상선을 약탈한

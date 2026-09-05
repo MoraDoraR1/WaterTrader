@@ -34,6 +34,7 @@ export function saveGame() {
     suppliesLastDay: state.suppliesLastDay,
     inventory: state.inventory,
     quests: state.quests,
+    questRespawnAt: state.questRespawnAt,
     reputation: state.reputation,
     pirateBounty: state.pirateBounty,
     crewMorale: state.crewMorale,
@@ -45,7 +46,6 @@ export function saveGame() {
     pirateEscalation: state.pirateEscalation,
     pirateEscalationResetDate: state.pirateEscalationResetDate,
     seenRespawnIntro: state.seenRespawnIntro,
-    nextAmbientDiscoveryAt: state.nextAmbientDiscoveryAt,
     marketState: state.marketState,
     marketCycle: state.marketCycle,
     marketVolume: state.marketVolume,
@@ -89,6 +89,7 @@ export function applySave(data) {
   if (typeof data.suppliesLastDay === 'number') state.suppliesLastDay = data.suppliesLastDay;
   if (Array.isArray(data.inventory)) state.inventory = data.inventory;
   state.quests = data.quests || {};
+  state.questRespawnAt = data.questRespawnAt && typeof data.questRespawnAt === 'object' ? data.questRespawnAt : {};
   state.reputation = data.reputation || {};
   if (typeof data.pirateBounty === 'number') state.pirateBounty = data.pirateBounty;
   if (typeof data.crewMorale === 'number') state.crewMorale = data.crewMorale;
@@ -100,7 +101,6 @@ export function applySave(data) {
   state.pirateEscalation = data.pirateEscalation && typeof data.pirateEscalation === 'object' ? data.pirateEscalation : {};
   state.pirateEscalationResetDate = typeof data.pirateEscalationResetDate === 'string' ? data.pirateEscalationResetDate : null;
   state.seenRespawnIntro = !!data.seenRespawnIntro;
-  state.nextAmbientDiscoveryAt = typeof data.nextAmbientDiscoveryAt === 'number' ? data.nextAmbientDiscoveryAt : null;
   state.marketState = data.marketState && typeof data.marketState === 'object' ? data.marketState : {};
   state.marketCycle = data.marketCycle && typeof data.marketCycle === 'object' ? data.marketCycle : {};
   state.marketVolume = data.marketVolume && typeof data.marketVolume === 'object' ? data.marketVolume : {};

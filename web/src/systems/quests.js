@@ -8,6 +8,12 @@ import { getShip } from '../data/ships.js';
 import { mulSkillEffect } from '../data/shipSkills.js';
 import { getRankInfo } from './rank.js';
 import { WORLD_REGIONS } from '../data/worldRegions.js';
+import { hud } from '../ui/hud.js';
+
+// 완료한 배달 의뢰가 다시 게시되기까지(항해일자 기준) — 항로 개척 3부작(id가 'chain_'로
+// 시작)은 스토리 게이트라 순환 대상에서 제외한다.
+const DELIVERY_QUEST_RESPAWN_DAYS = 5;
+const VOYAGE_DAY_SECONDS = 60; // entities/weather.js DAY_CYCLE_SECONDS와 동일 기준
 
 export function getQuestStatus(id) {
   return state.quests[id] || 'available';
@@ -53,6 +59,11 @@ export function acceptQuest(id) {
   if (getQuestStatus(id) !== 'available') return { ok: false, reason: '이미 수락했거나 완료한 의뢰입니다.' };
   if (!isQuestChainReady(q)) return { ok: false, reason: '아직 수락할 수 없는 의뢰입니다.' };
   state.quests = { ...state.quests, [id]: 'accepted' };
+  if (state.questRespawnAt[id] != null) {
+    const next = { ...state.questRespawnAt };
+    delete next[id];
+    state.questRespawnAt = next;
+  }
   notify({ questChanged: true });
   return { ok: true };
 }
@@ -69,21 +80,64 @@ export function turnInDelivery(id) {
   if (item.qty <= 0) state.inventory = state.inventory.filter((it) => it.id !== q.goodId);
   state.gold += q.reward;
   state.quests = { ...state.quests, [id]: 'completed' };
+  // 항로 개척 3부작(chain_ 접두)은 스토리 게이트라 순환에서 제외 — 나머지 배달 의뢰는
+  // 며칠 뒤 다시 게시돼 소진형으로 끝나지 않는다(checkQuestRespawns가 매 프레임 확인).
+  if (!id.startsWith('chain_')) {
+    state.questRespawnAt = { ...state.questRespawnAt, [id]: state.dayTimer + DELIVERY_QUEST_RESPAWN_DAYS * VOYAGE_DAY_SECONDS };
+  }
   addReputation(getCity(q.destCityId)?.country, 5);
   notify({ questChanged: true, inventoryChanged: true });
   return { ok: true, reward: q.reward };
 }
 
 // 전투/충돌/백병전 등 어떤 수단으로든 npc가 격침됐을 때 호출 — 그 배를 노리는 토벌 의뢰가
-// 수락 상태였다면 자동으로 완료 처리한다(항구로 돌아가 보고할 필요 없음).
+// 수락 상태였다면 자동으로 완료 처리한다(항구로 돌아가 보고할 필요 없음). 같은 npc를
+// 노리는 의뢰가 동시에 여러 개(예: 항로 개척 3부작의 토벌 + 그 항로가 열린 뒤의 반복
+// 토벌 의뢰) 수락 상태일 수 있으므로 전부 찾아 함께 완료 처리한다.
 export function checkBountyKill(npcOwnerId) {
-  const q = QUESTS.find((x) => x.type === 'bounty' && x.targetId === npcOwnerId);
-  if (!q || getQuestStatus(q.id) !== 'accepted' || !isQuestChainReady(q)) return null;
-  state.gold += q.reward;
-  state.quests = { ...state.quests, [q.id]: 'completed' };
+  const matches = QUESTS.filter((x) => x.type === 'bounty' && x.targetId === npcOwnerId
+    && getQuestStatus(x.id) === 'accepted' && isQuestChainReady(x));
+  if (matches.length === 0) return [];
+  let totalReward = 0;
+  const nextQuests = { ...state.quests };
+  for (const q of matches) { nextQuests[q.id] = 'completed'; totalReward += q.reward; }
+  state.quests = nextQuests;
+  state.gold += totalReward;
   state.pirateBounty = (state.pirateBounty || 0) + 1;
   notify({ questChanged: true });
-  return q;
+  return matches;
+}
+
+// 반복(repeatable) 토벌 의뢰가 노리는 npc가 리스폰했을 때(entities/pirate.js
+// checkPirateRespawns) 호출 — 완료 상태였던 반복 의뢰를 다시 게시판에 올린다. 항로 개척
+// 3부작의 토벌은 repeatable이 아니므로 여기서 다시 열리지 않는다(영구 완료 유지).
+export function reactivateRepeatableBounties(npcOwnerId) {
+  const matches = QUESTS.filter((q) => q.type === 'bounty' && q.repeatable
+    && q.targetId === npcOwnerId && getQuestStatus(q.id) === 'completed');
+  if (matches.length === 0) return matches;
+  const nextQuests = { ...state.quests };
+  for (const q of matches) delete nextQuests[q.id];
+  state.quests = nextQuests;
+  notify({ questChanged: true });
+  return matches;
+}
+
+// 냉각 시간이 지난 배달 의뢰를 다시 'available'로 되돌린다 — 엘리트/보스 리스폰과 같은
+// 방식(절대 시각 비교)으로 매 프레임 확인한다(seaScene.update()에서 호출).
+export function checkQuestRespawns() {
+  for (const [id, respawnAt] of Object.entries(state.questRespawnAt)) {
+    if (state.dayTimer < respawnAt) continue;
+    const nextRespawn = { ...state.questRespawnAt };
+    delete nextRespawn[id];
+    state.questRespawnAt = nextRespawn;
+    if (getQuestStatus(id) !== 'completed') continue; // 이미 다시 수락한 경우 등은 건너뛴다
+    const nextQuests = { ...state.quests };
+    delete nextQuests[id];
+    state.quests = nextQuests;
+    const q = getQuest(id);
+    hud.toast(`📜 '${q?.title || id}' 의뢰가 다시 게시됐습니다.`);
+    notify({ questChanged: true });
+  }
 }
 
 // 항해(voyage) 의뢰는 항구에 정박하는 순간 자동 완료된다 — 목적지에 직접 가는 것 자체가
