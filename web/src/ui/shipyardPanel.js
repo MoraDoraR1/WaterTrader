@@ -5,6 +5,7 @@ import { hud } from './hud.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_NAMES, getShip } from '../data/ships.js';
 import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef, getBaseArmor } from '../data/shipParts.js';
 import { getShipSkills } from '../data/shipSkills.js';
+import { getCombatPower } from '../systems/combatPower.js';
 import {
   buyShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
   setActiveShip, sellFleetShip, FLEET_CAP, getCannonSlotCount, getCannonSlotMaxTier,
@@ -63,10 +64,13 @@ function renderBuyTab() {
     const cls = SHIP_CLASSES[s.class];
     const disabled = isOwned || fleetFull;
     const skillNames = getShipSkills(s).map((sk) => sk.name).join(', ');
+    // 구매 직후(부품 하나도 없는 상태) 기준 전투력 — 대포가 없어 화력 점수는 0이지만
+    // 기본 방어력·정원(백병전력)은 이미 반영된다. 부품을 달면 더 오른다.
+    const combatPower = getCombatPower(s, {}).score;
     return {
       name: s.name,
       badge: role.label, badgeColor: role.color,
-      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 스킬: ${skillNames}`,
+      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 전투력 ${combatPower}(구매 직후) · 스킬: ${skillNames}`,
       priceLabel: isOwned ? '보유 중' : `${fmt(s.price)} 두캇`,
       actionLabel: isOwned ? '보유 중' : fleetFull ? '함대 만석' : '구매',
       disabled,
