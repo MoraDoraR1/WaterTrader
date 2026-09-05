@@ -66,7 +66,7 @@ window.addEventListener('mouseup', (e) => {
   if (moved >= CLICK_THRESHOLD) return;
   const { x, y } = toLogicalXY(e.clientX, e.clientY);
   if (e.button === 0) {
-    if (state.screen === 'sea') seaScene?.handleLeftClick();
+    if (state.screen === 'sea') seaScene?.handleLeftClick(x, y);
     else if (state.screen === 'city') citySceneObj?.handleInteract();
   } else if (e.button === 2) {
     if (state.screen === 'city') citySceneObj?.handleRightClickAt(x, y);

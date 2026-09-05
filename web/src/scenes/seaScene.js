@@ -12,7 +12,7 @@ import { Wind } from '../entities/wind.js';
 import { WeatherSystem, RainEffect } from '../entities/weather.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { getEffectiveShipDef, armorDamageMul } from '../data/shipParts.js';
-import { getCombatants } from '../systems/combatPower.js';
+import { getCombatants, getCombatPower, getNpcCombatPower } from '../systems/combatPower.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
@@ -55,6 +55,17 @@ const WATER_DEEP = '#0d4256';
 const WATER_LIGHT = '#155a78';
 const LAND_COLOR = '#7a9c5a';
 const LAND_EDGE = '#5c7a42';
+
+// 클릭으로 함선을 조준했을 때 화면상 판정 반경(논리 픽셀) — 배 스프라이트 크기가 작아도
+// 최소한 이 정도는 클릭이 맞아야 한다.
+const SHIP_PICK_MIN_PX = 11;
+// NPC별 dialogue 필드가 없을 때 유형별로 쓰는 기본 대사.
+const DEFAULT_NPC_DIALOGUE = {
+  pirate: '거친 눈빛으로 노려볼 뿐, 대화가 통하지 않는 듯합니다.',
+  merchant: '"이 근방 항구 시세가 심상치 않다던데... 조심해서 다니시게." 상인이 손을 흔들며 지나쳐 갑니다.',
+  adventurer: '"신대륙 이야기 들었나? 나도 그쪽으로 가는 길일세!" 모험가가 활기차게 인사를 건넵니다.',
+  notable: '위엄 있는 함대가 예를 갖춰 예포를 짧게 울리고는 항로를 계속합니다.',
+};
 
 export class SeaScene {
   constructor(logicalW, logicalH) {
@@ -99,6 +110,7 @@ export class SeaScene {
     this.meleeState = null;
     this.pendingCapture = null;
     this._boardable = null; // 충돌 직후 F로 승선(백병전)할 수 있는 짧은 창구 — { npc, timer }
+    this.selectedTarget = null; // 클릭으로 지정한 NPC — 상호작용 범위 원 + 전투/대화/종료 메뉴
     this.shakeTrauma = 0;
     this.wakeTrail = new WakeTrail();
     this._wakeTimer = 0;
@@ -147,11 +159,65 @@ export class SeaScene {
     this.ship.notch = prevNotch;
   }
 
-  handleLeftClick() {
+  // screenX/screenY(논리 좌표)가 주어지면 먼저 NPC 함선 클릭 여부를 판정한다 — 맞으면
+  // 상호작용 범위 원 + 전투/대화/종료 메뉴를 띄우고, 다른 동작(포격/도킹)은 하지 않는다.
+  handleLeftClick(screenX, screenY) {
     if (this.pendingCapture) return;
     if (this.meleeState) { this._meleeMash(); return; }
+    if (typeof screenX === 'number' && typeof screenY === 'number') {
+      const picked = this._pickShipAt(screenX, screenY);
+      if (picked) { this._selectTarget(picked); return; }
+    }
     if (state.inCombat) this.fireCannon();
     else if (this.hoveredCity && this.onDock) this.onDock(this.hoveredCity.id);
+  }
+
+  // 화면(논리) 좌표 근처에 있는 NPC 함선을 찾는다 — 등각 투영으로 화면에 그려진 위치 기준.
+  _pickShipAt(screenX, screenY) {
+    const w = this.logicalW, h = this.logicalH;
+    let best = null, bestD2 = Infinity;
+    for (const npc of this.npcShips) {
+      if (npc.dead) continue;
+      const p = this.iso.toScreen(this.camera, npc.pos.x, npc.pos.y, w, h);
+      const dx = screenX - p.x, dy = screenY - p.y;
+      const d2 = dx * dx + dy * dy;
+      const hitR = Math.max(SHIP_PICK_MIN_PX, npc.radius * this.iso.scaleX * 1.3);
+      if (d2 < hitR * hitR && d2 < bestD2) { bestD2 = d2; best = npc; }
+    }
+    return best;
+  }
+
+  _selectTarget(npc) {
+    this.selectedTarget = npc;
+    hud.showInteractionMenu(
+      { name: npc.def.name, hostile: npc.isHostile() },
+      {
+        onCombat: () => this._engageTarget(),
+        onTalk: () => this._talkTarget(),
+        onCancel: () => this._cancelTarget(),
+      }
+    );
+  }
+
+  _engageTarget() {
+    const npc = this.selectedTarget;
+    if (!npc || npc.dead) return;
+    npc.engage();
+    hud.toast(`${npc.def.name}에 교전을 선포했습니다!`);
+    this.selectedTarget = null;
+    hud.hideInteractionMenu();
+  }
+
+  _talkTarget() {
+    const npc = this.selectedTarget;
+    if (!npc || npc.dead) return;
+    const line = npc.def.dialogue || DEFAULT_NPC_DIALOGUE[npc.def.type] || '별다른 대화가 오가지 않았습니다.';
+    hud.showDialogue(npc.def.name, line, [{ label: '닫기', onClick: () => hud.hideDialogue() }]);
+  }
+
+  _cancelTarget() {
+    this.selectedTarget = null;
+    hud.hideInteractionMenu();
   }
 
   // 충돌 후 짧은 승선 창구(this._boardable) 안에 F를 누르면 백병전이 시작된다.
@@ -261,7 +327,7 @@ export class SeaScene {
   _nearestHostile() {
     let best = null, bestD = Infinity;
     for (const npc of this.npcShips) {
-      if (npc.dead || !npc.def.hostile) continue;
+      if (npc.dead || !npc.isHostile()) continue;
       const d = npc.pos.distanceTo(this.ship.pos);
       if (d < bestD) { bestD = d; best = npc; }
     }
@@ -278,7 +344,7 @@ export class SeaScene {
 
     const playerR = worldSizeFor(this.ship.shipDef).length * 0.5;
     for (const npc of this.npcShips) {
-      if (npc.dead || !npc.def.hostile) continue;
+      if (npc.dead || !npc.isHostile()) continue;
       const dx = this.ship.pos.x - npc.pos.x, dz = this.ship.pos.y - npc.pos.y;
       const dist = Math.hypot(dx, dz);
       const minDist = playerR + npc.radius;
@@ -572,16 +638,49 @@ export class SeaScene {
     hud.setWeather(`${this.weather.label} · 항해 ${this.weather.voyageDay}일차`, this.weather.stormIntensity > 0.1);
     audio.updateOcean(this.weather.stormIntensity);
 
-    const hostileNear = this.npcShips.some((n) => !n.dead && n.def.hostile && n.state === 'attack');
+    const hostileNear = this.npcShips.some((n) => !n.dead && n.isHostile() && n.state === 'attack');
     if (hostileNear !== state.inCombat) {
       state.inCombat = hostileNear;
       hud.showCombatBanner(hostileNear);
-      if (hostileNear) hud.toast('전투 시작! 좌클릭/스페이스바로 포격하세요.');
+      // 강습으로 이미 전용 토스트를 띄운 경우엔 이 일반 문구가 한 프레임 뒤에 그걸 덮어쓰지
+      // 않도록 한 번 건너뛴다(hud.toast()는 큐가 없어 마지막 호출만 화면에 남는다).
+      if (hostileNear && !this._skipNextCombatToast) hud.toast('전투 시작! 좌클릭/스페이스바로 포격하세요.');
+      this._skipNextCombatToast = false;
     }
 
     if (!this.meleeState && !this.pendingCapture) {
       for (const npc of this.npcShips) npc.update(delta, elapsed, this.ship.pos, this.cannonPool);
       this._resolveShipCollisions(delta);
+      // 해적의 확률적 강습(ambush) — 플레이어의 선택 없이 즉시 교전이 시작된 경우, 여기서
+      // 한 번만 소비해 알림을 띄운다. 마침 그 배가 선택돼 메뉴가 떠 있었다면 메뉴를 닫는다
+      // (더 이상 "고를 수 있는" 상황이 아니므로).
+      for (const npc of this.npcShips) {
+        if (!npc.ambushTriggered) continue;
+        npc.ambushTriggered = false;
+        hud.toast(`⚠ ${npc.def.name}이(가) 강습해왔습니다! 전투 돌입!`);
+        this._skipNextCombatToast = true;
+        if (this.selectedTarget === npc) { this.selectedTarget = null; hud.hideInteractionMenu(); }
+      }
+    }
+
+    // 클릭으로 지정해둔 상호작용 타겟 — 매 프레임 범위/생존 여부를 갱신해 메뉴 버튼의
+    // 활성/비활성을 최신 상태로 유지한다.
+    if (this.selectedTarget) {
+      const npc = this.selectedTarget;
+      if (npc.dead) {
+        this.selectedTarget = null;
+        hud.hideInteractionMenu();
+      } else {
+        const dist = npc.pos.distanceTo(this.ship.pos);
+        const inRange = dist < npc.interactionRange;
+        const npcPower = getNpcCombatPower(npc).score;
+        const myPower = getCombatPower(getShip(state.currentShipId), state.shipParts).score;
+        hud.updateInteractionMenu({
+          inRange,
+          hpRatio: npc.maxHp > 0 ? npc.hp / npc.maxHp : 1,
+          combatText: `내 전투력 ${myPower} · 상대 전투력 ${npcPower}`,
+        });
+      }
     }
 
     this.fireTimer = Math.max(0, this.fireTimer - delta);
@@ -601,6 +700,10 @@ export class SeaScene {
         this.addShake(0.45);
       } else {
         this.addShake(0.18);
+        // 아직 교전 중이 아니던 배(순찰 중 저격당한 해적, 혹은 플레이어가 먼저 도발한
+        // 평화로운 상대)라도 포격을 맞으면 곧바로 맞대응(engage)한다 — 쏘기만 하고
+        // 아무 반응이 없는 어색함을 막는다.
+        target.ref.engage();
         target.ref.takeDamage(22);
         if (target.ref.dead) {
           this._victoryToast(`${target.ref.def.name}을(를) 격침했습니다!`, target.ref.owner);
@@ -698,7 +801,7 @@ export class SeaScene {
       this._minimapBounds(),
       { x: this.ship.pos.x, z: this.ship.pos.y, heading: this.ship.heading },
       this.minimapCities,
-      this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.def.hostile })),
+      this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.isHostile() })),
       this.wind.towardDirection
     );
     // 승선(백병전 돌입) 안내가 떠 있는 동안은 정박 안내가 매 프레임 덮어쓰지 않도록 양보한다.
@@ -742,6 +845,7 @@ export class SeaScene {
     for (const m of this.cityMarkers) this._drawCityMarker(ctx, w, h, m);
     this._drawWake(ctx, w, h);
     if (this.waypoint) this._drawWaypoint(ctx, w, h);
+    if (this.selectedTarget && !this.selectedTarget.dead) this._drawInteractionRange(ctx, w, h, this.selectedTarget);
 
     // 화면 앞뒤 순서(페인터 알고리즘) — (x+z, 즉 스크린 y에 대응하는 값)가 클수록 앞쪽이라
     // 나중에 그려야 뒤 물체를 가리지 않는다.
@@ -822,6 +926,30 @@ export class SeaScene {
       ctx.closePath();
       ctx.fill();
     }
+  }
+
+  // 클릭으로 지정한 함선의 상호작용 범위 — 45% 불투명도 원(해적은 붉은빛, 그 외는 푸른빛)으로
+  // 시각화한다. 등각 투영이라 원이 화면에선 타원으로 보이므로, 항구 반경 표시와 같은 방식으로
+  // 월드 원을 여러 점으로 샘플링해 화면 좌표 다각형으로 그린다.
+  _drawInteractionRange(ctx, w, h, npc) {
+    const SEGMENTS = 40;
+    const hostile = npc.isHostile();
+    ctx.save();
+    ctx.fillStyle = hostile ? 'rgba(224,80,63,0.45)' : 'rgba(90,170,220,0.45)';
+    ctx.strokeStyle = hostile ? 'rgba(224,80,63,0.85)' : 'rgba(120,195,235,0.85)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let i = 0; i <= SEGMENTS; i++) {
+      const a = (i / SEGMENTS) * Math.PI * 2;
+      const wx = npc.pos.x + Math.sin(a) * npc.interactionRange;
+      const wz = npc.pos.y + Math.cos(a) * npc.interactionRange;
+      const p = this.iso.toScreen(this.camera, wx, wz, w, h);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
   }
 
   _drawCityMarker(ctx, w, h, marker) {

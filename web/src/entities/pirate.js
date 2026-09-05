@@ -1,11 +1,21 @@
 // NPC 선박 AI — 순찰/추격/공격 상태기계. 렌더링(스프라이트 회전/위치)은 seaScene의 그리기
 // 패스가 이 인스턴스의 pos/heading을 읽어서 처리한다(엔티티 자체는 화면에 아무것도 그리지 않음).
+//
+// 전투 진입 방식(개편): 예전엔 플레이어가 AGGRO_RANGE 안에 들어오기만 하면 자동으로
+// chase→attack까지 이어져 강제로 포격전이 시작됐다. 지금은 chase(추격 연출)까지는 거리로
+// 자동 전이하지만, 실제 attack(발포) 상태로 넘어가는 건 this.engaged가 true일 때뿐이다.
+// engaged는 두 가지 경로로만 켜진다 — (1) 플레이어가 seaScene의 상호작용 메뉴에서 "전투"를
+// 선택, (2) 해적(hostile) 한정으로 플레이어가 interactionRange 안에 있을 때 일정 확률로
+// 발동하는 강습(ambush). 상인/모험가/명사 함대(hostile=false)는 플레이어가 직접 "전투"를
+// 선택해 도발하지 않는 한 절대 먼저 싸움을 걸지 않는다.
 import { Vec2 } from '../util/math2d.js';
 import { getShip } from '../data/ships.js';
 
 const AGGRO_RANGE = 90;
 const ATTACK_RANGE = 55;
 const STANDOFF = 40;
+const AMBUSH_CHECK_INTERVAL = 4.0; // 강습 확률 판정 주기(초) — 해적 한정
+const AMBUSH_CHANCE = 0.18; // 판정마다 강습이 실제로 발동할 확률
 
 export class NpcShip {
   constructor(def) {
@@ -32,6 +42,21 @@ export class NpcShip {
     this.sinkT = 0; // 격침 후 가라앉는 연출용 타이머
     this.owner = def.id;
     this.radius = 6 * ((getShip(def.shipId)?.class === 'xlarge' && 1.8) || 1);
+    // 상호작용 범위 — 이 거리 안에 들어와야 플레이어가 클릭으로 전투/대화/종료를 선택할 수
+    // 있다(seaScene이 원으로 시각화). 큰 배일수록 범위도 조금 더 넓다.
+    this.interactionRange = Math.round(55 + this.radius * 3);
+    this.engaged = false; // 플레이어의 "전투" 선택 또는 강습으로만 true가 되며, attack 상태 진입 조건이다
+    this.hostileOverride = false; // 원래 평화로운 NPC를 플레이어가 먼저 공격했을 때만 true
+    this.ambushTimer = AMBUSH_CHECK_INTERVAL * (0.5 + Math.random());
+  }
+
+  isHostile() { return this.def.hostile || this.hostileOverride; }
+
+  // 플레이어가 상호작용 메뉴에서 "전투"를 선택했을 때 seaScene이 호출한다.
+  engage() {
+    if (!this.def.hostile) this.hostileOverride = true;
+    this.engaged = true;
+    if (this.state === 'patrol') this.state = 'chase';
   }
 
   _randomPatrolPoint() {
@@ -56,11 +81,33 @@ export class NpcShip {
 
     const toPlayer = new Vec2(playerPos2.x - this.pos.x, playerPos2.y - this.pos.y);
     const distToPlayer = toPlayer.length();
+    const hostile = this.isHostile();
 
-    if (this.def.hostile) {
+    // 해적(원래 hostile)만 강습 대상이다 — 상호작용 범위 안에 플레이어가 있으면 주기적으로
+    // 확률 판정을 굴려, 성공하면 플레이어의 선택과 무관하게 즉시 engaged가 된다.
+    if (this.def.hostile && !this.engaged && this.state !== 'sunk') {
+      if (distToPlayer < this.interactionRange) {
+        this.ambushTimer -= delta;
+        if (this.ambushTimer <= 0) {
+          this.ambushTimer = AMBUSH_CHECK_INTERVAL;
+          if (Math.random() < AMBUSH_CHANCE) {
+            this.engaged = true;
+            this.ambushTriggered = true; // seaScene이 한 번 읽고 나서 꺼준다(토스트/배너 표시용)
+            if (this.state === 'patrol') this.state = 'chase';
+          }
+        }
+      } else {
+        this.ambushTimer = AMBUSH_CHECK_INTERVAL * (0.6 + Math.random() * 0.4);
+      }
+    }
+
+    if (hostile) {
       if (this.state === 'patrol' && distToPlayer < AGGRO_RANGE) this.state = 'chase';
-      if (this.state === 'chase' && distToPlayer < ATTACK_RANGE) this.state = 'attack';
-      if (this.state !== 'patrol' && distToPlayer > AGGRO_RANGE * 1.6) this.state = 'patrol';
+      if (this.engaged && this.state === 'chase' && distToPlayer < ATTACK_RANGE) this.state = 'attack';
+      if (this.state !== 'patrol' && distToPlayer > AGGRO_RANGE * 1.6) {
+        this.state = 'patrol';
+        this.engaged = false;
+      }
     }
 
     let targetDir;

@@ -13,7 +13,8 @@ export const SEA_NPC_SHIPS = [
   { id: 'adventurer_1', type: 'adventurer', name: '모험가 페드로의 배', pos: project(-8.50, 36.11), shipId: 'pinta',
     hp: 350, hostile: false, patrolRadius: 20 },
   { id: 'notable_1', type: 'notable', name: '항해가 바스코 다가마 함대', pos: project(-12.28, 41.00), shipId: 'nau_santa_maria',
-    hp: 900, hostile: false, patrolRadius: 0 },
+    hp: 900, hostile: false, patrolRadius: 0,
+    dialogue: '"인도로 가는 항로를 처음 연 게 나일세." 노련한 함대 사령관이 자부심 가득한 얼굴로 인사를 건넵니다.' },
 
   // ── 북해/영불해협 (런던·암스테르담·함부르크 인근) ──
   { id: 'merchant_london', type: 'merchant', name: '차 무역선 빅토리아호', pos: project(1.86, 51.82), shipId: 'tea_clipper',
@@ -27,7 +28,8 @@ export const SEA_NPC_SHIPS = [
 
   // ── 지중해(마르세유·제노바·베네치아 인근) ──
   { id: 'notable_soleil', type: 'notable', name: '프랑스 왕실함대 솔레유 루아얄호', pos: project(5.32, 41.36), shipId: 'soleil_royal',
-    hp: 2900, hostile: false, patrolRadius: 0 },
+    hp: 2900, hostile: false, patrolRadius: 0,
+    dialogue: '태양왕의 문장을 두른 거함이 위풍당당하게 예포를 울립니다. 함부로 대적할 상대는 아닌 듯합니다.' },
   { id: 'adventurer_genova', type: 'adventurer', name: '항해가 콜롬보의 배', pos: project(7.66, 42.69), shipId: 'caravel_pinnace',
     hp: 450, hostile: false, patrolRadius: 30 },
   { id: 'merchant_venezia', type: 'merchant', name: '베네치아 갈레온 레온도로호', pos: project(13.32, 43.44), shipId: 'galeone_veneziano',

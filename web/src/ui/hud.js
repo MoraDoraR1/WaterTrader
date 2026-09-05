@@ -94,6 +94,28 @@ export const hud = {
   showCombatBanner(v) { $('combat-banner').classList.toggle('hidden', !v); },
   setCombatBannerText(text) { $('combat-banner').textContent = text; },
   showTargetHp(v) { $('target-hp-box').classList.toggle('hidden', !v); },
+
+  // 클릭으로 지정한 함선의 상호작용 메뉴(전투/대화/종료) — 처음 열 때 버튼 핸들러를 등록하고,
+  // 이후엔 updateInteractionMenu()로 매 프레임 범위 내 여부·전투력 텍스트만 갱신한다.
+  showInteractionMenu({ name, hostile }, { onCombat, onTalk, onCancel }) {
+    $('interaction-menu').classList.remove('hidden');
+    const nameEl = $('im-name');
+    nameEl.textContent = name;
+    nameEl.classList.toggle('hostile', !!hostile);
+    $('im-combat').onclick = onCombat;
+    $('im-talk').onclick = onTalk;
+    $('im-cancel').onclick = onCancel;
+  },
+  updateInteractionMenu({ inRange, hpRatio, combatText }) {
+    const el = $('interaction-menu');
+    if (el.classList.contains('hidden')) return;
+    $('im-sub').textContent = `${combatText} · 상대 내구 ${Math.round((hpRatio ?? 1) * 100)}%`;
+    $('im-combat').disabled = !inRange;
+    $('im-talk').disabled = !inRange;
+    $('im-cancel').disabled = !inRange;
+    $('im-hint').classList.toggle('hidden', inRange);
+  },
+  hideInteractionMenu() { $('interaction-menu').classList.add('hidden'); },
   showInteractPrompt(v, text = '') {
     const el = $('interact-prompt');
     el.classList.toggle('hidden', !v);

@@ -3,7 +3,7 @@
 // 비전투 스탯은 제외). T키 함선정보 패널에 "현재 실제 장착 기준"으로 표시된다 —
 // 완전무장 가정치가 아니라 대포를 하나도 안 달았으면 화력 점수가 그대로 0이다.
 import { SHIPS } from '../data/ships.js';
-import { getEffectiveShipDef, armorDamageMul, SHIP_PARTS, partsBySlot } from '../data/shipParts.js';
+import { getEffectiveShipDef, armorDamageMul, getBaseArmor, SHIP_PARTS, partsBySlot } from '../data/shipParts.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 
 const FIRE_COOLDOWN = 1.5;
@@ -71,6 +71,24 @@ export function getCombatPower(shipDef, shipParts) {
   const eff = getEffectiveShipDef(shipDef, shipParts);
   const dps = rangedDps(shipDef, eff);
   const ehp = effectiveHp(shipDef, eff);
+  const combatants = getCombatants(shipDef);
+  const score = WEIGHTS.dps * (dps / MAX_REFS.maxDps)
+    + WEIGHTS.ehp * (ehp / MAX_REFS.maxEhp)
+    + WEIGHTS.melee * (combatants / MAX_REFS.maxCombatants);
+  return { dps, ehp, combatants, score: Math.round(score * 10) / 10 };
+}
+
+// NPC선은 shipParts(장착 부품)가 없다 — 대포는 shipDef.cannons 그대로, 방어는 기본 장갑
+// (getBaseArmor)뿐이고, 내구도는 스폰 데이터의 maxHp(배 원본 hp를 덮어쓰는 경우가 많다)를
+// 쓴다. 실제 발포 간격·데미지도 pirate.js가 계산해둔 값(npc.fireInterval/shotDmg) 그대로
+// 반영해, 여기 표시되는 점수가 실전 위협도와 어긋나지 않게 한다. 점수 척도(MAX_REFS)는
+// 플레이어용 getCombatPower와 동일해 서로 직접 비교할 수 있다.
+export function getNpcCombatPower(npc) {
+  const shipDef = npc?.shipDef;
+  if (!shipDef) return { dps: 0, ehp: 0, combatants: 0, score: 0 };
+  const dps = npc.fireInterval > 0 ? (npc.shotDmg || 0) / npc.fireInterval : 0;
+  const dmgMul = armorDamageMul(getBaseArmor(shipDef));
+  const ehp = (npc.maxHp ?? shipDef.hp ?? 0) / dmgMul;
   const combatants = getCombatants(shipDef);
   const score = WEIGHTS.dps * (dps / MAX_REFS.maxDps)
     + WEIGHTS.ehp * (ehp / MAX_REFS.maxEhp)
