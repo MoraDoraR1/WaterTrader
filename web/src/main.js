@@ -20,7 +20,7 @@ import { openCrew } from './ui/crewPanel.js';
 import { repairAtSea, getCannonSlotCount } from './systems/shipyard.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
-import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent } from './systems/market.js';
+import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood } from './systems/market.js';
 import { SUPPLY_DEFS } from './systems/supplies.js';
 import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUnlock.js';
 import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
@@ -427,5 +427,5 @@ window.__debug = {
   get citySceneObj() { return citySceneObj; },
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
-  checkDiscoveryEvents, openQuestBoard,
+  checkDiscoveryEvents, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
 };
