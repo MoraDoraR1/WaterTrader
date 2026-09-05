@@ -8,6 +8,7 @@
 //   물리적으로 배를 못 몬다"는 의미다. 입항해서 급여를 낼 수 있으면 일부 재충원된다.
 import { state, notify } from '../state.js';
 import { getShip } from '../data/ships.js';
+import { sumSkillEffect, mulSkillEffect } from '../data/shipSkills.js';
 
 const WAGE_PER_CREW = 0.5; // 승무원 1명당 입항 시 지급하는 급여
 const MORALE_DOCK_RECOVER = 15;
@@ -23,9 +24,11 @@ const CREW_RECOVER_PCT_ON_DOCK = 0.2; // 급여를 낼 수 있으면 입항할 �
 const HIRE_COST_PER_CREW = 4; // 항구에서 선원을 새로 고용할 때 1명당 드는 두캇(항해 전 정원을 채우는 용도)
 export const RESCUE_CREW_MIN = 1, RESCUE_CREW_MAX = 3; // 전투 승리(격침·나포 불문) 시 적선에서 구조/편입되는 인원 — 항구 없이도 바다에서 소폭 보충 가능
 
-// 지금 배의 정원 대비 최소 필요 선원 수(반올림 올림 — 최소 1명).
+// 지금 배의 정원 대비 최소 필요 선원 수(반올림 올림 — 최소 1명). 소수 정예 승조 스킬은
+// 이 비율 자체를 낮춰(minCrewRatioAdd는 음수) 더 적은 인원으로도 출항할 수 있게 해준다.
 export function getMinCrew(shipDef) {
-  return Math.max(1, Math.ceil((shipDef?.crew || 20) * MIN_CREW_RATIO));
+  const ratio = Math.max(0.1, sumSkillEffect(shipDef, 'minCrewRatioAdd', MIN_CREW_RATIO));
+  return Math.max(1, Math.ceil((shipDef?.crew || 20) * ratio));
 }
 
 export function getCurrentMinCrew() {
@@ -52,6 +55,10 @@ export function payWagesOnDock() {
     state.crewMorale = Math.min(100, morale + MORALE_DOCK_RECOVER);
     const recruited = Math.max(0, Math.round(crew * CREW_RECOVER_PCT_ON_DOCK));
     state.crewCount = Math.min(crew, (state.crewCount ?? crew) + recruited);
+    // 순환 보급 스킬 — 급여를 낼 수 있었을 때만(=정상적으로 입항 처리됐을 때만) 식량·식수를
+    // 추가로 얹어준다.
+    const supplyBonus = sumSkillEffect(shipDef, 'dockSupplyBonusAdd', 0);
+    if (supplyBonus > 0) { state.food += supplyBonus; state.water += supplyBonus; }
     paid = true;
   } else {
     state.gold = 0;
@@ -76,7 +83,8 @@ export function loseCrewFromSupplies(starvedDays, dehydratedDays) {
   if (starvedDays <= 0 && dehydratedDays <= 0) return;
   const shipDef = getShip(state.currentShipId);
   const maxCrew = shipDef?.crew || 20;
-  const loss = Math.round(maxCrew * (starvedDays * CREW_LOSS_PCT_STARVED + dehydratedDays * CREW_LOSS_PCT_DEHYDRATED));
+  const loss = Math.round(maxCrew * (starvedDays * CREW_LOSS_PCT_STARVED + dehydratedDays * CREW_LOSS_PCT_DEHYDRATED)
+    * mulSkillEffect(shipDef, 'starvationLossMul', 1));
   if (loss <= 0) return;
   state.crewCount = Math.max(0, (state.crewCount ?? maxCrew) - loss);
   notify({ crewChanged: true });
@@ -113,7 +121,8 @@ export function rescueCrewFromVictory() {
   const maxCrew = shipDef?.crew || 20;
   const before = state.crewCount ?? maxCrew;
   if (before >= maxCrew) return 0;
-  const gain = Math.floor(Math.random() * (RESCUE_CREW_MAX - RESCUE_CREW_MIN + 1)) + RESCUE_CREW_MIN;
+  const gain = Math.floor(Math.random() * (RESCUE_CREW_MAX - RESCUE_CREW_MIN + 1)) + RESCUE_CREW_MIN
+    + sumSkillEffect(shipDef, 'rescueBonusAdd', 0);
   state.crewCount = Math.min(maxCrew, before + gain);
   const actual = state.crewCount - before;
   if (actual > 0) notify({ crewChanged: true });

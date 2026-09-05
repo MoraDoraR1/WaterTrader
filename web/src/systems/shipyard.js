@@ -3,6 +3,7 @@
 import { state, notify, initShipHp } from '../state.js';
 import { getShip } from '../data/ships.js';
 import { getPart, getEffectiveShipDef } from '../data/shipParts.js';
+import { mulSkillEffect } from '../data/shipSkills.js';
 import { SUPPLY_DEFS } from './supplies.js';
 
 const TRADE_IN_RATE = 0.4; // 기존 배를 넘길 때 받는 가치 비율(조선비 대비)
@@ -74,7 +75,9 @@ export function sellFleetShip(uid) {
 export function repairCost() {
   const shipDef = getCurrentEffectiveShipDef();
   const missing = Math.max(0, shipDef.hp - state.shipHp);
-  return Math.round((missing / shipDef.hp) * shipDef.price * REPAIR_RATE);
+  const base = (missing / shipDef.hp) * shipDef.price * REPAIR_RATE;
+  // 유능한 목수 스킬 — 항구 조선소 수리비 자체를 깎아준다(바다 위 응급수리와는 별개).
+  return Math.round(base * mulSkillEffect(getShip(state.currentShipId), 'repairCostMul', 1));
 }
 
 // 항구 조선소 수리 — 골드만 들고(자재는 안 씀), 대신 항상 전액(100%)까지 완전히 고친다.
@@ -110,7 +113,9 @@ export function repairAtSea() {
   if (missing <= 0) return { ok: false, reason: '이미 완전한 상태입니다.' };
   if (state.materials < 1) return { ok: false, reason: '자재가 부족합니다 (항구 관리인에게 보급받으세요).' };
   const shipyardRatePerHp = (shipDef.price * REPAIR_RATE) / shipDef.hp; // 조선소라면 이 배 1hp를 고치는 데 드는 골드
-  const valuePerMaterial = SUPPLY_DEFS.materials.price * SEA_REPAIR_VALUE_MUL;
+  // 자재 활용술 스킬 — 자재 1개가 갖는 수리 "가치" 자체를 키워, 같은 자재량으로 더 많이 고친다.
+  const valuePerMaterial = SUPPLY_DEFS.materials.price * SEA_REPAIR_VALUE_MUL
+    * mulSkillEffect(getShip(state.currentShipId), 'seaRepairEfficiencyMul', 1);
   const materialsNeeded = Math.max(1, Math.ceil((missing * shipyardRatePerHp) / valuePerMaterial));
   const materialsUsed = Math.min(state.materials, materialsNeeded);
   const healed = Math.min(missing, Math.floor((materialsUsed * valuePerMaterial) / shipyardRatePerHp));

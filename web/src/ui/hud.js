@@ -196,6 +196,15 @@ export const hud = {
           <span class="si-part-name">${p.name || '미장착'}</span>
         </div>`).join('');
     }
+    if (info.skills) {
+      $('ship-info-skills-list').innerHTML = info.skills.length
+        ? info.skills.map((s) => `
+          <div class="si-skill-row">
+            <span class="si-skill-name">${s.name}</span>
+            <span class="si-skill-desc">${s.desc}</span>
+          </div>`).join('')
+        : '<div class="si-part-row si-part-empty"><span class="si-part-name">없음</span></div>';
+    }
   },
 
   showShipyard(v) { $('shipyard-panel').classList.toggle('hidden', !v); },

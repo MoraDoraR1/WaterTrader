@@ -4,6 +4,7 @@ import { state } from '../state.js';
 import { hud } from './hud.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_NAMES, getShip } from '../data/ships.js';
 import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef } from '../data/shipParts.js';
+import { getShipSkills } from '../data/shipSkills.js';
 import {
   buyShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
   setActiveShip, sellFleetShip, FLEET_CAP, getCannonSlotCount, getCannonSlotMaxTier,
@@ -60,10 +61,11 @@ function renderBuyTab() {
     const role = SHIP_ROLES[s.role];
     const cls = SHIP_CLASSES[s.class];
     const disabled = isOwned || fleetFull;
+    const skillNames = getShipSkills(s).map((sk) => sk.name).join(', ');
     return {
       name: s.name,
       badge: role.label, badgeColor: role.color,
-      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed}`,
+      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 스킬: ${skillNames}`,
       priceLabel: isOwned ? '보유 중' : `${fmt(s.price)} 두캇`,
       actionLabel: isOwned ? '보유 중' : fleetFull ? '함대 만석' : '구매',
       disabled,

@@ -7,6 +7,7 @@
 // 갈아타면 함께 이전되지 않는다).
 // effects: cannonsAdd(화력) / hpAdd(최대 내구도) / cargoAdd(적재량) — 가산.
 //          speedMul / turnRateMul — 현재 장착 중인 배의 기준 스탯에 곱연산으로 적용.
+import { mulSkillEffect } from './shipSkills.js';
 
 export const PART_SLOTS = {
   cannon: { label: '대포', icon: '⚔' },
@@ -101,13 +102,15 @@ export function getEquippedParts(shipParts) {
 // 장착 부품 효과를 반영한 "실효 스탯" 선박 정의를 만든다(원본 SHIPS 데이터는 건드리지 않는다).
 // speedMul은 표시용 speed 값과 별개로도 그대로 실어둔다 — ShipController가 실제 이동 속도
 // 계산에 직접 곱해서 쓰기 때문(표시값 반영만으로는 게임플레이에 반영되지 않는다).
+// 탐험 스킬(순풍 항해술/민첩한 조타)의 speedMul·turnRateMul도 부품과 같은 배율 자리에
+// 곱해 넣는다 — 부품과 달리 장착/해제가 없는 배 고유 특성이라 shipDef.skills에서 직접 읽는다.
 export function getEffectiveShipDef(shipDef, shipParts) {
   if (!shipDef) return shipDef;
   const parts = getEquippedParts(shipParts);
   // cannons는 shipDef.cannons(슬롯을 전부 채웠을 때의 "최대치")와 무관하게 실제로 장착한
   // 대포 부품의 합으로만 정해진다 — 슬롯이 비어 있으면 0(대포 없이는 포격 자체가 불가능).
   let hp = shipDef.hp, cargo = shipDef.cargo, cannons = 0;
-  let speedMul = 1, turnRateMul = 1;
+  let speedMul = mulSkillEffect(shipDef, 'speedMul', 1), turnRateMul = mulSkillEffect(shipDef, 'turnRateMul', 1);
   for (const p of parts) {
     const e = p.effects;
     if (e.hpAdd) hp += e.hpAdd;

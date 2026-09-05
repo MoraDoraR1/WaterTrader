@@ -4,6 +4,8 @@ import { state, notify } from '../state.js';
 import { QUESTS, getQuest } from '../data/quests.js';
 import { getCity } from '../data/cities.js';
 import { getGood } from '../data/goods.js';
+import { getShip } from '../data/ships.js';
+import { mulSkillEffect } from '../data/shipSkills.js';
 
 export function getQuestStatus(id) {
   return state.quests[id] || 'available';
@@ -24,7 +26,10 @@ export function getActiveQuests() {
 
 export function addReputation(country, amount) {
   if (!country) return;
-  state.reputation = { ...state.reputation, [country]: (state.reputation[country] || 0) + amount };
+  // 항구 친화 스킬은 평판이 오르는 속도 자체를 키운다(음수 방향/페널티에는 손대지 않는다 —
+  // "친화력"이 나쁜 평판까지 완화해주는 건 어색하다).
+  const gain = amount > 0 ? amount * mulSkillEffect(getShip(state.currentShipId), 'reputationGainMul', 1) : amount;
+  state.reputation = { ...state.reputation, [country]: (state.reputation[country] || 0) + gain };
 }
 
 export function getReputation(country) {

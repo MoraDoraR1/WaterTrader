@@ -3,6 +3,7 @@
 import { state, notify } from '../state.js';
 import { getShip } from '../data/ships.js';
 import { getEffectiveShipDef } from '../data/shipParts.js';
+import { mulSkillEffect } from '../data/shipSkills.js';
 import { CITY_MARKET, getGood } from '../data/goods.js';
 import { getCity } from '../data/cities.js';
 import { getReputation } from './quests.js';
@@ -284,11 +285,15 @@ export function getMarketRows(cityId) {
     const held = state.inventory.find((it) => it.id === goodId);
     const dynMul = decayedSupplyMul(cityId, goodId) * cycleMul(cityId, goodId) * eventMul;
     const effBuy = Math.max(1, Math.round(price.buy * (1 - f * REP_PRICE_EFFECT_MAX) * dynMul));
-    const premium = distancePremium(cityId, goodId);
+    const myShipDef = getShip(state.currentShipId);
+    // 장거리 물류/신항로 개척 스킬은 거리 프리미엄 자체를 키워준다(멀리서 실어온 물건일수록
+    // 이 배로는 더 큰 웃돈이 붙는다). 능숙한 흥정 스킬은 매도가 전체에 고정 배율로 붙는다.
+    const premium = distancePremium(cityId, goodId) * mulSkillEffect(myShipDef, 'distancePremiumMul', 1);
     // 거리 프리미엄도 dynMul(공급/수요 압박 + 항해일자 사이클)에 함께 물린다 — 예전엔 프리미엄을
     // dynMul 적용 "이후"에 더해서 아무리 대량으로 팔아 시세를 짓눌러도 프리미엄만큼은 절대 안
     // 깎이는 구멍이 있었다(실측: 팔면 팔수록 마진률이 바닥을 쳐야 하는데 79→67로 15%밖에 안 빠짐).
-    const effSell = Math.max(1, Math.round((price.sell + premium) * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul));
+    const effSell = Math.max(1, Math.round((price.sell + premium) * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul
+      * mulSkillEffect(myShipDef, 'sellPriceMul', 1)));
     // pct: "원래 설정된 가격(도시별 매입/매도가)을 100%로 뒀을 때 지금이 몇 %인지" — 주식
     // 현재가/기준가처럼, 이 도시 이 품목의 시세가 그동안 얼마나 오르내렸는지 그대로 보여준다.
     const pct = Math.round(dynMul * 100);

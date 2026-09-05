@@ -12,6 +12,7 @@ import { Wind } from '../entities/wind.js';
 import { WeatherSystem, RainEffect } from '../entities/weather.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { getEffectiveShipDef } from '../data/shipParts.js';
+import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project } from '../data/coastline.js';
 import { seaRegionAt } from '../data/seaRegions.js';
@@ -267,12 +268,17 @@ export class SeaScene {
       this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
       const speedRatio = Math.min(1, Math.abs(this.ship.curSpeed) / this.ship.maxSpeedMs);
       const dmg = Math.round(COLLISION_DAMAGE_BASE + COLLISION_DAMAGE_SPEED_BONUS * speedRatio);
-      state.shipHp = Math.max(0, state.shipHp - dmg);
+      // 충각 강화(상대에게 더 큰 피해)와 철갑 방어(내가 받는 피해 감소)는 서로 다른 쪽에
+      // 적용되는 별개의 배율이라, 같은 충돌이라도 자신이 받는 피해와 상대가 받는 피해를
+      // 따로 계산한다.
+      const selfDmg = Math.round(dmg * mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1));
+      const npcDmg = Math.round(dmg * mulSkillEffect(this.ship.shipDef, 'ramDamageMul', 1));
+      state.shipHp = Math.max(0, state.shipHp - selfDmg);
       loseMoraleFromCombat();
-      npc.takeDamage(dmg);
+      npc.takeDamage(npcDmg);
       audio.playHit();
       this.addShake(0.6);
-      hud.toast(`충돌! 양측 선체가 ${dmg} 손상되었습니다.`);
+      hud.toast(`충돌! 선체가 ${selfDmg} 손상되고, 상대는 ${npcDmg} 손상되었습니다.`);
       if (npc.dead) {
         this._victoryToast(`${npc.def.name}을(를) 격침했습니다!`, npc.owner);
         continue;
@@ -310,7 +316,8 @@ export class SeaScene {
     // 상대가 이미 포격으로 많이 상해 있었다면(내구도 비율 낮음) 백병전에서도 약하게 싸운다 —
     // 승선 전에 함포로 충분히 두들겨 놓는 게 실제로 이득이 되도록 한다.
     const npcHpRatio = npc.maxHp > 0 ? npc.hp / npc.maxHp : 1;
-    const playerPower = playerCrew * (0.75 + Math.random() * 0.5) * getMoralePowerMul() * clickBonus;
+    const playerPower = playerCrew * (0.75 + Math.random() * 0.5) * getMoralePowerMul() * clickBonus
+      * mulSkillEffect(this.ship.shipDef, 'meleePowerMul', 1);
     const npcPower = npcCrew * (0.75 + Math.random() * 0.5) * (0.5 + 0.5 * npcHpRatio);
     this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
 
@@ -332,7 +339,7 @@ export class SeaScene {
       }
     } else {
       audio.playLoseStinger();
-      const dmg = Math.round(50 + Math.random() * 70);
+      const dmg = Math.round((50 + Math.random() * 70) * mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1));
       state.shipHp = Math.max(0, state.shipHp - dmg);
       loseMoraleFromCombat();
       hud.toast(`백병전에서 밀렸습니다! 선체 내구도 ${dmg} 손실.`);
@@ -345,6 +352,8 @@ export class SeaScene {
   _victoryToast(baseMsg, npcOwner) {
     const rescued = rescueCrewFromVictory();
     const bounty = checkBountyKill(npcOwner);
+    const moraleAdd = sumSkillEffect(this.ship.shipDef, 'victoryMoraleAdd', 0);
+    if (moraleAdd > 0) state.crewMorale = Math.min(100, (state.crewMorale ?? 100) + moraleAdd);
     const bits = [baseMsg];
     if (rescued > 0) bits.push(`표류하던 선원 ${rescued}명을 구조해 편입했습니다.`);
     if (bounty) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
@@ -364,8 +373,11 @@ export class SeaScene {
     this.pendingCapture = null;
     hud.hideDialogue();
     audio.playCaptureFanfare();
-    const capturedHp = Math.round(npc.shipDef.hp * (0.3 + Math.random() * 0.25));
-    const capturedCrew = Math.round((npc.shipDef.crew || 20) * (0.3 + Math.random() * 0.25));
+    // 숙련된 나포조 스킬은 나포한 배가 처음부터 갖고 시작하는 내구도·선원 비율의
+    // 최소/최대 구간을 통째로 +10%p 끌어올린다.
+    const captureBonus = sumSkillEffect(this.ship.shipDef, 'captureBonusAdd', 0);
+    const capturedHp = Math.round(npc.shipDef.hp * (0.3 + captureBonus + Math.random() * 0.25));
+    const capturedCrew = Math.round((npc.shipDef.crew || 20) * (0.3 + captureBonus + Math.random() * 0.25));
     state.fleet = [...state.fleet, { uid: `fleet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, shipId: npc.shipDef.id, shipHp: capturedHp, crewCount: capturedCrew, shipParts: {}, name: null }];
     state.captureCount = (state.captureCount || 0) + 1;
     npc.takeDamage(npc.maxHp);
@@ -398,11 +410,13 @@ export class SeaScene {
     if (this.ship.shipDef.cannons <= 0) { hud.toast('이 배는 대포가 없습니다 — 충돌이나 백병전으로 싸우세요.'); return; }
     if (state.cannonballs <= 0) { hud.toast('포탄이 없습니다! 항구 관리인에게 보급받으세요.'); return; }
     const target = this._nearestHostile();
-    if (!target || target.pos.distanceTo(this.ship.pos) > 60) {
+    // 정밀 포격 스킬은 이 사거리 판정 자체를 늘려준다 — 더 멀리서부터 교전을 걸 수 있다.
+    const range = 60 * mulSkillEffect(this.ship.shipDef, 'rangeMul', 1);
+    if (!target || target.pos.distanceTo(this.ship.pos) > range) {
       hud.toast('사거리 내에 목표가 없습니다.');
       return;
     }
-    this.fireTimer = FIRE_COOLDOWN;
+    this.fireTimer = FIRE_COOLDOWN * mulSkillEffect(this.ship.shipDef, 'fireCooldownMul', 1);
     state.cannonballs -= 1; // 일제 사격(현측 포열 전체) 1회 = 포탄 1개 소모(게임적 추상화)
     audio.playCannon();
     const toTarget = { x: target.pos.x - this.ship.pos.x, y: target.pos.y - this.ship.pos.y };
@@ -410,7 +424,8 @@ export class SeaScene {
     const dir = { x: toTarget.x / len, y: toTarget.y / len };
     // 상한을 9->36으로 올려(140문급 최상급 함선까지 대포 수가 그대로 발사 수에 반영되게)
     // 화력 투자가 낭비되지 않게 했다(실측: 예전엔 38문 이상인 7척이 전부 9발로 동일했음).
-    const shotCount = clamp(Math.round(this.ship.shipDef.cannons / 4), 2, 36);
+    // 다연장 포열 스킬의 +3은 이 상한 위에 얹힌다(상한도 함께 40으로 살짝 올려 낭비 방지).
+    const shotCount = clamp(Math.round(this.ship.shipDef.cannons / 4) + sumSkillEffect(this.ship.shipDef, 'shotCountAdd', 0), 2, 40);
     // 다만 산탄 퍼짐 각도까지 발사수에 비례해 키우면(예전 방식) 36발일 때 부채꼴이 180도 가까이
     // 벌어져 옆·뒤로도 쏘는 꼴이 된다 — 총 퍼짐각에 상한(약 40도)을 둬서, 발사수가 많을수록
     // 그 안에 더 촘촘히 들어차도록만 한다.
@@ -434,9 +449,12 @@ export class SeaScene {
     const daysPassed = day - state.suppliesLastDay;
     state.suppliesLastDay = day;
     let starvedDays = 0, dehydratedDays = 0;
+    // 절약 항해 스킬은 일일 소모량 자체를 줄여준다(소모가 아예 없던 걸로 치지 않고, 매일
+    // 실제로 덜 쓰는 것이라 장기 항해일수록 누적 이득이 커진다).
+    const consumeMul = mulSkillEffect(this.ship.shipDef, 'supplyConsumeMul', 1);
     for (let i = 0; i < daysPassed; i++) {
-      state.food = Math.max(0, state.food - FOOD_PER_DAY);
-      state.water = Math.max(0, state.water - WATER_PER_DAY);
+      state.food = Math.max(0, state.food - FOOD_PER_DAY * consumeMul);
+      state.water = Math.max(0, state.water - WATER_PER_DAY * consumeMul);
       if (state.food <= 0) starvedDays++;
       if (state.water <= 0) dehydratedDays++;
     }
@@ -461,6 +479,13 @@ export class SeaScene {
     this._processSupplies();
     this.wind.stormActive = this.weather.stormActive;
     this.wind.update(delta);
+
+    // 응급 수리반 스킬 — 전투 중일 때만, 완전 침몰(0)까지 떨어진 상태가 아니면 초당 소량
+    // 자동 회복한다(최대 내구도를 넘지는 않는다).
+    if (state.inCombat && state.shipHp > 0) {
+      const regen = sumSkillEffect(this.ship.shipDef, 'combatHpRegenPerSec', 0);
+      if (regen > 0) state.shipHp = Math.min(this.ship.shipDef.hp, state.shipHp + regen * delta);
+    }
 
     if (this.meleeState) {
       if (consumeJustPressed('Space')) this._meleeMash();
@@ -503,6 +528,13 @@ export class SeaScene {
         this.ship.turnInput = manualTurn;
       }
       this.ship.crewSpeedMul = getCrewSpeedMul();
+      // 전투 중에만 발동하는 스킬(신속 기동/돌격 항해술)과, 폭풍 중에만 발동하는 스킬
+      // (침수 대비/폭풍 항해술)은 상태가 매 순간 바뀌므로 매 프레임 다시 계산해준다.
+      this.ship.combatSpeedMul = state.inCombat ? mulSkillEffect(this.ship.shipDef, 'combatSpeedMul', 1) : 1;
+      this.ship.combatTurnMul = state.inCombat ? mulSkillEffect(this.ship.shipDef, 'combatTurnMul', 1) : 1;
+      this.ship.windSensitivity = this.weather.stormActive
+        ? this.ship.baseWindSensitivity * mulSkillEffect(this.ship.shipDef, 'stormWindResistMul', 1)
+        : this.ship.baseWindSensitivity;
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
     }
     this._updateWake(delta);
@@ -533,7 +565,8 @@ export class SeaScene {
     this.cannonPool.update(delta, targets, (target) => {
       audio.playHit();
       if (target.ref === 'player') {
-        state.shipHp = Math.max(0, state.shipHp - 18);
+        const hitDmg = Math.round(18 * mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1));
+        state.shipHp = Math.max(0, state.shipHp - hitDmg);
         loseMoraleFromCombat();
         this.addShake(0.45);
       } else {
@@ -640,7 +673,8 @@ export class SeaScene {
     );
     // 승선(백병전 돌입) 안내가 떠 있는 동안은 정박 안내가 매 프레임 덮어쓰지 않도록 양보한다.
     if (!this._boardable) {
-      if (nearest.marker && nearest.dist < DOCK_RANGE) {
+      const dockRange = DOCK_RANGE + sumSkillEffect(this.ship.shipDef, 'dockRangeAdd', 0);
+      if (nearest.marker && nearest.dist < dockRange) {
         const city = CITIES.find((c) => c.id === nearest.marker.cityId);
         hud.showInteractPrompt(true, `[좌클릭] ${city.name}에 정박하기`);
         this.hoveredCity = city;

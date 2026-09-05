@@ -225,6 +225,11 @@
   .si-part-row .si-part-label { width: 64px; color: #9fb8c9; flex-shrink: 0; }
   .si-part-row .si-part-name { color: #f0e6d2; }
   .si-part-row.si-part-empty .si-part-name { color: #6b7c86; }
+  #ship-info-skills { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(200,180,120,0.25); }
+  #ship-info-skills .si-parts-title { font-size: 0.68rem; color: #8fa6b4; letter-spacing: 0.1rem; margin-bottom: 0.5rem; }
+  .si-skill-row { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.76rem; padding: 3px 0; }
+  .si-skill-row .si-skill-name { color: #f3d98a; flex-shrink: 0; }
+  .si-skill-row .si-skill-desc { color: #9fb8c9; }
   #ship-info-panel .close-hint { text-align: center; margin-top: 0.7rem; font-size: 0.72rem; color: #8fa6b4; }
 
   /* ---- 조선소 ---- */
@@ -408,6 +413,7 @@
       <div class="si-stat-row"><span class="si-label">선회</span><div class="bar-track"><div class="bar-fill si-turn" id="si-bar-turn"></div></div><span class="si-val" id="si-val-turn"></span></div>
       <div class="si-stat-row"><span class="si-label">속도</span><div class="bar-track"><div class="bar-fill si-speed" id="si-bar-speed"></div></div><span class="si-val" id="si-val-speed"></span></div>
       <div id="ship-info-parts"><div class="si-parts-title">장착 부품</div><div id="ship-info-parts-list"></div></div>
+      <div id="ship-info-skills"><div class="si-parts-title">보유 스킬</div><div id="ship-info-skills-list"></div></div>
       <div class="close-hint">T 또는 ESC 로 닫기</div>
     </div>
   </div>

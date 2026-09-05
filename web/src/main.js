@@ -10,6 +10,7 @@ import { LAND_POLYGONS, project } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
 import { getEffectiveShipDef, PART_SLOTS, getPart } from './data/shipParts.js';
+import { getShipSkills } from './data/shipSkills.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 import { payWagesOnDock, getCurrentMinCrew } from './systems/crew.js';
@@ -254,6 +255,7 @@ function openShipInfo() {
       const part = state.shipParts[slot] ? getPart(state.shipParts[slot]) : null;
       return { icon: meta.icon, label: meta.label, name: part?.name };
     }),
+    skills: getShipSkills(getShip(state.currentShipId)).map((s) => ({ name: s.name, desc: s.desc })),
   });
   hud.showShipInfo(true);
 }
