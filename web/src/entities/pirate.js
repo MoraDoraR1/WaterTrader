@@ -26,6 +26,29 @@ const TIER_MULS = {
   boss: { hp: 2.2, dmg: 1.7, fireIntervalMul: 0.7, rangeMul: 1.35 },
 };
 
+// 해역별 난이도(레벨 디자인) — spawn 데이터의 region 필드(1~4, 생략 시 1)로 정해진다.
+// 상인 유저의 전형적인 항로를 그대로 따른다: 유럽 근해(초심자) → 대서양 횡단·카리브해
+// (담배 무역) → 인도양·동남아 향신료 항로(캘리컷 이후 육두구 등) → 극동·남만 무역로(가장
+// 위험한 원거리 항로). tier(잡몹/엘리트/보스)가 "이 배가 어떤 성격의 위협인가"를 정한다면,
+// region은 "이 바다 자체가 얼마나 위험한가"를 곱연산으로 얹는다 — 같은 잡몹이라도 극동
+// 해역에서는 유럽 엘리트급 위협이 된다. 보스는 이미 개별적으로 밸런스를 맞춘 유일 개체라
+// region 배율을 중복 적용하지 않는다(무한정 부풀어 오르는 것을 막는다).
+const REGION_MULS = {
+  1: { hp: 1, dmg: 1, fireIntervalMul: 1 }, // 유럽 근해 — 초심자 해역
+  2: { hp: 1.25, dmg: 1.15, fireIntervalMul: 0.95 }, // 대서양 횡단·카리브해(담배 무역로)
+  3: { hp: 1.6, dmg: 1.35, fireIntervalMul: 0.88 }, // 인도양·동남아 향신료 항로
+  4: { hp: 2.0, dmg: 1.6, fireIntervalMul: 0.8 }, // 극동·남만 무역로 — 가장 위험한 원거리 항로
+};
+// 보스는 위 REGION_MULS를 그대로 곱하면 체력이 통제 불능으로 부풀어 오르므로(예: 잡몹
+// 기준 2배가 보스의 2.2배 위에 또 곱해짐) 훨씬 완만한 전용 배율을 쓴다 — 그래도 "카리브해
+// 보스(2구간)보다 극동 보스(4구간)가 더 강해야 한다"는 최종 관문으로서의 위계는 지킨다.
+const BOSS_REGION_MULS = {
+  1: { hp: 1, dmg: 1 },
+  2: { hp: 1, dmg: 1 },
+  3: { hp: 1.1, dmg: 1.08 },
+  4: { hp: 1.22, dmg: 1.15 },
+};
+
 export class NpcShip {
   constructor(def) {
     this.def = def;
@@ -34,8 +57,13 @@ export class NpcShip {
     this.pos = this.spawn.clone();
     this.heading = Math.random() * Math.PI * 2;
     this.tier = def.tier || 'grunt';
+    this.region = def.region || 1;
     const tm = TIER_MULS[this.tier] || TIER_MULS.grunt;
-    this.hp = Math.round(def.hp * tm.hp);
+    const isBoss = this.tier === 'boss';
+    const rm = isBoss
+      ? { ...(BOSS_REGION_MULS[this.region] || BOSS_REGION_MULS[1]), fireIntervalMul: 1 }
+      : (REGION_MULS[this.region] || REGION_MULS[1]);
+    this.hp = Math.round(def.hp * tm.hp * rm.hp);
     this.maxHp = this.hp;
     this.state = 'patrol';
     this.patrolTarget = this._randomPatrolPoint();
@@ -44,11 +72,12 @@ export class NpcShip {
     // 더 위협적이어야 실제로 "어떤 배를 상대하는지"가 전투 난이도에 의미를 갖는다.
     // cannons=5(소형) 기준 dps~5.2, cannons=18(카라벨라 데 아르마다급) 기준 dps~9.9 정도로
     // 완만하게 벌어지도록 잡았다 — 플레이어 화력 스케일(수십~수백 dps)에 비하면 여전히
-    // NPC는 전반적으로 약하지만, 배 종류별 차이는 확실히 드러난다. 위협 등급(tier)은 이
-    // 기준선 위에 곱연산으로 얹혀, 엘리트/보스는 같은 배라도 눈에 띄게 더 위협적이다.
+    // NPC는 전반적으로 약하지만, 배 종류별 차이는 확실히 드러난다. 위협 등급(tier)과 해역
+    // 난이도(region)는 이 기준선 위에 곱연산으로 함께 얹혀, 같은 잡몹이라도 먼바다로 갈수록
+    // 눈에 띄게 더 위협적이다.
     const cannons = this.shipDef?.cannons || 0;
-    this.fireInterval = Math.max(1.6, Math.min(3.0, 3.0 - cannons * 0.06)) * tm.fireIntervalMul;
-    this.shotDmg = Math.round(Math.min(30, Math.round(12 + cannons * 0.4)) * tm.dmg);
+    this.fireInterval = Math.max(1.6, Math.min(3.0, 3.0 - cannons * 0.06)) * tm.fireIntervalMul * rm.fireIntervalMul;
+    this.shotDmg = Math.round(Math.min(30, Math.round(12 + cannons * 0.4)) * tm.dmg * rm.dmg);
     this.fireTimer = this.fireInterval * Math.random();
     this.dead = false;
     this.sinkT = 0; // 격침 후 가라앉는 연출용 타이머
