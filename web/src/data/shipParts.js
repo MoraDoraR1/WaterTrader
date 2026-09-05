@@ -5,8 +5,9 @@
 // (systems/shipyard.js의 getCannonSlotCount 참고 — 소형선 1개부터 초대형선 6개까지).
 // 교체 시 기존 부품은 환불 없이 해제된다(장착 부품은 실물 선체에 딸린 개장으로 취급 — 배를
 // 갈아타면 함께 이전되지 않는다).
-// effects: cannonsAdd(화력) / hpAdd(최대 내구도) / cargoAdd(적재량) — 가산.
-//          speedMul / turnRateMul — 현재 장착 중인 배의 기준 스탯에 곱연산으로 적용.
+// effects: cannonsAdd(화력) / hpAdd(최대 내구도) / cargoAdd(적재량) / armorAdd(방어력,
+//          피격 데미지 감소율 %) — 가산. speedMul / turnRateMul — 현재 장착 중인 배의
+//          기준 스탯에 곱연산으로 적용.
 import { mulSkillEffect } from './shipSkills.js';
 
 export const PART_SLOTS = {
@@ -35,16 +36,16 @@ export const SHIP_PARTS = [
     effects: { cannonsAdd: 32, turnRateMul: 0.90 },
     desc: '함대전의 승패를 가르는 최중량 포열. 압도적 화력이지만 선회가 눈에 띄게 둔해진다.' },
 
-  // ── 장갑판: 내구도를 크게 올리되 무게로 기동성을 깎는다 ──
+  // ── 장갑판: 맞는 피해 자체를 % 로 깎아주는 진짜 방어력. 무게로 기동성을 깎는다 ──
   { id: 'armor_oak_planking', slot: 'armor', tier: 1, name: '참나무 보강판', price: 700,
-    effects: { hpAdd: 150, speedMul: 0.97 },
-    desc: '선체 외판에 참나무를 덧댄다. 가벼운 감속만으로 내구도를 보강한다.' },
+    effects: { armorAdd: 8, speedMul: 0.97 },
+    desc: '선체 외판에 참나무를 덧댄다. 가벼운 감속만으로 피격 데미지를 8% 줄인다.' },
   { id: 'armor_iron_strap', slot: 'armor', tier: 2, name: '철대 보강 장갑', price: 1800,
-    effects: { hpAdd: 400, speedMul: 0.94, turnRateMul: 0.95 },
-    desc: '철제 띠로 선체를 둘러 보강한다. 확실히 튼튼해지지만 무거워진다.' },
+    effects: { armorAdd: 18, speedMul: 0.94, turnRateMul: 0.95 },
+    desc: '철제 띠로 선체를 둘러 보강한다. 피격 데미지를 18% 줄이지만 무거워진다.' },
   { id: 'armor_composite_plate', slot: 'armor', tier: 3, name: '복합 장갑판', price: 4200,
-    effects: { hpAdd: 900, speedMul: 0.90, turnRateMul: 0.90 },
-    desc: '목재와 철판을 겹친 최고급 장갑. 내구도는 최상급이나 상당히 둔중해진다.' },
+    effects: { armorAdd: 32, speedMul: 0.90, turnRateMul: 0.90 },
+    desc: '목재와 철판을 겹친 최고급 장갑. 피격 데미지를 32% 줄이지만 상당히 둔중해진다.' },
 
   // ── 돛: 속도를 끌어올리되 클수록 선회에 살짝 불리하다 ──
   { id: 'sail_reinforced_canvas', slot: 'sail', tier: 1, name: '보강 범포', price: 600,
@@ -109,21 +110,30 @@ export function getEffectiveShipDef(shipDef, shipParts) {
   const parts = getEquippedParts(shipParts);
   // cannons는 shipDef.cannons(슬롯을 전부 채웠을 때의 "최대치")와 무관하게 실제로 장착한
   // 대포 부품의 합으로만 정해진다 — 슬롯이 비어 있으면 0(대포 없이는 포격 자체가 불가능).
-  let hp = shipDef.hp, cargo = shipDef.cargo, cannons = 0;
+  let hp = shipDef.hp, cargo = shipDef.cargo, cannons = 0, armor = 0;
   let speedMul = mulSkillEffect(shipDef, 'speedMul', 1), turnRateMul = mulSkillEffect(shipDef, 'turnRateMul', 1);
   for (const p of parts) {
     const e = p.effects;
     if (e.hpAdd) hp += e.hpAdd;
     if (e.cargoAdd) cargo += e.cargoAdd;
     if (e.cannonsAdd) cannons += e.cannonsAdd;
+    if (e.armorAdd) armor += e.armorAdd;
     if (e.speedMul) speedMul *= e.speedMul;
     if (e.turnRateMul) turnRateMul *= e.turnRateMul;
   }
   return {
     ...shipDef,
-    hp, cargo, cannons,
+    hp, cargo, cannons, armor,
     speed: Math.round(shipDef.speed * speedMul * 10) / 10,
     turnRate: Math.round(shipDef.turnRate * turnRateMul * 10) / 10,
     speedMul,
   };
+}
+
+// 방어력(armor, 0~100 사이의 "피격 데미지 감소율 %") 값을 실제 피해 배율로 바꾼다 —
+// 전투 스킬(철갑 방어 등)의 incomingDamageMul과 곱연산으로 함께 적용되는 별개의 감산원이다.
+// 70% 넘게 깎이지는 않도록 하한을 둬(장갑판 하나로는 도달 불가능한 수치라 실질적으로는
+// 안전장치에 가깝다) 무적에 가까운 조합이 나오지 않게 한다.
+export function armorDamageMul(armor) {
+  return Math.max(0.3, 1 - (armor || 0) / 100);
 }

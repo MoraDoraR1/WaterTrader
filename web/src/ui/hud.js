@@ -179,6 +179,7 @@ export const hud = {
     $('ship-info-desc').textContent = info.desc;
     const rows = [
       ['si-bar-hp', 'si-val-hp', info.hpRatio, info.hpVal],
+      ['si-bar-armor', 'si-val-armor', info.armorRatio, info.armorVal],
       ['si-bar-cargo', 'si-val-cargo', info.cargoRatio, info.cargoVal],
       ['si-bar-cannons', 'si-val-cannons', info.cannonsRatio, info.cannonsVal],
       ['si-bar-turn', 'si-val-turn', info.turnRatio, info.turnVal],

@@ -92,6 +92,7 @@
   .bar-track { width: 100%; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 4px; }
   .bar-fill { height: 100%; background: linear-gradient(90deg, #5fbf5f, #a9d96b); transition: width .25s; }
   .bar-fill.enemy { background: linear-gradient(90deg, #c94d3f, #e07a5f); }
+  .bar-fill.si-armor { background: linear-gradient(90deg, #4a6a7a, #8fb8c9); }
   .bar-fill.si-cargo { background: linear-gradient(90deg, #b98a3a, #e6c15a); }
   .bar-fill.si-cannon { background: linear-gradient(90deg, #b03f2f, #e0645a); }
   .bar-fill.si-turn { background: linear-gradient(90deg, #2f7fb0, #6fc8e0); }
@@ -408,6 +409,7 @@
       <div id="ship-info-sub">-</div>
       <p id="ship-info-desc"></p>
       <div class="si-stat-row"><span class="si-label">내구도</span><div class="bar-track"><div class="bar-fill" id="si-bar-hp"></div></div><span class="si-val" id="si-val-hp"></span></div>
+      <div class="si-stat-row"><span class="si-label">방어력</span><div class="bar-track"><div class="bar-fill si-armor" id="si-bar-armor"></div></div><span class="si-val" id="si-val-armor"></span></div>
       <div class="si-stat-row"><span class="si-label">적재량</span><div class="bar-track"><div class="bar-fill si-cargo" id="si-bar-cargo"></div></div><span class="si-val" id="si-val-cargo"></span></div>
       <div class="si-stat-row"><span class="si-label">화력</span><div class="bar-track"><div class="bar-fill si-cannon" id="si-bar-cannons"></div></div><span class="si-val" id="si-val-cannons"></span></div>
       <div class="si-stat-row"><span class="si-label">선회</span><div class="bar-track"><div class="bar-fill si-turn" id="si-bar-turn"></div></div><span class="si-val" id="si-val-turn"></span></div>

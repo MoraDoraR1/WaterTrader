@@ -17,6 +17,7 @@ function effectSummary(part) {
   const bits = [];
   if (e.cannonsAdd) bits.push(`화력 +${e.cannonsAdd}`);
   if (e.hpAdd) bits.push(`내구 +${e.hpAdd}`);
+  if (e.armorAdd) bits.push(`방어 +${e.armorAdd}%`);
   if (e.cargoAdd) bits.push(`적재 +${e.cargoAdd}t`);
   if (e.speedMul) bits.push(`속도 ${e.speedMul > 1 ? '+' : ''}${Math.round((e.speedMul - 1) * 100)}%`);
   if (e.turnRateMul) bits.push(`선회 ${e.turnRateMul > 1 ? '+' : ''}${Math.round((e.turnRateMul - 1) * 100)}%`);

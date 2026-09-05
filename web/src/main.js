@@ -9,7 +9,7 @@ import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, project } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
-import { getEffectiveShipDef, PART_SLOTS, getPart } from './data/shipParts.js';
+import { getEffectiveShipDef, PART_SLOTS, getPart, partsBySlot } from './data/shipParts.js';
 import { getShipSkills } from './data/shipSkills.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
@@ -227,6 +227,9 @@ const STAT_MAX = {
   cannons: Math.max(...SHIPS.map((s) => s.cannons)),
   turnRate: Math.max(...SHIPS.map((s) => s.turnRate)),
   speed: Math.max(...SHIPS.map((s) => s.speed)),
+  // armor는 배 자체가 아니라 장갑판 부품에서만 나오는 스탯이라, 달성 가능한 최댓값은
+  // 최고 등급 장갑판 하나의 armorAdd 값이다(슬롯이 1개뿐이라 여러 개를 겹쳐 낄 수 없다).
+  armor: Math.max(...partsBySlot('armor').map((p) => p.effects.armorAdd || 0)),
 };
 
 function openShipInfo() {
@@ -241,6 +244,7 @@ function openShipInfo() {
     sub: `${COUNTRY_NAMES[shipDef.country] || shipDef.country} · ${cls.label} · ${shipDef.era}`,
     desc: shipDef.desc,
     hpRatio: shipDef.hp / STAT_MAX.hp, hpVal: shipDef.hp,
+    armorRatio: (shipDef.armor || 0) / STAT_MAX.armor, armorVal: `${shipDef.armor || 0}%`,
     cargoRatio: shipDef.cargo / STAT_MAX.cargo, cargoVal: `${shipDef.cargo}t`,
     cannonsRatio: shipDef.cannons / STAT_MAX.cannons, cannonsVal: `${shipDef.cannons}문`,
     turnRatio: shipDef.turnRate / STAT_MAX.turnRate, turnVal: `${shipDef.turnRate}°/s`,

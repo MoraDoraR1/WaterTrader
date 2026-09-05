@@ -11,7 +11,7 @@ import { WakeTrail } from '../entities/wake.js';
 import { Wind } from '../entities/wind.js';
 import { WeatherSystem, RainEffect } from '../entities/weather.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
-import { getEffectiveShipDef } from '../data/shipParts.js';
+import { getEffectiveShipDef, armorDamageMul } from '../data/shipParts.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
@@ -234,6 +234,12 @@ export class SeaScene {
     return false;
   }
 
+  // 자신이 받는 피해에 곱하는 총 배율 — 장갑판 부품(armor 스탯)과 전투 스킬(철갑 방어 등)의
+  // incomingDamageMul은 서로 다른 감산원이라 곱연산으로 함께 적용한다.
+  _incomingDamageMul() {
+    return mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1) * armorDamageMul(this.ship.shipDef.armor);
+  }
+
   _isInHarborClearance(x, z) {
     for (const c of CITIES) {
       const dx = x - c.pos[0], dz = z - c.pos[1];
@@ -291,7 +297,7 @@ export class SeaScene {
       // 충각 강화(상대에게 더 큰 피해)와 철갑 방어(내가 받는 피해 감소)는 서로 다른 쪽에
       // 적용되는 별개의 배율이라, 같은 충돌이라도 자신이 받는 피해와 상대가 받는 피해를
       // 따로 계산한다.
-      const selfDmg = Math.round(dmg * mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1));
+      const selfDmg = Math.round(dmg * this._incomingDamageMul());
       const npcDmg = Math.round(dmg * mulSkillEffect(this.ship.shipDef, 'ramDamageMul', 1));
       state.shipHp = Math.max(0, state.shipHp - selfDmg);
       loseMoraleFromCombat();
@@ -359,7 +365,7 @@ export class SeaScene {
       }
     } else {
       audio.playLoseStinger();
-      const dmg = Math.round((50 + Math.random() * 70) * mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1));
+      const dmg = Math.round((50 + Math.random() * 70) * this._incomingDamageMul());
       state.shipHp = Math.max(0, state.shipHp - dmg);
       loseMoraleFromCombat();
       hud.toast(`백병전에서 밀렸습니다! 선체 내구도 ${dmg} 손실.`);
@@ -585,7 +591,7 @@ export class SeaScene {
     this.cannonPool.update(delta, targets, (target) => {
       audio.playHit();
       if (target.ref === 'player') {
-        const hitDmg = Math.round(18 * mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1));
+        const hitDmg = Math.round(18 * this._incomingDamageMul());
         state.shipHp = Math.max(0, state.shipHp - hitDmg);
         loseMoraleFromCombat();
         this.addShake(0.45);
