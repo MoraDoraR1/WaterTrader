@@ -177,6 +177,7 @@ export const hud = {
     roleBadge.style.background = info.roleColor;
     $('ship-info-sub').textContent = info.sub;
     $('ship-info-desc').textContent = info.desc;
+    $('si-val-combat').textContent = info.combatVal;
     const rows = [
       ['si-bar-hp', 'si-val-hp', info.hpRatio, info.hpVal],
       ['si-bar-armor', 'si-val-armor', info.armorRatio, info.armorVal],

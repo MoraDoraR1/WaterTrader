@@ -12,6 +12,7 @@ import { Wind } from '../entities/wind.js';
 import { WeatherSystem, RainEffect } from '../entities/weather.js';
 import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { getEffectiveShipDef, armorDamageMul } from '../data/shipParts.js';
+import { getCombatants } from '../systems/combatPower.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
@@ -336,8 +337,10 @@ export class SeaScene {
     hud.setCombatBannerText('⚔ 전투 상황');
     if (npc.dead) return;
 
-    const playerCrew = state.crewCount ?? this.ship.shipDef.crew ?? 20;
-    const npcCrew = npc.shipDef.crew || 20;
+    // 갤리형(노잡이 다수)은 정원 그대로가 아니라 실제 싸울 수 있는 전투원 수만 반영한다
+    // (combatPower.js getCombatants — 표시되는 전투력 스탯과 실전 결과를 일치시킨다).
+    const playerCrew = getCombatants(this.ship.shipDef, state.crewCount ?? this.ship.shipDef.crew ?? 20);
+    const npcCrew = getCombatants(npc.shipDef, npc.shipDef.crew || 20);
     const clickBonus = 1 + Math.min(MELEE_CLICK_CAP, clicks || 0) * MELEE_CLICK_POWER;
     // 상대가 이미 포격으로 많이 상해 있었다면(내구도 비율 낮음) 백병전에서도 약하게 싸운다 —
     // 승선 전에 함포로 충분히 두들겨 놓는 게 실제로 이득이 되도록 한다.

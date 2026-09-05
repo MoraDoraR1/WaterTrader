@@ -10,6 +10,7 @@ import { LAND_POLYGONS, project } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
 import { getEffectiveShipDef, PART_SLOTS, getPart, partsBySlot, getBaseArmor } from './data/shipParts.js';
+import { getCombatPower } from './systems/combatPower.js';
 import { getShipSkills } from './data/shipSkills.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
@@ -233,16 +234,21 @@ const STAT_MAX = {
 };
 
 function openShipInfo() {
-  const shipDef = getEffectiveShipDef(getShip(state.currentShipId), state.shipParts);
+  const baseShipDef = getShip(state.currentShipId);
+  const shipDef = getEffectiveShipDef(baseShipDef, state.shipParts);
   if (!shipDef) return;
   const role = SHIP_ROLES[shipDef.role] || SHIP_ROLES.trade;
   const cls = SHIP_CLASSES[shipDef.class];
+  // 전투력은 "지금 실제 장착된 부품" 기준으로만 계산한다(완전무장 가정치 아님) — 대포를
+  // 하나도 안 달았으면 화력 점수가 그대로 0으로 나온다.
+  const combatPower = getCombatPower(baseShipDef, state.shipParts);
   hud.renderShipInfo({
     name: shipDef.name,
     roleLabel: role.label,
     roleColor: role.color,
     sub: `${COUNTRY_NAMES[shipDef.country] || shipDef.country} · ${cls.label} · ${shipDef.era}`,
     desc: shipDef.desc,
+    combatVal: combatPower.score,
     hpRatio: shipDef.hp / STAT_MAX.hp, hpVal: shipDef.hp,
     armorRatio: (shipDef.armor || 0) / STAT_MAX.armor, armorVal: `${shipDef.armor || 0}%`,
     cargoRatio: shipDef.cargo / STAT_MAX.cargo, cargoVal: `${shipDef.cargo}t`,

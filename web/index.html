@@ -215,6 +215,12 @@
   #ship-info-name { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; }
   #ship-info-sub { font-size: 0.74rem; color: #9fb8c9; margin-top: 3px; letter-spacing: 0.03rem; }
   #ship-info-desc { font-size: 0.82rem; color: #dce8ef; line-height: 1.5; margin: 0.8rem 0 1.1rem; }
+  #ship-info-combat-power { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem;
+    padding: 0.55rem 0.8rem; margin-bottom: 0.9rem; border-radius: 6px;
+    background: linear-gradient(90deg, rgba(224,100,90,0.18), rgba(224,100,90,0.05));
+    border: 1px solid rgba(224,100,90,0.4); }
+  #ship-info-combat-power .si-combat-label { font-size: 0.74rem; color: #e0645a; letter-spacing: 0.08rem; }
+  #ship-info-combat-power .si-combat-val { font-size: 1.3rem; font-weight: 700; color: #f3d98a; font-variant-numeric: tabular-nums; }
   .si-stat-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
   .si-label { width: 42px; font-size: 0.72rem; color: #cfe0ea; flex-shrink: 0; }
   .si-stat-row .bar-track { flex: 1; height: 8px; margin-top: 0; }
@@ -408,6 +414,10 @@
       </div>
       <div id="ship-info-sub">-</div>
       <p id="ship-info-desc"></p>
+      <div id="ship-info-combat-power">
+        <span class="si-combat-label">전투력</span>
+        <span class="si-combat-val" id="si-val-combat">0</span>
+      </div>
       <div class="si-stat-row"><span class="si-label">내구도</span><div class="bar-track"><div class="bar-fill" id="si-bar-hp"></div></div><span class="si-val" id="si-val-hp"></span></div>
       <div class="si-stat-row"><span class="si-label">방어력</span><div class="bar-track"><div class="bar-fill si-armor" id="si-bar-armor"></div></div><span class="si-val" id="si-val-armor"></span></div>
       <div class="si-stat-row"><span class="si-label">적재량</span><div class="bar-track"><div class="bar-fill si-cargo" id="si-bar-cargo"></div></div><span class="si-val" id="si-val-cargo"></span></div>
