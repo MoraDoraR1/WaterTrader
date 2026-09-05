@@ -6,9 +6,14 @@
 // 상인 유저가 실제로 밟는 항로를 그대로 난이도 곡선으로 삼는다 — entities/pirate.js의
 // REGION_MULS가 이 region 값(1~4)을 hp·화력·발사속도 배율로 바꾼다.
 //   region 1: 유럽 근해(리스본·북해·지중해·발트해) — 초심자 해역, 배율 없음.
-//   region 2: 대서양 횡단·카리브해 — 담배 무역으로 처음 건너가는 원양. 첫 보스(크라켄) 배치.
-//   region 3: 인도양·동남아 향신료 항로 — 캘리컷 이후 육두구 등 향신료 무역권.
-//   region 4: 극동·남만 무역로 — 중국·일본 항로, 가장 위험한 원거리 해역. 두 번째 보스(정씨 해적) 배치.
+//   region 2: 대서양 횡단·카리브해 — 담배 무역으로 처음 건너가는 원양. 첫 보스(흑수염) 배치.
+//   region 3: 인도양·동남아 향신료 항로 — 캘리컷 이후 육두구 등 향신료 무역권. 두 번째 보스(헨리 에브리) 배치.
+//   region 4: 극동·남만 무역로 — 중국·일본 항로, 가장 위험한 원거리 해역. 세 번째 보스(정씨 해적) 배치.
+//
+// ---- 보스/엘리트는 전부 실존했던 유명 해적을 소재로 한다 ----
+// (판옥선·거북선처럼 각국 정규 수군이 정의롭게 쓴 배와는 별개로, 여기 이름들은 실제
+// 해적·사략선 선장들이다 — 흑수염(에드워드 티치)/헨리 에브리/정이수(보스), 클라우스
+// 슈퇴르테베커/캘리코 잭/라 뷔즈(올리비에 르바쇠르)/장바오자이(엘리트).)
 import { project } from './coastline.js';
 
 export const SEA_NPC_SHIPS = [
@@ -35,6 +40,10 @@ export const SEA_NPC_SHIPS = [
     hp: 600, hostile: false, patrolRadius: 40 },
   { id: 'pirate_baltic', type: 'pirate', name: '발트해 해적선', pos: project(15.5, 55.0), shipId: 'pirate_galliot',
     hp: 300, hostile: true, patrolRadius: 30, tier: 'grunt', region: 1 },
+  // 클라우스 슈퇴르테베커 — 14세기 발트해·북해를 주름잡은 "빅투알리엔 형제단"의 실존
+  // 해적 두목. 함부르크에서 처형된 뒤에도 참수된 목이 대열 앞을 걸어갔다는 전설로 남았다.
+  { id: 'pirate_elite_stortebeker', type: 'pirate', name: '클라우스 슈퇴르테베커의 해적선', pos: project(10.5, 57.0), shipId: 'pirate_brigantine',
+    hp: 580, hostile: true, patrolRadius: 35, tier: 'elite', region: 1 },
 
   // ── [region 1: 유럽 근해] 지중해(마르세유·제노바·베네치아·바르바리 인근) ──
   { id: 'notable_soleil', type: 'notable', name: '프랑스 왕실함대 솔레유 루아얄호', pos: project(5.32, 41.36), shipId: 'soleil_royal',
@@ -52,14 +61,19 @@ export const SEA_NPC_SHIPS = [
     hp: 550, hostile: true, patrolRadius: 35, tier: 'elite', region: 1 },
 
   // ── [region 2: 대서양 횡단·카리브해 — 담배 무역로] ──
-  // 유럽을 벗어나 처음 마주하는 원양. 잡몹 두 척 + 항로 한복판을 지키는 첫 보스(크라켄).
+  // 유럽을 벗어나 처음 마주하는 원양. 잡몹 두 척 + 엘리트(캘리코 잭) + 항로 한복판을
+  // 지키는 첫 보스(흑수염, 에드워드 티치의 실존 기함 "앤 여왕의 복수호").
   { id: 'pirate_caribbean', type: 'pirate', name: '해적선 카리브의 유령호', pos: project(-75.87, 21.0), shipId: 'baltimore_schooner',
     hp: 480, hostile: true, patrolRadius: 40, tier: 'grunt', region: 2 },
   { id: 'merchant_havana', type: 'merchant', name: '은 함대 산타클라라호', pos: project(-79.5, 19.0), shipId: 'fluyt',
     hp: 800, hostile: false, patrolRadius: 40 },
   { id: 'pirate_caribbean_2', type: 'pirate', name: '해적선 죽음의 산호호', pos: project(-78.5, 20.0), shipId: 'pirate_sloop',
     hp: 320, hostile: true, patrolRadius: 40, tier: 'grunt', region: 2 },
-  { id: 'pirate_boss_kraken', type: 'pirate', name: '[보스] 해적 기함 크라켄의 이빨호', pos: project(-27.0, 36.0), shipId: 'pirate_flagship_kraken',
+  // 존 "캘리코 잭" 랙엄 — 앤 보니·메리 리드와 함께 활동한 실존 해적. 그의 배 "윌리엄호"는
+  // 작고 빠른 슬루프였지만, 선장의 악명은 대형선 못지않았다.
+  { id: 'pirate_elite_calicojack', type: 'pirate', name: '캘리코 잭의 윌리엄호', pos: project(-76.5, 22.0), shipId: 'pirate_sloop',
+    hp: 650, hostile: true, patrolRadius: 35, tier: 'elite', region: 2 },
+  { id: 'pirate_boss_blackbeard', type: 'pirate', name: '[보스] 흑수염의 앤 여왕의 복수호', pos: project(-27.0, 36.0), shipId: 'pirate_flagship_blackbeard',
     hp: 2400, hostile: true, patrolRadius: 25, tier: 'boss', region: 2 },
 
   // ── [region 3: 인도양·동남아 향신료 항로] 캘리컷 이후 육두구 등 향신료 무역권 ──
@@ -77,6 +91,14 @@ export const SEA_NPC_SHIPS = [
     hp: 480, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
   { id: 'pirate_indian_ocean', type: 'pirate', name: '해적선 계절풍의 습격자호', pos: project(101.0, 3.5), shipId: 'pirate_frigate',
     hp: 560, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
+  // 올리비에 르바쇠르(라 뷔즈, "매") — 마다가스카르를 근거지로 무굴 보물선 나포에도
+  // 가담한 실존 인도양 해적. 처형 직전 관중에게 던졌다는 미해독 보물 암호문으로 유명하다.
+  { id: 'pirate_elite_labuse', type: 'pirate', name: '라 뷔즈의 해적선', pos: project(47.5, -18.0), shipId: 'pirate_frigate',
+    hp: 520, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
+  // 헨리 에브리("롱 벤") — 1695년 무굴 제국의 보물선 간즈이사와이호를 나포해 사상 최대급
+  // 해적질을 해낸 실존 해적. 이후 끝내 붙잡히지 않고 종적을 감춰 "해적왕"으로 불렸다.
+  { id: 'pirate_boss_every', type: 'pirate', name: '[보스] 헨리 에브리의 팬시호', pos: project(58.0, 6.0), shipId: 'pirate_flagship_every',
+    hp: 2500, hostile: true, patrolRadius: 25, tier: 'boss', region: 3 },
 
   // ── [region 4: 극동·남만 무역로] 중국·일본 항로 — 가장 위험한 원거리 해역 ──
   // 판옥선·거북선처럼 각국 정규 수군이 "정의롭게" 쓴 배는 해적에게 넘기지 않고, 그 해역
@@ -85,6 +107,10 @@ export const SEA_NPC_SHIPS = [
     hp: 420, hostile: true, patrolRadius: 30, tier: 'grunt', region: 4 },
   { id: 'pirate_china_coast', type: 'pirate', name: '해적선 흑룡호', pos: project(116.5, 22.5), shipId: 'pirate_junk',
     hp: 1000, hostile: true, patrolRadius: 35, tier: 'elite', region: 4 },
+  // 장바오자이(張保仔) — 정이수의 양자이자 최측근 지휘관이었던 실존 해적. 한때 남중국해
+  // 해적 연합의 실질적 야전 사령관으로, 훗날 청 조정에 투항해 관직까지 받았다.
+  { id: 'pirate_elite_zhangbaozai', type: 'pirate', name: '장바오자이의 해적선', pos: project(114.3, 22.2), shipId: 'pirate_junk',
+    hp: 900, hostile: true, patrolRadius: 35, tier: 'elite', region: 4 },
   { id: 'pirate_boss_zheng', type: 'pirate', name: '[보스] 정씨 해적 선단 기함', pos: project(114.0, 21.5), shipId: 'pirate_junk_flagship',
     hp: 2600, hostile: true, patrolRadius: 25, tier: 'boss', region: 4 },
 ];

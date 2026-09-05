@@ -93,6 +93,7 @@ export const SHIP_TYPES = {
   pirate_junk_flagship: { label: '해적 선단 기함', era: '1800~1810s', nations: [], sizes: ['xlarge'] },
   galliot: { label: '갤리엇', era: '1650~1800s', nations: [], sizes: ['small'] },
   pirate_frigate: { label: '해적 프리깃', era: '1690~1720s', nations: [], sizes: ['large'] },
+  pirate_flagship_every: { label: '해적 기함', era: '1690~1700s', nations: [], sizes: ['xlarge'] },
 };
 
 export const SHIPS = [
@@ -354,9 +355,12 @@ export const SHIPS = [
   { id: 'pirate_brigantine', name: '해적 브리건틴', class: 'medium', role: 'combat', type: 'brigantine',
     country: 'PR', era: '1650~1800s', speed: 12, turnRate: 50, hp: 620, cargo: 140, cannons: 10, cannonSlotTiers: [2, 2], skills: ['rapid_reload', 'assault_speed'], crew: 55, price: 2600,
     desc: '노련한 해적 선장이 지휘하는 중형 무장선. 상선단을 통째로 노릴 만큼 위협적이다.', purchasable: false },
-  { id: 'pirate_flagship_kraken', name: '[보스] 해적 기함 크라켄의 이빨호', class: 'xlarge', role: 'combat', type: 'pirate_flagship',
-    country: 'PR', era: '1650~1800s', speed: 8, turnRate: 24, hp: 2600, cargo: 300, cannons: 78, cannonSlotTiers: [4, 4, 2, 2, 1, 1], skills: ['multi_cannon', 'rapid_reload', 'boarding_mastery', 'battle_morale'], crew: 190, price: 16000,
-    desc: '악명 높은 해적왕의 기함. 각지에 소문으로만 떠돌던 전설적인 초대형 사략선으로, 마주치면 상당한 전투력을 각오해야 한다.', purchasable: false },
+  { id: 'pirate_flagship_blackbeard', name: '[보스] 흑수염의 앤 여왕의 복수호', class: 'xlarge', role: 'combat', type: 'pirate_flagship',
+    country: 'PR', era: '1716~1718s', speed: 8, turnRate: 24, hp: 2600, cargo: 300, cannons: 78, cannonSlotTiers: [4, 4, 2, 2, 1, 1], skills: ['multi_cannon', 'rapid_reload', 'boarding_mastery', 'battle_morale'], crew: 190, price: 16000,
+    desc: '카리브해와 북미 연안을 공포에 떨게 한 실존 해적 에드워드 티치(흑수염)의 기함. 전투 중 수염에 화승 심지를 꽂아 태우고 싸웠다는 일화로 유명하다.', purchasable: false },
+  { id: 'pirate_flagship_every', name: '[보스] 헨리 에브리의 팬시호', class: 'xlarge', role: 'combat', type: 'pirate_flagship_every',
+    country: 'PR', era: '1690~1700s', speed: 9, turnRate: 22, hp: 2700, cargo: 320, cannons: 65, cannonSlotTiers: [4, 3, 2, 2, 2, 1], skills: ['multi_cannon', 'precision_fire', 'boarding_mastery', 'agile_maneuvers'], crew: 200, price: 17000,
+    desc: '1695년 무굴 제국의 보물선 간즈이사와이호를 나포해 역사상 최대급 해적질을 해낸 실존 해적 헨리 에브리의 쾌속 프리깃. 인도양을 주름잡은 뒤 끝내 붙잡히지 않고 종적을 감췄다.', purchasable: false },
   { id: 'pirate_xebec', name: '해적 제벡선', class: 'medium', role: 'combat', type: 'xebec',
     country: 'PR', era: '1650~1800s', speed: 14, turnRate: 66, hp: 480, cargo: 90, cannons: 7, cannonSlotTiers: [2, 1], skills: ['assault_speed', 'reinforced_ram'], crew: 70, price: 1900,
     desc: '지중해 바르바리 해적이 애용한 삼각돛 쾌속 제벡선. 노와 돛을 겸용해 무풍에도 빠르게 접근한다.', purchasable: false },
