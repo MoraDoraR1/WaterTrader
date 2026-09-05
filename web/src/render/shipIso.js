@@ -53,7 +53,7 @@ function fillPoly(ctx, pts, style) {
   ctx.fill();
 }
 
-export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, variant, alpha) {
+export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, variant, alpha, tier) {
   const p0 = iso.toScreen(camera, pos.x, pos.y, w, h);
   if (p0.x < -70 || p0.x > w + 70 || p0.y < -70 || p0.y > h + 70) return;
 
@@ -71,7 +71,10 @@ export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, varia
   const isHostile = variant === 'hostile';
   const mastCount = SHIP_CLASSES[shipDef.class]?.mastCount || 1;
   const roleColor = (SHIP_ROLES[shipDef.role] || SHIP_ROLES.trade).color;
-  const flagColor = isHostile ? '#221d19' : (COUNTRY_COLORS[shipDef.country] || '#999');
+  // 잡몹/엘리트/보스 위협 등급을 깃발·갑판 중심선 색으로 멀리서도 구분할 수 있게 한다 —
+  // 평시 배(상선·모험가 등)는 tier가 없으니 이 값이 null이 되어 기존 배색을 그대로 쓴다.
+  const tierColor = isHostile && tier === 'boss' ? '#8b2fc9' : isHostile && tier === 'elite' ? '#d68a1a' : null;
+  const flagColor = tierColor || (isHostile ? '#221d19' : (COUNTRY_COLORS[shipDef.country] || '#999'));
   const sailColor = isWreck ? '#8f8577' : '#e9e2cf';
   const hullBase = isWreck ? '#453b30' : '#8a5a34';
   const hostileOfs = isHostile ? -20 : 0;
@@ -118,8 +121,8 @@ export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, varia
   const bowDeck = deckPts[0];
   const sternDeck = { x: (deckPts[3].x + deckPts[4].x) / 2, y: (deckPts[3].y + deckPts[4].y) / 2 };
   if (!isWreck) {
-    ctx.strokeStyle = roleColor;
-    ctx.lineWidth = Math.max(1, 1.3 * camera.zoom);
+    ctx.strokeStyle = tierColor || roleColor;
+    ctx.lineWidth = tierColor ? Math.max(1.6, 2.1 * camera.zoom) : Math.max(1, 1.3 * camera.zoom);
     ctx.beginPath(); ctx.moveTo(bowDeck.x, bowDeck.y); ctx.lineTo(sternDeck.x, sternDeck.y); ctx.stroke();
   }
   ctx.strokeStyle = 'rgba(0,0,0,0.16)';

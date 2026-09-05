@@ -49,6 +49,15 @@ const BOSS_REGION_MULS = {
   4: { hp: 1.22, dmg: 1.15 },
 };
 
+// 보스 격침 고정 보상 — 잡몹/엘리트와 달리 보스는 현상금 의뢰가 없어도(의뢰를 안 받았어도,
+// 심지어 그 보스를 노리는 의뢰 자체가 아예 없어도) 격침 방식과 무관하게 항상 지급된다.
+// 해역이 위험할수록 보상도 커지도록 REGION_MULS와 같은 곡선을 따른다(seaScene._victoryToast
+// 에서 tier==='boss'일 때만 호출).
+const BOSS_BOUNTY_BY_REGION = { 1: 2500, 2: 3000, 3: 3600, 4: 4200 };
+export function getBossBounty(region) {
+  return BOSS_BOUNTY_BY_REGION[region] || BOSS_BOUNTY_BY_REGION[1];
+}
+
 export class NpcShip {
   constructor(def) {
     this.def = def;

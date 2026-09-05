@@ -4,7 +4,7 @@ import { cityIconSprite } from '../render/pixelSprites.js';
 import { drawShipIso } from '../render/shipIso.js';
 import { ShipController } from '../entities/shipController.js';
 import { worldSizeFor } from '../entities/shipSize.js';
-import { NpcShip } from '../entities/pirate.js';
+import { NpcShip, getBossBounty } from '../entities/pirate.js';
 import { EscortShip } from '../entities/escort.js';
 import { CannonballPool } from '../entities/cannon.js';
 import { WakeTrail } from '../entities/wake.js';
@@ -401,7 +401,7 @@ export class SeaScene {
       this.addShake(0.6);
       hud.toast(`충돌! 선체가 ${selfDmg} 손상되고, 상대는 ${npcDmg} 손상되었습니다.`);
       if (npc.dead) {
-        this._victoryToast(`${npc.def.name}을(를) 격침했습니다!`, npc.owner);
+        this._victoryToast(`${npc.def.name}을(를) 격침했습니다!`, npc);
         continue;
       }
       // 충돌 즉시 백병전으로 이어지지 않는다 — F를 눌러야 승선한다(플레이어의 선택).
@@ -473,15 +473,23 @@ export class SeaScene {
   // 전투 승리(격침/나포/충돌격침/포격격침 어디서든) 메시지들을 한 토스트로 합쳐 띄운다 —
   // hud.toast()는 큐 없이 즉시 덮어써서 따로따로 부르면 마지막 것만 남으므로, 구조 인원·
   // 의뢰 완료 문구가 묻히지 않게 항상 한 번에 합쳐서 보여준다.
-  _victoryToast(baseMsg, npcOwner) {
+  // npc(NpcShip 인스턴스 그대로)를 받는다 — 잡몹/엘리트는 현상금 의뢰가 있을 때만 보상이
+  // 붙지만, 보스는 의뢰 유무와 무관하게 격침 방식(포격/백병전 격침/나포) 상관없이 항상
+  // 고정 보상이 붙는다(entities/pirate.js의 getBossBounty, 해역이 위험할수록 커진다).
+  _victoryToast(baseMsg, npc) {
     hud.flashCombatText('승리!', 'win');
     const rescued = rescueCrewFromVictory();
-    const bounty = checkBountyKill(npcOwner);
+    const bounty = checkBountyKill(npc.owner);
     const moraleAdd = sumSkillEffect(this.ship.shipDef, 'victoryMoraleAdd', 0);
     if (moraleAdd > 0) state.crewMorale = Math.min(100, (state.crewMorale ?? 100) + moraleAdd);
     const bits = [baseMsg];
     if (rescued > 0) bits.push(`표류하던 선원 ${rescued}명을 구조해 편입했습니다.`);
     if (bounty) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
+    if (npc.tier === 'boss') {
+      const bossBounty = getBossBounty(npc.region);
+      state.gold += bossBounty;
+      bits.push(`보스 격침 포상금 +${bossBounty.toLocaleString('ko-KR')} 두캇!`);
+    }
     hud.toast(bits.join(' '));
   }
 
@@ -491,7 +499,7 @@ export class SeaScene {
     const loot = Math.round(80 + Math.random() * 160);
     state.gold += loot;
     npc.takeDamage(npc.maxHp);
-    this._victoryToast(`${prefix}백병전 승리! 적선을 격침하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`, npc.owner);
+    this._victoryToast(`${prefix}백병전 승리! 적선을 격침하고 ${loot.toLocaleString('ko-KR')} 두캇을 노획했습니다.`, npc);
   }
 
   _confirmCapture(npc) {
@@ -507,7 +515,7 @@ export class SeaScene {
     state.captureCount = (state.captureCount || 0) + 1;
     npc.takeDamage(npc.maxHp);
     notify({ fleetChanged: true });
-    this._victoryToast(`나포 성공! ${npc.def.name}을(를) 함대에 편입했습니다 (손상 상태 — 조선소에서 수리 필요).`, npc.owner);
+    this._victoryToast(`나포 성공! ${npc.def.name}을(를) 함대에 편입했습니다 (손상 상태 — 조선소에서 수리 필요).`, npc);
   }
 
   _updateWake(delta) {
@@ -742,7 +750,7 @@ export class SeaScene {
         target.ref.engage();
         target.ref.takeDamage(22);
         if (target.ref.dead) {
-          this._victoryToast(`${target.ref.def.name}을(를) 격침했습니다!`, target.ref.owner);
+          this._victoryToast(`${target.ref.def.name}을(를) 격침했습니다!`, target.ref);
         }
       }
     });
@@ -888,7 +896,7 @@ export class SeaScene {
     // 화면 앞뒤 순서(페인터 알고리즘) — (x+z, 즉 스크린 y에 대응하는 값)가 클수록 앞쪽이라
     // 나중에 그려야 뒤 물체를 가리지 않는다.
     const drawables = [
-      ...this.npcShips.map((n) => ({ z: n.pos.x + n.pos.y, draw: () => this._drawShip(ctx, w, h, n.pos, n.heading, n.shipDef, n.dead ? 'wreck' : 'hostile', n.dead ? clamp(1 - n.sinkT / 1.5, 0, 1) : 1) })),
+      ...this.npcShips.map((n) => ({ z: n.pos.x + n.pos.y, draw: () => this._drawShip(ctx, w, h, n.pos, n.heading, n.shipDef, n.dead ? 'wreck' : 'hostile', n.dead ? clamp(1 - n.sinkT / 1.5, 0, 1) : 1, n.tier) })),
       ...this.escorts.map((e) => ({ z: e.pos.x + e.pos.y, draw: () => this._drawShip(ctx, w, h, e.pos, e.heading, e.shipDef, 'friendly', 1) })),
       { z: this.ship.pos.x + this.ship.pos.y, draw: () => this._drawShip(ctx, w, h, this.ship.pos, this.ship.heading, this.ship.shipDef, 'player', 1) },
     ].sort((a, b) => a.z - b.z);
@@ -966,16 +974,23 @@ export class SeaScene {
     }
   }
 
-  // 클릭으로 지정한 함선의 상호작용 범위 — 45% 불투명도 원(해적은 붉은빛, 그 외는 푸른빛)으로
-  // 시각화한다. 등각 투영이라 원이 화면에선 타원으로 보이므로, 항구 반경 표시와 같은 방식으로
-  // 월드 원을 여러 점으로 샘플링해 화면 좌표 다각형으로 그린다.
+  // 클릭으로 지정한 함선의 상호작용 범위 — 45% 불투명도 원으로 시각화한다. 평시 배는 푸른빛,
+  // 적대적인 배는 위협 등급(잡몹=붉은빛/엘리트=주황빛/보스=보랏빛)에 따라 색을 달리해 클릭
+  // 전에도 무엇을 상대하는지 한눈에 구분되게 한다. 등각 투영이라 원이 화면에선 타원으로
+  // 보이므로, 항구 반경 표시와 같은 방식으로 월드 원을 여러 점으로 샘플링해 화면 좌표
+  // 다각형으로 그린다.
   _drawInteractionRange(ctx, w, h, npc) {
     const SEGMENTS = 40;
     const hostile = npc.isHostile();
+    const TIER_RANGE_COLORS = {
+      boss: { fill: 'rgba(139,47,201,0.45)', stroke: 'rgba(186,104,235,0.9)' },
+      elite: { fill: 'rgba(214,138,26,0.45)', stroke: 'rgba(240,175,80,0.9)' },
+    };
+    const tc = hostile && TIER_RANGE_COLORS[npc.tier];
     ctx.save();
-    ctx.fillStyle = hostile ? 'rgba(224,80,63,0.45)' : 'rgba(90,170,220,0.45)';
-    ctx.strokeStyle = hostile ? 'rgba(224,80,63,0.85)' : 'rgba(120,195,235,0.85)';
-    ctx.lineWidth = 1.4;
+    ctx.fillStyle = tc ? tc.fill : (hostile ? 'rgba(224,80,63,0.45)' : 'rgba(90,170,220,0.45)');
+    ctx.strokeStyle = tc ? tc.stroke : (hostile ? 'rgba(224,80,63,0.85)' : 'rgba(120,195,235,0.85)');
+    ctx.lineWidth = tc ? 2 : 1.4;
     ctx.beginPath();
     for (let i = 0; i <= SEGMENTS; i++) {
       const a = (i / SEGMENTS) * Math.PI * 2;
@@ -1028,9 +1043,9 @@ export class SeaScene {
     ctx.restore();
   }
 
-  _drawShip(ctx, w, h, pos, heading, shipDef, variant, alpha) {
+  _drawShip(ctx, w, h, pos, heading, shipDef, variant, alpha, tier) {
     const v = variant === 'player' ? 'n' : variant === 'friendly' ? 'n' : variant;
-    drawShipIso(ctx, this.iso, this.camera, w, h, pos, heading, shipDef, v, alpha);
+    drawShipIso(ctx, this.iso, this.camera, w, h, pos, heading, shipDef, v, alpha, tier);
   }
 
   _drawCannonballs(ctx, w, h) {

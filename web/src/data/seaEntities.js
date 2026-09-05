@@ -42,7 +42,7 @@ export const SEA_NPC_SHIPS = [
     hp: 300, hostile: true, patrolRadius: 30, tier: 'grunt', region: 1 },
   // 클라우스 슈퇴르테베커 — 14세기 발트해·북해를 주름잡은 "빅투알리엔 형제단"의 실존
   // 해적 두목. 함부르크에서 처형된 뒤에도 참수된 목이 대열 앞을 걸어갔다는 전설로 남았다.
-  { id: 'pirate_elite_stortebeker', type: 'pirate', name: '클라우스 슈퇴르테베커의 해적선', pos: project(10.5, 57.0), shipId: 'pirate_brigantine',
+  { id: 'pirate_elite_stortebeker', type: 'pirate', name: '[엘리트] 클라우스 슈퇴르테베커의 해적선', pos: project(10.5, 57.0), shipId: 'pirate_brigantine',
     hp: 580, hostile: true, patrolRadius: 35, tier: 'elite', region: 1 },
 
   // ── [region 1: 유럽 근해] 지중해(마르세유·제노바·베네치아·바르바리 인근) ──
@@ -57,7 +57,7 @@ export const SEA_NPC_SHIPS = [
     hp: 380, hostile: true, patrolRadius: 35, tier: 'grunt', region: 1 },
   { id: 'pirate_barbary_grunt', type: 'pirate', name: '바르바리 해적선', pos: project(2.2, 37.3), shipId: 'pirate_xebec',
     hp: 300, hostile: true, patrolRadius: 30, tier: 'grunt', region: 1 },
-  { id: 'pirate_barbary_elite', type: 'pirate', name: '바르바리 해적 사령선', pos: project(15.3, 35.3), shipId: 'pirate_xebec',
+  { id: 'pirate_barbary_elite', type: 'pirate', name: '[엘리트] 바르바리 해적 사령선', pos: project(15.3, 35.3), shipId: 'pirate_xebec',
     hp: 550, hostile: true, patrolRadius: 35, tier: 'elite', region: 1 },
 
   // ── [region 2: 대서양 횡단·카리브해 — 담배 무역로] ──
@@ -71,7 +71,7 @@ export const SEA_NPC_SHIPS = [
     hp: 320, hostile: true, patrolRadius: 40, tier: 'grunt', region: 2 },
   // 존 "캘리코 잭" 랙엄 — 앤 보니·메리 리드와 함께 활동한 실존 해적. 그의 배 "윌리엄호"는
   // 작고 빠른 슬루프였지만, 선장의 악명은 대형선 못지않았다.
-  { id: 'pirate_elite_calicojack', type: 'pirate', name: '캘리코 잭의 윌리엄호', pos: project(-76.5, 22.0), shipId: 'pirate_sloop',
+  { id: 'pirate_elite_calicojack', type: 'pirate', name: '[엘리트] 캘리코 잭의 윌리엄호', pos: project(-76.5, 22.0), shipId: 'pirate_sloop',
     hp: 650, hostile: true, patrolRadius: 35, tier: 'elite', region: 2 },
   { id: 'pirate_boss_blackbeard', type: 'pirate', name: '[보스] 흑수염의 앤 여왕의 복수호', pos: project(-27.0, 36.0), shipId: 'pirate_flagship_blackbeard',
     hp: 2400, hostile: true, patrolRadius: 25, tier: 'boss', region: 2 },
@@ -87,13 +87,13 @@ export const SEA_NPC_SHIPS = [
     hp: 500, hostile: true, patrolRadius: 35, tier: 'grunt', region: 3 },
   { id: 'pirate_malacca', type: 'pirate', name: '해적선 해협의 이빨호', pos: project(100.8, 3.0), shipId: 'caravel_war',
     hp: 460, hostile: true, patrolRadius: 30, tier: 'grunt', region: 3 },
-  { id: 'pirate_sulu', type: 'pirate', name: '해적선 술루의 파도호', pos: project(119.5, 7.5), shipId: 'pirate_lanong',
+  { id: 'pirate_sulu', type: 'pirate', name: '[엘리트] 해적선 술루의 파도호', pos: project(119.5, 7.5), shipId: 'pirate_lanong',
     hp: 480, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
-  { id: 'pirate_indian_ocean', type: 'pirate', name: '해적선 계절풍의 습격자호', pos: project(101.0, 3.5), shipId: 'pirate_frigate',
+  { id: 'pirate_indian_ocean', type: 'pirate', name: '[엘리트] 해적선 계절풍의 습격자호', pos: project(101.0, 3.5), shipId: 'pirate_frigate',
     hp: 560, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
   // 올리비에 르바쇠르(라 뷔즈, "매") — 마다가스카르를 근거지로 무굴 보물선 나포에도
   // 가담한 실존 인도양 해적. 처형 직전 관중에게 던졌다는 미해독 보물 암호문으로 유명하다.
-  { id: 'pirate_elite_labuse', type: 'pirate', name: '라 뷔즈의 해적선', pos: project(47.5, -18.0), shipId: 'pirate_frigate',
+  { id: 'pirate_elite_labuse', type: 'pirate', name: '[엘리트] 라 뷔즈의 해적선', pos: project(47.5, -18.0), shipId: 'pirate_frigate',
     hp: 520, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
   // 헨리 에브리("롱 벤") — 1695년 무굴 제국의 보물선 간즈이사와이호를 나포해 사상 최대급
   // 해적질을 해낸 실존 해적. 이후 끝내 붙잡히지 않고 종적을 감춰 "해적왕"으로 불렸다.
@@ -105,11 +105,11 @@ export const SEA_NPC_SHIPS = [
   // 해적이 실제로 즐겨 쓴 전용 선형(왜구 습격선/해적 정크)을 새로 만들어 태운다.
   { id: 'pirate_wokou', type: 'pirate', name: '왜구선 아카츠키호', pos: project(129.6, 33.0), shipId: 'wokou_raider',
     hp: 420, hostile: true, patrolRadius: 30, tier: 'grunt', region: 4 },
-  { id: 'pirate_china_coast', type: 'pirate', name: '해적선 흑룡호', pos: project(116.5, 22.5), shipId: 'pirate_junk',
+  { id: 'pirate_china_coast', type: 'pirate', name: '[엘리트] 해적선 흑룡호', pos: project(116.5, 22.5), shipId: 'pirate_junk',
     hp: 1000, hostile: true, patrolRadius: 35, tier: 'elite', region: 4 },
   // 장바오자이(張保仔) — 정이수의 양자이자 최측근 지휘관이었던 실존 해적. 한때 남중국해
   // 해적 연합의 실질적 야전 사령관으로, 훗날 청 조정에 투항해 관직까지 받았다.
-  { id: 'pirate_elite_zhangbaozai', type: 'pirate', name: '장바오자이의 해적선', pos: project(114.3, 22.2), shipId: 'pirate_junk',
+  { id: 'pirate_elite_zhangbaozai', type: 'pirate', name: '[엘리트] 장바오자이의 해적선', pos: project(114.3, 22.2), shipId: 'pirate_junk',
     hp: 900, hostile: true, patrolRadius: 35, tier: 'elite', region: 4 },
   { id: 'pirate_boss_zheng', type: 'pirate', name: '[보스] 정씨 해적 선단 기함', pos: project(114.0, 21.5), shipId: 'pirate_junk_flagship',
     hp: 2600, hostile: true, patrolRadius: 25, tier: 'boss', region: 4 },
