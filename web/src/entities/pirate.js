@@ -228,11 +228,19 @@ export class NpcShip {
         const level = prev.level + 1;
         const respawnAt = state.dayTimer + RESPAWN_DELAY_VOYAGE_DAYS[this.tier] * VOYAGE_DAY_SECONDS;
         state.pirateEscalation = { ...state.pirateEscalation, [this.owner]: { level, respawnAt } };
+      } else if (this.def.respawnDays) {
+        // 잡몹 중 반복 토벌 의뢰가 걸린 개체만, 강화 없이(level 항상 0) 단순 리스폰한다 —
+        // pirateEscalation 저장소를 그대로 재사용해 checkPirateRespawns 로직을 공유한다.
+        const respawnAt = state.dayTimer + this.def.respawnDays * VOYAGE_DAY_SECONDS;
+        state.pirateEscalation = { ...state.pirateEscalation, [this.owner]: { level: 0, respawnAt } };
       }
     }
   }
 
-  update(delta, t, playerPos2, cannonPool) {
+  // visMul: 안개 시야 배율(entities/weather.js fogVisMul, 1=평시·짙은 안개일수록 작아짐) —
+  // 아직 교전하지 않은 순찰 중 상대를 서로 알아채는 거리에만 적용한다(이미 교전 중이면
+  // 안개와 무관하게 알고 있는 것으로 취급 — ATTACK_RANGE·standoff 로직은 그대로 둔다).
+  update(delta, t, playerPos2, cannonPool, visMul = 1) {
     if (this.dead) {
       this.sinkT += delta;
       return;
@@ -245,7 +253,7 @@ export class NpcShip {
     // 해적(원래 hostile)만 강습 대상이다 — 상호작용 범위 안에 플레이어가 있으면 주기적으로
     // 확률 판정을 굴려, 성공하면 플레이어의 선택과 무관하게 즉시 engaged가 된다.
     if (this.def.hostile && !this.engaged && this.state !== 'sunk') {
-      if (distToPlayer < this.interactionRange) {
+      if (distToPlayer < this.interactionRange * visMul) {
         this.ambushTimer -= delta;
         if (this.ambushTimer <= 0) {
           this.ambushTimer = AMBUSH_CHECK_INTERVAL;
@@ -261,9 +269,9 @@ export class NpcShip {
     }
 
     if (hostile) {
-      if (this.state === 'patrol' && distToPlayer < AGGRO_RANGE) this.state = 'chase';
+      if (this.state === 'patrol' && distToPlayer < AGGRO_RANGE * visMul) this.state = 'chase';
       if (this.engaged && this.state === 'chase' && distToPlayer < ATTACK_RANGE) this.state = 'attack';
-      if (this.state !== 'patrol' && distToPlayer > AGGRO_RANGE * 1.6) {
+      if (this.state !== 'patrol' && distToPlayer > AGGRO_RANGE * 1.6 * visMul) {
         this.state = 'patrol';
         this.engaged = false;
       }
@@ -316,10 +324,12 @@ export function checkPirateRespawns(npcShips) {
     if (!entry || entry.respawnAt == null || state.dayTimer < entry.respawnAt) continue;
     state.pirateEscalation = { ...state.pirateEscalation, [npc.owner]: { ...entry, respawnAt: null } };
     npc.respawn();
-    const pct = npc.escalationLevel * 25;
     const reactivated = reactivateRepeatableBounties(npc.owner);
     const repeatNote = reactivated.length > 0 ? ' 관련 반복 토벌 의뢰가 다시 게시됐습니다.' : '';
-    hud.toast(`⚔ ${npc.def.name}이(가) 다시 나타났습니다! (강화 Lv.${npc.escalationLevel} · 이전 대비 +${pct}%)${repeatNote}`);
+    // 잡몹 단순 리스폰(respawnDays)은 강화가 없으므로(escalationLevel 항상 0) 그 문구를 뺀다.
+    const escalationNote = (npc.tier === 'elite' || npc.tier === 'boss')
+      ? ` (강화 Lv.${npc.escalationLevel} · 이전 대비 +${npc.escalationLevel * 25}%)` : '';
+    hud.toast(`⚔ ${npc.def.name}이(가) 다시 나타났습니다!${escalationNote}${repeatNote}`);
   }
 }
 

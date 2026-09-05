@@ -41,6 +41,14 @@ const WATER_PER_DAY = 1; // 항해일자 하루당 식수 소모
 // 조건(완전한 폭풍·정순풍·전속력)에서 초당 잃는 최대 내구도 비율 — "조금씩" 상하는 수준으로,
 // 폭풍 지속시간(45~95초) 내내 최악의 조건으로만 달려도 완파에는 크게 못 미치게 잡았다.
 const STORM_TAILWIND_DMG_PCT_PER_SEC = 0.002;
+// 역풍으로 폭풍을 정면으로 거스를 때의 손상률 — 속도 이득이 전혀 없는데도 순풍보다 더
+// 크게 잡아, "폭풍 속에서는 역풍으로 버티지 말고 방향을 바꿔라"는 실제 선택압을 준다.
+const STORM_HEADWIND_DMG_PCT_PER_SEC = 0.0035;
+// 벼락(lightning) — 아주 심한 폭풍(stormIntensity>0.7)에서만, 진행 방향과 무관하게
+// 판정 주기마다 낮은 확률로 발동하는 목돈 피해 사고.
+const LIGHTNING_CHECK_INTERVAL = 8; // 초 — 이 주기마다 한 번씩 확률을 굴린다
+const LIGHTNING_CHANCE = 0.12; // 판정마다 실제로 발동할 확률
+const LIGHTNING_DMG_PCT_MIN = 0.03, LIGHTNING_DMG_PCT_MAX = 0.06; // 최대 내구도 대비 피해 비율
 // 충돌 피해는 충돌 순간 속도에 비례한다 — 제자리에서 스치듯 부딪히면 가볍게, 전속력으로
 // 들이받으면(충각 전술) 양측 모두 크게 상한다.
 const COLLISION_DAMAGE_BASE = 18;
@@ -86,7 +94,8 @@ export class SeaScene {
     this.weather = new WeatherSystem(state.dayTimer);
     this.rain = new RainEffect(logicalW, logicalH);
     this.wind = new Wind();
-    this._stormSailWarned = false; // 폭풍 속 순풍 항해 경고 토스트를 폭풍당 한 번만 띄우기 위한 플래그
+    this._stormSailWarned = false; // 폭풍 속 순풍/역풍 항해 경고 토스트를 폭풍당 한 번만 띄우기 위한 플래그
+    this._lightningTimer = LIGHTNING_CHECK_INTERVAL;
 
     this.moundColliders = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], r: 30 }));
     this.cityMarkers = this._computeCityMarkers();
@@ -154,8 +163,23 @@ export class SeaScene {
   addShake(amount) { this.shakeTrauma = Math.min(1, this.shakeTrauma + amount); }
   onWheelZoom(deltaY) { this.camera.zoom = clamp(this.camera.zoom - deltaY * 0.0011, this.camera.minZoom, this.camera.maxZoom); }
 
+  // 피격으로 바뀐 escort의 hp를 state.fleet의 해당 항목에 즉시 되써준다 — 세이브나 함대
+  // 탭 교체(rebuildEscorts) 시에도 깎인 체력이 그대로 이어지게 하기 위해서다.
+  _syncEscortHp(escort) {
+    state.fleet = state.fleet.map((f) => (f.uid === escort.fleetUid ? { ...f, shipHp: escort.hp } : f));
+  }
+
+  // escort가 hp 0으로 격침되면 함대에서 영구히 사라진다(플레이어 자신의 난파와 달리
+  // 되살아나지 않는다) — 함대에 실제 위험을 부여하는 핵심.
+  _loseFleetShip(escort) {
+    state.fleet = state.fleet.filter((f) => f.uid !== escort.fleetUid);
+    this.escorts = this.escorts.filter((e) => e !== escort);
+    hud.toast(`💥 예비 함대의 ${escort.shipDef.name}이(가) 격침되어 함대에서 사라졌습니다!`);
+    notify({ fleetChanged: true });
+  }
+
   rebuildEscorts() {
-    this.escorts = state.fleet.map((f, i) => new EscortShip(getShip(f.shipId), i));
+    this.escorts = state.fleet.map((f, i) => new EscortShip(getShip(f.shipId), i, f.uid, f.shipHp));
   }
 
   rebuildShip() {
@@ -569,7 +593,8 @@ export class SeaScene {
     if (state.cannonballs <= 0) { hud.toast('포탄이 없습니다! 항구 관리인에게 보급받으세요.'); return; }
     const target = this._nearestHostile();
     // 정밀 포격 스킬은 이 사거리 판정 자체를 늘려준다 — 더 멀리서부터 교전을 걸 수 있다.
-    const range = 60 * mulSkillEffect(this.ship.shipDef, 'rangeMul', 1);
+    // 안개(weather.fogVisMul)는 반대로 사거리를 줄인다 — 목표를 눈으로 봐야 겨냥할 수 있다.
+    const range = 60 * mulSkillEffect(this.ship.shipDef, 'rangeMul', 1) * this.weather.fogVisMul;
     if (!target || target.pos.distanceTo(this.ship.pos) > range) {
       hud.toast('사거리 내에 목표가 없습니다.');
       return;
@@ -632,20 +657,51 @@ export class SeaScene {
 
   // 골드를 주는 발견 이벤트 대신, 날씨 자체가 위험과 보상을 함께 주는 "이벤트"다 — 폭풍
   // 중 순풍을 타고 달리면(entities/shipController.js의 바람 시스템이 이미 자연스럽게
-  // 최대 +25%까지 속도를 올려준다) 그만큼 선체에도 무리가 간다. 역풍이나 무풍, 저속
-  // 항해, 폭풍이 아닐 때는 전혀 영향이 없다 — 순전히 "폭풍+순풍+가속"의 조합에서만 발동.
+  // 최대 +25%까지 속도를 올려준다) 그만큼 선체에도 무리가 간다. 반대로 역풍으로 폭풍을
+  // 정면으로 거스르면 속도 이득은 전혀 없이(바람 시스템이 이미 감속시킨다) 파도에 뱃머리가
+  // 부딪히는 손상만 더 크게 받는다 — 폭풍 중엔 "어느 방향이든 가만히 있을 수 없는" 위험이다.
+  // 무풍(순풍/역풍 모두 아님)이거나 저속 항해, 폭풍이 아닐 때는 전혀 영향이 없다.
   _processStormSailing(delta) {
     if (this.weather.stormIntensity <= 0.5) { this._stormSailWarned = false; return; }
     const speedRatio = Math.min(1, Math.abs(this.ship.curSpeed) / (this.ship.maxSpeedMs || 1));
     const align = this.ship.windAlign || 0;
-    if (speedRatio < 0.3 || align < 0.5) return;
-    const alignExcess = clamp((align - 0.5) / 0.5, 0, 1);
-    const dmgPct = STORM_TAILWIND_DMG_PCT_PER_SEC * this.weather.stormIntensity * speedRatio * alignExcess;
+    if (speedRatio < 0.3) return;
+    let dmgPct = 0;
+    let warnMsg = null;
+    if (align >= 0.5) {
+      const alignExcess = clamp((align - 0.5) / 0.5, 0, 1);
+      dmgPct = STORM_TAILWIND_DMG_PCT_PER_SEC * this.weather.stormIntensity * speedRatio * alignExcess;
+      warnMsg = '⛈ 폭풍 속 순풍을 타고 있습니다 — 속도가 오르지만 선체가 서서히 상합니다!';
+    } else if (align <= -0.5) {
+      const alignExcess = clamp((-align - 0.5) / 0.5, 0, 1);
+      dmgPct = STORM_HEADWIND_DMG_PCT_PER_SEC * this.weather.stormIntensity * speedRatio * alignExcess;
+      warnMsg = '⛈ 폭풍을 정면으로 거스르고 있습니다 — 속도 이득 없이 선체만 상합니다. 뱃머리를 돌리세요!';
+    } else {
+      this._stormSailWarned = false;
+      return;
+    }
     state.shipHp = Math.max(0, state.shipHp - this.ship.shipDef.hp * dmgPct * delta);
     if (!this._stormSailWarned) {
       this._stormSailWarned = true;
-      hud.toast('⛈ 폭풍 속 순풍을 타고 있습니다 — 속도가 오르지만 선체가 서서히 상합니다!');
+      hud.toast(warnMsg);
     }
+  }
+
+  // 폭풍이 심할 때(stormIntensity>0.7)만 판정하는 희귀 사고 — 진행 방향/속도와 무관하게
+  // 순전히 운으로 배에 벼락이 떨어져 목돈 피해를 준다. 위 순풍/역풍 피해와 달리 항해
+  // 선택으로 피할 수 없는 "폭풍 자체의 위험"을 표현한다.
+  _processLightning(delta) {
+    if (this.weather.stormIntensity <= 0.7) { this._lightningTimer = LIGHTNING_CHECK_INTERVAL; return; }
+    this._lightningTimer -= delta;
+    if (this._lightningTimer > 0) return;
+    this._lightningTimer = LIGHTNING_CHECK_INTERVAL;
+    if (Math.random() >= LIGHTNING_CHANCE) return;
+    const pct = LIGHTNING_DMG_PCT_MIN + Math.random() * (LIGHTNING_DMG_PCT_MAX - LIGHTNING_DMG_PCT_MIN);
+    const dmg = Math.round(this.ship.shipDef.hp * pct);
+    state.shipHp = Math.max(0, state.shipHp - dmg);
+    this.addShake(0.5);
+    audio.playHit();
+    hud.toast(`⚡ 벼락이 배에 떨어졌습니다! 선체가 ${dmg} 손상되었습니다.`);
   }
 
   update(delta, elapsed) {
@@ -713,6 +769,7 @@ export class SeaScene {
       this._checkRouteLockWarning(delta);
       checkDiscoveryEvents(delta);
       this._processStormSailing(delta);
+      this._processLightning(delta);
     }
     this._updateWake(delta);
     const escortTarget = state.inCombat ? this._nearestHostile() : null;
@@ -742,7 +799,7 @@ export class SeaScene {
     }
 
     if (!this.meleeState) {
-      for (const npc of this.npcShips) npc.update(delta, elapsed, this.ship.pos, this.cannonPool);
+      for (const npc of this.npcShips) npc.update(delta, elapsed, this.ship.pos, this.cannonPool, this.weather.fogVisMul);
       checkDailyEscalationReset(this.npcShips);
       checkPirateRespawns(this.npcShips);
       checkQuestRespawns();
@@ -789,6 +846,9 @@ export class SeaScene {
     const targets = [
       { owner: 'player', position: this.ship.pos, radius: worldSizeFor(this.ship.shipDef).length * 0.55, ref: 'player' },
       ...this.npcShips.filter((n) => !n.dead).map((n) => ({ owner: n.owner, position: n.pos, radius: n.radius, ref: n })),
+      // 함대(예비 선박)도 owner를 'player'로 둔다 — 플레이어/함대 자신의 포탄과는 owner가
+      // 같아 서로 맞지 않고(아군 오사 방지), 적 npc의 포탄(owner가 그 npc의 id)만 맞는다.
+      ...this.escorts.filter((e) => !e.dead).map((e) => ({ owner: 'player', position: e.pos, radius: worldSizeFor(e.shipDef).length * 0.5, ref: e, isEscort: true })),
     ];
     this.cannonPool.update(delta, targets, (target, ball) => {
       audio.playHit();
@@ -798,6 +858,11 @@ export class SeaScene {
         state.shipHp = Math.max(0, state.shipHp - hitDmg);
         loseMoraleFromCombat();
         this.addShake(0.45);
+      } else if (target.isEscort) {
+        this.addShake(0.12);
+        target.ref.takeDamage(ball.dmg ?? 18);
+        this._syncEscortHp(target.ref);
+        if (target.ref.dead) this._loseFleetShip(target.ref);
       } else {
         this.addShake(0.18);
         // 아직 교전 중이 아니던 배(순찰 중 저격당한 해적, 혹은 플레이어가 먼저 도발한
@@ -1122,6 +1187,10 @@ export class SeaScene {
     }
     if (this.weather.stormIntensity > 0.05) {
       ctx.fillStyle = `rgba(50,58,64,${this.weather.stormIntensity * 0.32})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+    if (this.weather.fogIntensity > 0.05) {
+      ctx.fillStyle = `rgba(205,210,212,${this.weather.fogIntensity * 0.4})`;
       ctx.fillRect(0, 0, w, h);
     }
   }

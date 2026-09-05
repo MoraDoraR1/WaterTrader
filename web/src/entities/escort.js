@@ -1,7 +1,7 @@
-// 함대의 예비 선박을 플레이어 뒤쪽 대형(편대) 위치를 따라오는 시각적 호위선으로 표현한다.
-// 전투 중 최소한의 화력만 보탠다(hp·피격은 여전히 모델링하지 않는 의도적으로 좁은 범위의
-// 개선 — "함대 사령관" 랭크명에 완전히 걸맞으려면 더 큰 재작업이 필요하지만, 예비 선박이
-// 완전히 구경만 하는 것보다는 낫다는 판단).
+// 함대의 예비 선박을 플레이어 뒤쪽 대형(편대) 위치를 따라오는 호위선으로 표현한다.
+// 전투 중 최소한의 화력을 보태고(tryFire), 실제로 hp를 갖고 피격당한다 — hp가 0이 되면
+// 격침돼 함대에서 영구히 사라진다(scenes/seaScene.js _loseFleetShip). 적의 화력이 오직
+// 플레이어에게만 향하던 기존의 비대칭을 깨는 대신, 잃을 수 있다는 실제 위험을 준다.
 import { Vec2, clamp } from '../util/math2d.js';
 
 const FORMATION_SLOTS = [
@@ -14,13 +14,25 @@ const ESCORT_FIRE_INTERVAL = 4.5; // 플레이어(FIRE_COOLDOWN 1.5초)보다 �
 const ESCORT_FIRE_RANGE = 90; // 편대 위치(플레이어 후방 최대 30유닛)를 감안해 약간 넉넉하게
 
 export class EscortShip {
-  constructor(shipDef, slotIndex) {
+  // fleetUid: state.fleet 항목의 uid — 피격으로 바뀐 hp를 그 항목에 되써주기 위해 필요하다.
+  // savedHp: 세이브/함대 탭 교체 등으로 이미 깎여 있던 hp(없으면 만재 상태로 시작).
+  constructor(shipDef, slotIndex, fleetUid, savedHp) {
     this.shipDef = shipDef;
     this.pos = new Vec2(0, 0);
     this.heading = 0;
     this.slot = FORMATION_SLOTS[slotIndex % FORMATION_SLOTS.length];
     this._initialized = false;
     this.fireTimer = ESCORT_FIRE_INTERVAL * (0.4 + Math.random() * 0.6);
+    this.fleetUid = fleetUid;
+    this.maxHp = shipDef.hp;
+    this.hp = typeof savedHp === 'number' && savedHp > 0 ? Math.min(savedHp, this.maxHp) : shipDef.hp;
+    this.dead = false;
+  }
+
+  // 적 포탄에 맞았을 때(scenes/seaScene.js cannonPool onHit) 호출 — hp가 0이 되면 격침된다.
+  takeDamage(dmg) {
+    this.hp = Math.max(0, this.hp - dmg);
+    if (this.hp <= 0) this.dead = true;
   }
 
   update(delta, playerShip) {

@@ -7,11 +7,18 @@ const DAY_CYCLE_SECONDS = 60; // 게임 내 하루(항해일자 1일) = 실제 1
 const STORM_CLEAR_MIN = 100, STORM_CLEAR_MAX = 220;
 const STORM_DURATION_MIN = 45, STORM_DURATION_MAX = 95;
 const STORM_TRANSITION_RATE = 0.15;
+// 안개는 폭풍과 독립된 별도의 기상 상태다(폭풍처럼 시야를 줄이지만, 위험이 아니라 은신
+// 기회를 준다 — 아래 fogVisMul 참고). 폭풍과 동시에 존재하면 의미가 흐려지므로 폭풍
+// 중에는 안개 판정을 건너뛰고, 폭풍이 시작되면 안개는 즉시 걷힌다.
+const FOG_CLEAR_MIN = 90, FOG_CLEAR_MAX = 210;
+const FOG_DURATION_MIN = 30, FOG_DURATION_MAX = 70;
+const FOG_TRANSITION_RATE = 0.2;
 
 const SKY_NIGHT = new Color('#0a1220');
 const SKY_TWILIGHT = new Color('#e0906a');
 const SKY_DAY = new Color('#bcd6e0');
 const STORM_SKY = new Color('#3c454c');
+const FOG_SKY = new Color('#ccd2d4');
 
 export class WeatherSystem {
   constructor(initialDayTimer) {
@@ -20,11 +27,14 @@ export class WeatherSystem {
     this.stormActive = false;
     this.stormIntensity = 0;
     this._stormTimer = STORM_CLEAR_MIN + Math.random() * (STORM_CLEAR_MAX - STORM_CLEAR_MIN);
+    this.fogActive = false;
+    this.fogIntensity = 0;
+    this._fogTimer = FOG_CLEAR_MIN + Math.random() * (FOG_CLEAR_MAX - FOG_CLEAR_MIN);
 
     this.skyColor = SKY_DAY.clone();
     this.brightness = 1; // 0(한밤)~1(대낮) — 스프라이트/바다 밝기 곱연산에 쓴다
     this.sunElevation = 0.6; // -1..1, 예전 sunDir.y 역할
-    this.visRange = 1; // 폭풍일수록 줄어드는 시야 배율(안개 반경 대용)
+    this.visRange = 1; // 폭풍·안개일수록 줄어드는 시야 배율(렌더용)
   }
 
   get dayPhase() { return (this.dayTimer % DAY_CYCLE_SECONDS) / DAY_CYCLE_SECONDS; }
@@ -52,13 +62,35 @@ export class WeatherSystem {
     const stormTarget = this.stormActive ? 1 : 0;
     this.stormIntensity += (stormTarget - this.stormIntensity) * Math.min(1, delta * STORM_TRANSITION_RATE);
 
+    // 안개는 폭풍과 겹치지 않는다 — 폭풍 중엔 판정을 건너뛰고, 폭풍이 막 시작됐다면 즉시 걷는다.
+    if (this.stormActive) {
+      if (this.fogActive) this.fogActive = false;
+    } else {
+      this._fogTimer -= delta;
+      if (this._fogTimer <= 0) {
+        this.fogActive = !this.fogActive;
+        this._fogTimer = this.fogActive
+          ? FOG_DURATION_MIN + Math.random() * (FOG_DURATION_MAX - FOG_DURATION_MIN)
+          : FOG_CLEAR_MIN + Math.random() * (FOG_CLEAR_MAX - FOG_CLEAR_MIN);
+      }
+    }
+    const fogTarget = this.fogActive ? 1 : 0;
+    this.fogIntensity += (fogTarget - this.fogIntensity) * Math.min(1, delta * FOG_TRANSITION_RATE);
+
     this.skyColor.lerp(STORM_SKY, this.stormIntensity * 0.85);
+    this.skyColor.lerp(FOG_SKY, this.fogIntensity * 0.6);
     this.brightness *= lerp(1, 0.55, this.stormIntensity);
-    this.visRange = lerp(1, 0.4, this.stormIntensity);
+    this.brightness *= lerp(1, 0.82, this.fogIntensity); // 안개는 폭풍만큼 어둡진 않고 뿌옇기만 하다
+    this.visRange = lerp(1, 0.4, this.stormIntensity) * lerp(1, 0.55, this.fogIntensity);
   }
+
+  // 전투/항해 판정용 시야 배율 — 안개가 짙을수록 서로를 늦게 알아챈다(폭풍은 시야보다는
+  // 파도·바람이 문제이므로 이 배율에는 관여하지 않는다). 1=평시, 낮을수록 더 안 보인다.
+  get fogVisMul() { return lerp(1, 0.45, this.fogIntensity); }
 
   get label() {
     if (this.stormIntensity > 0.5) return '⛈ 폭풍';
+    if (this.fogIntensity > 0.5) return '🌫 안개';
     if (this.stormIntensity > 0.1) return '🌥 흐림';
     if (this.isNight) return '🌙 밤';
     return '☀ 맑음';

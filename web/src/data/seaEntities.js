@@ -17,10 +17,13 @@
 import { project } from './coastline.js';
 
 export const SEA_NPC_SHIPS = [
+  // respawnDays: 이 잡몹 4척은 각자를 노리는 비-체인 현상금 의뢰가 있어(data/quests.js
+  // repeatable:true), 강화 없이(escalation 미적용) 단순 리스폰만 하도록 표시했다 — 다른
+  // 잡몹 7척은 여전히 소진형이다(전투 축의 "가벼운 전투" 소재는 의도적으로 유한하게 유지).
   { id: 'pirate_1', type: 'pirate', name: '해적선 검은상어호', pos: project(-11.83, 35.00), shipId: 'caravel_war',
-    hp: 500, hostile: true, patrolRadius: 60, tier: 'grunt', region: 1 },
+    hp: 500, hostile: true, patrolRadius: 60, tier: 'grunt', region: 1, respawnDays: 4 },
   { id: 'pirate_2', type: 'pirate', name: '해적선 붉은깃발호', pos: project(2.61, 52.78), shipId: 'caravela_redonda',
-    hp: 420, hostile: true, patrolRadius: 25, tier: 'grunt', region: 1 },
+    hp: 420, hostile: true, patrolRadius: 25, tier: 'grunt', region: 1, respawnDays: 4 },
   { id: 'merchant_1', type: 'merchant', name: '상인선 카를로스호', pos: project(-11.39, 40.56), shipId: 'fluyt',
     hp: 600, hostile: false, patrolRadius: 60, country: 'PT' },
   { id: 'adventurer_1', type: 'adventurer', name: '모험가 페드로의 배', pos: project(-8.50, 36.11), shipId: 'pinta',
@@ -33,7 +36,7 @@ export const SEA_NPC_SHIPS = [
   { id: 'merchant_london', type: 'merchant', name: '차 무역선 빅토리아호', pos: project(1.86, 51.82), shipId: 'tea_clipper',
     hp: 700, hostile: false, patrolRadius: 45, country: 'EN' },
   { id: 'pirate_channel', type: 'pirate', name: '해적선 북해의 늑대호', pos: project(2.57, 52.36), shipId: 'topsail_schooner',
-    hp: 550, hostile: true, patrolRadius: 35, tier: 'grunt', region: 1 },
+    hp: 550, hostile: true, patrolRadius: 35, tier: 'grunt', region: 1, respawnDays: 4 },
   { id: 'merchant_amsterdam', type: 'merchant', name: '동인도회사 무역선 바타비아호', pos: project(3.19, 53.64), shipId: 'east_indiaman',
     hp: 1000, hostile: false, patrolRadius: 50, country: 'NL' },
   { id: 'merchant_hamburg', type: 'merchant', name: '한자동맹 코게선 그라이프호', pos: project(8.445, 53.42), shipId: 'cog',
@@ -54,7 +57,7 @@ export const SEA_NPC_SHIPS = [
   { id: 'merchant_venezia', type: 'merchant', name: '베네치아 갈레온 레온도로호', pos: project(13.32, 43.44), shipId: 'galeone_veneziano',
     hp: 1100, hostile: false, patrolRadius: 45, country: 'IT' },
   { id: 'pirate_med', type: 'pirate', name: '바르바리 해적선 붉은수염호', pos: project(7.12, 41.98), shipId: 'baltimore_schooner',
-    hp: 380, hostile: true, patrolRadius: 35, tier: 'grunt', region: 1 },
+    hp: 380, hostile: true, patrolRadius: 35, tier: 'grunt', region: 1, respawnDays: 4 },
   { id: 'pirate_barbary_grunt', type: 'pirate', name: '바르바리 해적선', pos: project(2.2, 37.3), shipId: 'pirate_xebec',
     hp: 300, hostile: true, patrolRadius: 30, tier: 'grunt', region: 1 },
   { id: 'pirate_barbary_elite', type: 'pirate', name: '[엘리트] 바르바리 해적 사령선', pos: project(15.3, 35.3), shipId: 'pirate_xebec',
