@@ -222,6 +222,14 @@ export class SeaScene {
     hud.hideInteractionMenu();
   }
 
+  // 상호작용 메뉴를 띄운 채(전투/대화를 아직 선택하지 않은 채) 도킹하면, SeaScene의 매 프레임
+  // 갱신이 도시 화면에서는 멈추기 때문에 메뉴가 화면 위에 그대로 얼어붙은 채 남는다 — 이미
+  // 죽었거나 화면에서 사라진 npc를 계속 참조하게 되므로 도킹 시점에 명시적으로 정리한다.
+  clearSelection() {
+    this.selectedTarget = null;
+    hud.hideInteractionMenu();
+  }
+
   // 충돌 후 짧은 승선 창구(this._boardable) 안에 F를 누르면 백병전이 시작된다.
   handleBoardKey() {
     if (!this._boardable || this.meleeState) return;

@@ -124,6 +124,7 @@ function goToCity(cityId) {
   hud.showTargetHp(false);
   hud.showCombatBanner(false);
   hud.showInteractPrompt(false);
+  seaScene?.clearSelection();
   citySceneObj = new CityScene(cityId, () => goToSea(cityId), LOGICAL_W, LOGICAL_H);
   setScreen('city');
   audio.startHarbor();

@@ -27,7 +27,6 @@ export const state = {
   suppliesLastDay: 1, // 마지막으로 식량/식수 소모를 처리한 항해일자 — 날짜가 넘어갈 때마다 갱신.
   dockedCityId: null,
   inCombat: false,
-  playerHp: 100,
   // 시작 시점에 실제로 사고파는(둘 중 아무 항구에서나) 품목만 들려 보낸다 — 아직 어느
   // 항구도 취급하지 않는 품목(비단 등)을 쥐고 시작하면 팔 곳이 없어 죽은 짐이 된다.
   inventory: [
