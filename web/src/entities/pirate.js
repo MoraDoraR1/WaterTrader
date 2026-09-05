@@ -6,7 +6,6 @@ import { getShip } from '../data/ships.js';
 const AGGRO_RANGE = 90;
 const ATTACK_RANGE = 55;
 const STANDOFF = 40;
-const FIRE_INTERVAL = 2.6;
 
 export class NpcShip {
   constructor(def) {
@@ -19,7 +18,16 @@ export class NpcShip {
     this.maxHp = def.hp;
     this.state = 'patrol';
     this.patrolTarget = this._randomPatrolPoint();
-    this.fireTimer = FIRE_INTERVAL * Math.random();
+    // 원거리 공격력은 이 NPC의 shipId가 가진 cannons(대포 최대치) 스탯에 비례해 정해진다 —
+    // 예전엔 모든 NPC가 shipId와 무관하게 똑같이 쐈는데(2.6초당 18데미지 고정), 큰 함선일수록
+    // 더 위협적이어야 실제로 "어떤 배를 상대하는지"가 전투 난이도에 의미를 갖는다.
+    // cannons=5(소형) 기준 dps~5.2, cannons=18(카라벨라 데 아르마다급) 기준 dps~9.9 정도로
+    // 완만하게 벌어지도록 잡았다 — 플레이어 화력 스케일(수십~수백 dps)에 비하면 여전히
+    // NPC는 전반적으로 약하지만, 배 종류별 차이는 확실히 드러난다.
+    const cannons = this.shipDef?.cannons || 0;
+    this.fireInterval = Math.max(1.6, Math.min(3.0, 3.0 - cannons * 0.06));
+    this.shotDmg = Math.min(30, Math.round(12 + cannons * 0.4));
+    this.fireTimer = this.fireInterval * Math.random();
     this.dead = false;
     this.sinkT = 0; // 격침 후 가라앉는 연출용 타이머
     this.owner = def.id;
@@ -74,11 +82,11 @@ export class NpcShip {
 
       this.fireTimer -= delta;
       if (this.fireTimer <= 0 && distToPlayer < ATTACK_RANGE) {
-        this.fireTimer = FIRE_INTERVAL;
+        this.fireTimer = this.fireInterval;
         const len = Math.hypot(toPlayer.x, toPlayer.y) || 1;
         const dir = { x: toPlayer.x / len, y: toPlayer.y / len };
         const origin = { x: this.pos.x + dir.x * this.radius * 0.6, y: this.pos.y + dir.y * this.radius * 0.6 };
-        cannonPool.fire(origin, dir, 34, this.owner);
+        cannonPool.fire(origin, dir, 34, this.owner, this.shotDmg);
       }
     }
 

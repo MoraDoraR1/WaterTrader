@@ -588,10 +588,11 @@ export class SeaScene {
       { owner: 'player', position: this.ship.pos, radius: worldSizeFor(this.ship.shipDef).length * 0.55, ref: 'player' },
       ...this.npcShips.filter((n) => !n.dead).map((n) => ({ owner: n.owner, position: n.pos, radius: n.radius, ref: n })),
     ];
-    this.cannonPool.update(delta, targets, (target) => {
+    this.cannonPool.update(delta, targets, (target, ball) => {
       audio.playHit();
       if (target.ref === 'player') {
-        const hitDmg = Math.round(18 * this._incomingDamageMul());
+        // 쏜 NPC의 shotDmg(배 종류별 위력)를 그대로 쓰고, 못 찾으면(이론상 없음) 18로 폴백한다.
+        const hitDmg = Math.round((ball.dmg ?? 18) * this._incomingDamageMul());
         state.shipHp = Math.max(0, state.shipHp - hitDmg);
         loseMoraleFromCombat();
         this.addShake(0.45);
