@@ -40,8 +40,8 @@ export const SHIP_PARTS = [
 
   // ── 장갑판: 맞는 피해 자체를 % 로 깎아주는 진짜 방어력. 무게로 기동성을 깎는다 ──
   { id: 'armor_oak_planking', slot: 'armor', tier: 1, name: '참나무 보강판', price: 700,
-    effects: { armorAdd: 8, speedMul: 0.97 },
-    desc: '선체 외판에 참나무를 덧댄다. 가벼운 감속만으로 피격 데미지를 8% 줄인다.' },
+    effects: { armorAdd: 8 },
+    desc: '선체 외판에 참나무를 덧댄다. 큰 부담 없이 피격 데미지를 8% 줄인다.' },
   { id: 'armor_iron_strap', slot: 'armor', tier: 2, name: '철대 보강 장갑', price: 1800,
     effects: { armorAdd: 18, speedMul: 0.94, turnRateMul: 0.95 },
     desc: '철제 띠로 선체를 둘러 보강한다. 피격 데미지를 18% 줄이지만 무거워진다.' },
