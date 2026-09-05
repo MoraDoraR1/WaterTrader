@@ -164,6 +164,17 @@
     background: rgba(120,20,20,0.75); border: 1px solid #e07a5f; padding: 0.4rem 1.4rem; border-radius: 6px;
     font-size: 0.95rem; letter-spacing: 0.2rem; }
 
+  /* ---- 전투 개시/강습/승패 플래시 텍스트 — 화면 중앙에 잠깐 크게 떴다 사라진다 ---- */
+  #combat-flash { position: fixed; top: 38%; left: 50%; z-index: 40; pointer-events: none;
+    font-size: 2.6rem; font-weight: 800; letter-spacing: 0.18rem; color: #f5e6b8;
+    text-shadow: 0 0 16px rgba(0,0,0,0.7), 0 2px 5px rgba(0,0,0,0.85);
+    opacity: 0; transform: translate(-50%, -50%) scale(0.82);
+    transition: opacity 0.22s ease, transform 0.22s ease; }
+  #combat-flash.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #combat-flash.tone-danger { color: #ff7a5a; }
+  #combat-flash.tone-win { color: #9ee08a; }
+  #combat-flash.tone-lose { color: #ff5a4a; }
+
   /* ---- City HUD ---- */
   #interact-prompt { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 15;
     background: rgba(8,18,26,0.7); border: 1px solid rgba(200,180,120,0.4); padding: 0.5rem 1rem; border-radius: 8px;
@@ -367,6 +378,7 @@
   </div>
 
   <div id="combat-banner" class="hidden">⚔ 전투 상황</div>
+  <div id="combat-flash"></div>
 
   <div id="nav-panel" class="hidden">
     <div id="wind-box">

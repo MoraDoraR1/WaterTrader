@@ -93,6 +93,18 @@ export const hud = {
   },
   showCombatBanner(v) { $('combat-banner').classList.toggle('hidden', !v); },
   setCombatBannerText(text) { $('combat-banner').textContent = text; },
+
+  // 전투 개시/강습/승리/패배 — 화면 중앙에 1초간 크게 떴다 사라지는 플래시 텍스트.
+  // tone으로 색만 다르게 준다(default: 시작, danger: 강습, win: 승리, lose: 패배).
+  flashCombatText(text, tone = 'default') {
+    const el = $('combat-flash');
+    clearTimeout(this._combatFlashTimer);
+    el.textContent = text;
+    el.className = `tone-${tone}`;
+    void el.offsetWidth; // 같은 텍스트가 연달아 뜰 때도 트랜지션이 다시 재생되도록 리플로우 강제
+    el.classList.add('show');
+    this._combatFlashTimer = setTimeout(() => el.classList.remove('show'), 1000);
+  },
   showTargetHp(v) { $('target-hp-box').classList.toggle('hidden', !v); },
 
   // 클릭으로 지정한 함선의 상호작용 메뉴(전투/대화/종료) — 처음 열 때 버튼 핸들러를 등록하고,

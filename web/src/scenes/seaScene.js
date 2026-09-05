@@ -434,6 +434,7 @@ export class SeaScene {
       }
     } else {
       audio.playLoseStinger();
+      hud.flashCombatText('패배!', 'lose');
       const dmg = Math.round((50 + Math.random() * 70) * this._incomingDamageMul());
       state.shipHp = Math.max(0, state.shipHp - dmg);
       loseMoraleFromCombat();
@@ -445,6 +446,7 @@ export class SeaScene {
   // hud.toast()는 큐 없이 즉시 덮어써서 따로따로 부르면 마지막 것만 남으므로, 구조 인원·
   // 의뢰 완료 문구가 묻히지 않게 항상 한 번에 합쳐서 보여준다.
   _victoryToast(baseMsg, npcOwner) {
+    hud.flashCombatText('승리!', 'win');
     const rescued = rescueCrewFromVictory();
     const bounty = checkBountyKill(npcOwner);
     const moraleAdd = sumSkillEffect(this.ship.shipDef, 'victoryMoraleAdd', 0);
@@ -642,9 +644,12 @@ export class SeaScene {
     if (hostileNear !== state.inCombat) {
       state.inCombat = hostileNear;
       hud.showCombatBanner(hostileNear);
-      // 강습으로 이미 전용 토스트를 띄운 경우엔 이 일반 문구가 한 프레임 뒤에 그걸 덮어쓰지
-      // 않도록 한 번 건너뛴다(hud.toast()는 큐가 없어 마지막 호출만 화면에 남는다).
-      if (hostileNear && !this._skipNextCombatToast) hud.toast('전투 시작! 좌클릭/스페이스바로 포격하세요.');
+      // 강습으로 이미 전용 토스트/플래시를 띄운 경우엔 이 일반 문구가 한 프레임 뒤에 그걸
+      // 덮어쓰지 않도록 한 번 건너뛴다(hud.toast()는 큐가 없어 마지막 호출만 화면에 남는다).
+      if (hostileNear && !this._skipNextCombatToast) {
+        hud.toast('전투 시작! 좌클릭/스페이스바로 포격하세요.');
+        hud.flashCombatText('전투 개시!!');
+      }
       this._skipNextCombatToast = false;
     }
 
@@ -658,6 +663,7 @@ export class SeaScene {
         if (!npc.ambushTriggered) continue;
         npc.ambushTriggered = false;
         hud.toast(`⚠ ${npc.def.name}이(가) 강습해왔습니다! 전투 돌입!`);
+        hud.flashCombatText('강습!!', 'danger');
         this._skipNextCombatToast = true;
         if (this.selectedTarget === npc) { this.selectedTarget = null; hud.hideInteractionMenu(); }
       }
@@ -715,6 +721,8 @@ export class SeaScene {
     // 멀쩡해도 배를 몰 사람이 아무도 없으면 항해 불능인 건 마찬가지). 최소 정원(50%) 밑으로만
     // 떨어진 상태는 속도 페널티로 끝나고, "선원이 완전히 0"이 됐을 때만 난파로 이어진다.
     if (state.shipHp <= 0 || state.crewCount === 0) {
+      // 전투 중에 난파했다면(굶주림 등 다른 원인이 아니라) 이 조우전은 패배로 끝난 것이다.
+      if (state.inCombat) hud.flashCombatText('패배!', 'lose');
       const wreckedByCrew = state.crewCount === 0;
       const wreckedByHull = state.shipHp <= 0;
       const nearest = this._findNearestCityMarker();
