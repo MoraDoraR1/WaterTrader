@@ -28,6 +28,7 @@ function makeUid() {
 export function buyShip(shipId) {
   const target = getShip(shipId);
   if (!target) return { ok: false, reason: '존재하지 않는 배입니다.' };
+  if (target.purchasable === false) return { ok: false, reason: '이 배는 구매할 수 없습니다.' };
   if (state.fleet.length + 1 >= FLEET_CAP) return { ok: false, reason: `함대가 가득 찼습니다 (최대 ${FLEET_CAP}척).` };
   if (state.gold < target.price) return { ok: false, reason: '골드가 부족합니다.' };
 

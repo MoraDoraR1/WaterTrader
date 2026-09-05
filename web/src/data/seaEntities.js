@@ -5,9 +5,9 @@ import { project } from './coastline.js';
 
 export const SEA_NPC_SHIPS = [
   { id: 'pirate_1', type: 'pirate', name: '해적선 검은상어호', pos: project(-11.83, 35.00), shipId: 'caravel_war',
-    hp: 500, hostile: true, patrolRadius: 60 },
+    hp: 500, hostile: true, patrolRadius: 60, tier: 'grunt' },
   { id: 'pirate_2', type: 'pirate', name: '해적선 붉은깃발호', pos: project(2.61, 52.78), shipId: 'caravela_redonda',
-    hp: 420, hostile: true, patrolRadius: 25 },
+    hp: 420, hostile: true, patrolRadius: 25, tier: 'grunt' },
   { id: 'merchant_1', type: 'merchant', name: '상인선 카를로스호', pos: project(-11.39, 40.56), shipId: 'fluyt',
     hp: 600, hostile: false, patrolRadius: 60 },
   { id: 'adventurer_1', type: 'adventurer', name: '모험가 페드로의 배', pos: project(-8.50, 36.11), shipId: 'pinta',
@@ -20,7 +20,7 @@ export const SEA_NPC_SHIPS = [
   { id: 'merchant_london', type: 'merchant', name: '차 무역선 빅토리아호', pos: project(1.86, 51.82), shipId: 'tea_clipper',
     hp: 700, hostile: false, patrolRadius: 45 },
   { id: 'pirate_channel', type: 'pirate', name: '해적선 북해의 늑대호', pos: project(2.57, 52.36), shipId: 'topsail_schooner',
-    hp: 550, hostile: true, patrolRadius: 35 },
+    hp: 550, hostile: true, patrolRadius: 35, tier: 'grunt' },
   { id: 'merchant_amsterdam', type: 'merchant', name: '동인도회사 무역선 바타비아호', pos: project(3.19, 53.64), shipId: 'east_indiaman',
     hp: 1000, hostile: false, patrolRadius: 50 },
   { id: 'merchant_hamburg', type: 'merchant', name: '한자동맹 코게선 그라이프호', pos: project(8.445, 53.42), shipId: 'cog',
@@ -35,15 +35,39 @@ export const SEA_NPC_SHIPS = [
   { id: 'merchant_venezia', type: 'merchant', name: '베네치아 갈레온 레온도로호', pos: project(13.32, 43.44), shipId: 'galeone_veneziano',
     hp: 1100, hostile: false, patrolRadius: 45 },
   { id: 'pirate_med', type: 'pirate', name: '바르바리 해적선 붉은수염호', pos: project(7.12, 41.98), shipId: 'baltimore_schooner',
-    hp: 380, hostile: true, patrolRadius: 35 },
+    hp: 380, hostile: true, patrolRadius: 35, tier: 'grunt' },
 
   // ── 전세계 항로 확장 — 대서양·인도양 신규 항구 인근 순찰선 ──
   { id: 'pirate_caribbean', type: 'pirate', name: '해적선 카리브의 유령호', pos: project(-75.87, 21.0), shipId: 'baltimore_schooner',
-    hp: 480, hostile: true, patrolRadius: 40 },
+    hp: 480, hostile: true, patrolRadius: 40, tier: 'grunt' },
   { id: 'merchant_havana', type: 'merchant', name: '은 함대 산타클라라호', pos: project(-79.5, 19.0), shipId: 'fluyt',
     hp: 800, hostile: false, patrolRadius: 40 },
   { id: 'merchant_goa', type: 'merchant', name: '동인도 무역선 상투메호', pos: project(72.5, 16.5), shipId: 'east_indiaman',
     hp: 900, hostile: false, patrolRadius: 45 },
   { id: 'pirate_malacca', type: 'pirate', name: '해적선 해협의 이빨호', pos: project(100.8, 3.0), shipId: 'caravel_war',
-    hp: 460, hostile: true, patrolRadius: 30 },
+    hp: 460, hostile: true, patrolRadius: 30, tier: 'grunt' },
+
+  // ── 신규 해적 증원 — 지역별 컨셉 배치 ──
+  // 동아시아: 신규 아시아 선박(플레이어도 구매 가능한 세키부네·복선)을 그대로 탄 지역
+  // 해적들 — "유저가 살 수 있는 배를 해적도 몇 척은 탄다"는 컨셉을 동아시아 항로에도 심는다.
+  { id: 'pirate_wokou', type: 'pirate', name: '왜구선 아카츠키호', pos: project(129.6, 33.0), shipId: 'sekibune',
+    hp: 420, hostile: true, patrolRadius: 30, tier: 'grunt' },
+  { id: 'pirate_china_coast', type: 'pirate', name: '해적선 흑룡호', pos: project(116.5, 22.5), shipId: 'fuchuan',
+    hp: 1000, hostile: true, patrolRadius: 35, tier: 'elite' },
+
+  // 바르바리(지중해 서부)·인도양·카리브해에는 어느 나라에도 속하지 않는 해적 전용 선박
+  // (해적 슬루프/브리건틴, purchasable: false)을 배치해 지역 위협도에 단계를 둔다.
+  { id: 'pirate_barbary_grunt', type: 'pirate', name: '바르바리 해적선', pos: project(2.2, 37.3), shipId: 'pirate_sloop',
+    hp: 300, hostile: true, patrolRadius: 30, tier: 'grunt' },
+  { id: 'pirate_barbary_elite', type: 'pirate', name: '바르바리 해적 사령선', pos: project(15.3, 35.3), shipId: 'pirate_brigantine',
+    hp: 550, hostile: true, patrolRadius: 35, tier: 'elite' },
+  { id: 'pirate_caribbean_2', type: 'pirate', name: '해적선 죽음의 산호호', pos: project(-78.5, 20.0), shipId: 'pirate_sloop',
+    hp: 320, hostile: true, patrolRadius: 40, tier: 'grunt' },
+  { id: 'pirate_indian_ocean', type: 'pirate', name: '해적선 계절풍의 습격자호', pos: project(101.0, 3.5), shipId: 'pirate_brigantine',
+    hp: 560, hostile: true, patrolRadius: 35, tier: 'elite' },
+
+  // 보스 — 대서양 한복판(아조레스 인근)에 드물게 출몰하는 전설적인 해적왕의 기함.
+  // 세계 전역에 딱 한 척뿐인 유일 개체로, 마주치면 상당한 각오가 필요하다.
+  { id: 'pirate_boss_kraken', type: 'pirate', name: '[보스] 해적 기함 크라켄의 이빨호', pos: project(-27.0, 36.0), shipId: 'pirate_flagship_kraken',
+    hp: 2400, hostile: true, patrolRadius: 25, tier: 'boss' },
 ];

@@ -17,6 +17,15 @@ const STANDOFF = 40;
 const AMBUSH_CHECK_INTERVAL = 4.0; // 강습 확률 판정 주기(초) — 해적 한정
 const AMBUSH_CHANCE = 0.18; // 판정마다 강습이 실제로 발동할 확률
 
+// 해적 위협 등급 — spawn 데이터(seaEntities.js)의 tier 필드로 정해진다(생략 시 grunt).
+// 같은 배(shipId)라도 등장 지역에 따라 이 배율만큼 더 강해질 수 있다 — 전용 보스 함선을
+// 새로 그릴 필요 없이, 기존 배에 위협 등급만 얹어 지역별 난이도차를 낼 수 있게 한다.
+const TIER_MULS = {
+  grunt: { hp: 1, dmg: 1, fireIntervalMul: 1, rangeMul: 1 },
+  elite: { hp: 1.4, dmg: 1.3, fireIntervalMul: 0.85, rangeMul: 1.15 },
+  boss: { hp: 2.2, dmg: 1.7, fireIntervalMul: 0.7, rangeMul: 1.35 },
+};
+
 export class NpcShip {
   constructor(def) {
     this.def = def;
@@ -24,8 +33,10 @@ export class NpcShip {
     this.spawn = new Vec2(def.pos[0], def.pos[1]);
     this.pos = this.spawn.clone();
     this.heading = Math.random() * Math.PI * 2;
-    this.hp = def.hp;
-    this.maxHp = def.hp;
+    this.tier = def.tier || 'grunt';
+    const tm = TIER_MULS[this.tier] || TIER_MULS.grunt;
+    this.hp = Math.round(def.hp * tm.hp);
+    this.maxHp = this.hp;
     this.state = 'patrol';
     this.patrolTarget = this._randomPatrolPoint();
     // 원거리 공격력은 이 NPC의 shipId가 가진 cannons(대포 최대치) 스탯에 비례해 정해진다 —
@@ -33,18 +44,19 @@ export class NpcShip {
     // 더 위협적이어야 실제로 "어떤 배를 상대하는지"가 전투 난이도에 의미를 갖는다.
     // cannons=5(소형) 기준 dps~5.2, cannons=18(카라벨라 데 아르마다급) 기준 dps~9.9 정도로
     // 완만하게 벌어지도록 잡았다 — 플레이어 화력 스케일(수십~수백 dps)에 비하면 여전히
-    // NPC는 전반적으로 약하지만, 배 종류별 차이는 확실히 드러난다.
+    // NPC는 전반적으로 약하지만, 배 종류별 차이는 확실히 드러난다. 위협 등급(tier)은 이
+    // 기준선 위에 곱연산으로 얹혀, 엘리트/보스는 같은 배라도 눈에 띄게 더 위협적이다.
     const cannons = this.shipDef?.cannons || 0;
-    this.fireInterval = Math.max(1.6, Math.min(3.0, 3.0 - cannons * 0.06));
-    this.shotDmg = Math.min(30, Math.round(12 + cannons * 0.4));
+    this.fireInterval = Math.max(1.6, Math.min(3.0, 3.0 - cannons * 0.06)) * tm.fireIntervalMul;
+    this.shotDmg = Math.round(Math.min(30, Math.round(12 + cannons * 0.4)) * tm.dmg);
     this.fireTimer = this.fireInterval * Math.random();
     this.dead = false;
     this.sinkT = 0; // 격침 후 가라앉는 연출용 타이머
     this.owner = def.id;
     this.radius = 6 * ((getShip(def.shipId)?.class === 'xlarge' && 1.8) || 1);
     // 상호작용 범위 — 이 거리 안에 들어와야 플레이어가 클릭으로 전투/대화/종료를 선택할 수
-    // 있다(seaScene이 원으로 시각화). 큰 배일수록 범위도 조금 더 넓다.
-    this.interactionRange = Math.round(55 + this.radius * 3);
+    // 있다(seaScene이 원으로 시각화). 큰 배일수록, 위협 등급이 높을수록 범위도 넓다.
+    this.interactionRange = Math.round((55 + this.radius * 3) * tm.rangeMul);
     this.engaged = false; // 플레이어의 "전투" 선택 또는 강습으로만 true가 되며, attack 상태 진입 조건이다
     this.hostileOverride = false; // 원래 평화로운 NPC를 플레이어가 먼저 공격했을 때만 true
     this.ambushTimer = AMBUSH_CHECK_INTERVAL * (0.5 + Math.random());

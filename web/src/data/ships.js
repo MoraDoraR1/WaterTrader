@@ -51,6 +51,24 @@ export const SHIP_TYPES = {
   // (1860년대 대형 이민/양모 클리퍼) — 클리퍼는 시기가 늦을수록 극단으로 커진 실제 사례가
   // 많아 소~초대형 전체 범위를 채울 근거가 충분하다.
   clipper: { label: '클리퍼', era: '1830~1870s', nations: ['EN'], sizes: ['small', 'medium', 'large', 'xlarge'] },
+  // ── 동아시아 선종 — 판옥선/거북선/정크/아타케부네 등. 시기가 서로 안 맞아도(예: 거북선
+  // 1592년과 오다 노부나가 철갑선 1570년대가 유럽 전열함들의 시대와 겹치지 않아도) 게임적
+  // 허용 범위로 함께 등장시킨다. "유명하고 강력한 배는 초대형으로" 원칙에 따라 크기 등급은
+  // 실제 고증(대부분 중~대형급)보다 한 단계 이상 올려 잡은 항목이 있다(거북선/철갑선/정화보선).
+  panokseon: { label: '판옥선', era: '1555~1800s', nations: ['KR'], sizes: ['medium'] },
+  geobukseon: { label: '거북선', era: '1592', nations: ['KR'], sizes: ['xlarge'] },
+  joseon_cargo: { label: '조운선', era: '1400~1800s', nations: ['KR'], sizes: ['medium'] },
+  junk: { label: '정크(전선)', era: '1300~1800s', nations: ['CN'], sizes: ['small', 'large'] },
+  treasure_ship: { label: '보선', era: '1405~1433', nations: ['CN'], sizes: ['xlarge'] },
+  atakebune: { label: '아타케부네', era: '1560~1630s', nations: ['JP'], sizes: ['large'] },
+  tekkosen: { label: '철갑 아타케부네', era: '1578', nations: ['JP'], sizes: ['xlarge'] },
+  sekibune: { label: '세키부네', era: '1467~1800s', nations: ['JP'], sizes: ['medium'] },
+  bezaisen: { label: '벤자이센', era: '1600~1800s', nations: ['JP'], sizes: ['medium'] },
+  kobaya: { label: '고바야', era: '1400~1800s', nations: ['JP'], sizes: ['small'] },
+  // ── 해적 전용 선종 — 어느 나라에도 속하지 않는(country: 'PR') 해적 자체 무장선.
+  sloop: { label: '슬루프', era: '1650~1800s', nations: [], sizes: ['small'] },
+  brigantine: { label: '브리건틴', era: '1650~1800s', nations: [], sizes: ['medium'] },
+  pirate_flagship: { label: '해적 기함', era: '1650~1800s', nations: [], sizes: ['xlarge'] },
 };
 
 export const SHIPS = [
@@ -171,6 +189,60 @@ export const SHIPS = [
   { id: 'soleil_royal', name: '솔레유 루아얄 (Soleil Royal)', class: 'xlarge', role: 'combat', type: 'shipline',
     country: 'FR', era: '1670', speed: 7, turnRate: 19, hp: 2900, cargo: 520, cannons: 103, cannonSlotTiers: [4, 4, 3, 3, 2, 1], skills: ['precision_fire', 'boarding_mastery', 'capture_expert', 'battle_morale'], crew: 210, price: 19500,
     desc: '태양왕 루이 14세를 상징하는 프랑스 왕실 기함.' },
+
+  // ── 조선(KR) ──
+  { id: 'panokseon', name: '판옥선 (板屋船)', class: 'medium', role: 'combat', type: 'panokseon',
+    country: 'KR', era: '1555~1800s', speed: 9, turnRate: 55, hp: 700, cargo: 160, cannons: 18, cannonSlotTiers: [3, 1], skills: ['ironclad_defense', 'damage_control'], crew: 60, price: 2800,
+    desc: '평저선 특유의 안정된 선체를 포격 플랫폼으로 삼은 조선 수군의 주력 전선. 천자총통 등 대형 화포를 실을 수 있었다.' },
+  { id: 'geobukseon', name: '거북선 (龜船)', class: 'xlarge', role: 'combat', type: 'geobukseon',
+    country: 'KR', era: '1592', speed: 8, turnRate: 34, hp: 2700, cargo: 450, cannons: 92, cannonSlotTiers: [4, 4, 3, 2, 2, 1], skills: ['reinforced_ram', 'ironclad_defense', 'agile_maneuvers', 'damage_control'], crew: 190, price: 17000,
+    desc: '쇠못 박힌 덮개와 용머리 충각을 갖춘 조선 수군의 전설적 철갑 전함. 임진왜란 해전에서 왜선 사이를 종횡무진하며 격파했다 — 실제 규모보다 훨씬 강력하게, 여느 초대형 전열함과 어깨를 나란히 하도록 재현했다.' },
+  { id: 'joseon_cargo', name: '조운선 (漕運船)', class: 'medium', role: 'trade', type: 'joseon_cargo',
+    country: 'KR', era: '1400~1800s', speed: 9, turnRate: 46, hp: 650, cargo: 260, cannons: 7, cannonSlotTiers: [2, 1], skills: ['bulk_buyer', 'careful_voyage'], crew: 34, price: 2300,
+    desc: '조선의 조세미(租稅米)를 전국 항구로 실어 나르던 평저형 세곡 운반선.' },
+
+  // ── 중국(CN) ──
+  { id: 'shachuan', name: '사선 (沙船)', class: 'small', role: 'adventure', type: 'junk',
+    country: 'CN', era: '1350~1800s', speed: 10, turnRate: 62, hp: 340, cargo: 90, cannons: 5, cannonSlotTiers: [2], skills: ['nimble_helm'], crew: 18, price: 900,
+    desc: '평저에 방수격벽 구조를 갖춰 얕은 연안과 원양을 가리지 않고 다닌 중국의 표준 정크선.' },
+  { id: 'fuchuan', name: '복선 (福船)', class: 'large', role: 'combat', type: 'junk',
+    country: 'CN', era: '1400~1800s', speed: 9, turnRate: 30, hp: 1450, cargo: 380, cannons: 28, cannonSlotTiers: [3, 2, 2, 1], skills: ['multi_cannon', 'ironclad_defense', 'damage_control'], crew: 110, price: 6800,
+    desc: '명나라 해군의 주력 대형 정크선. 높은 선루와 두꺼운 선체로 왜구·서양 해적선에 맞섰다.' },
+  { id: 'zheng_he_treasure_ship', name: '정화보선 (鄭和寶船)', class: 'xlarge', role: 'trade', type: 'treasure_ship',
+    country: 'CN', era: '1405~1433', speed: 6, turnRate: 14, hp: 2200, cargo: 750, cannons: 18, cannonSlotTiers: [2, 2, 1, 1, 1, 1], skills: ['long_haul_logistics', 'skilled_carpenter', 'standing_supply', 'port_friendly'], crew: 250, price: 20000,
+    desc: '명나라 정화 함대의 기함. 당대 세계 최대 규모의 목조선으로, 조공 무역과 위세 과시를 위해 건조되었다 — 전 함선 통틀어 최대의 적재량을 자랑하지만 선회는 가장 둔하다.' },
+
+  // ── 일본(JP) ──
+  { id: 'atakebune', name: '아타케부네 (安宅船)', class: 'large', role: 'combat', type: 'atakebune',
+    country: 'JP', era: '1560~1630s', speed: 8, turnRate: 28, hp: 1300, cargo: 320, cannons: 17, cannonSlotTiers: [2, 2, 2, 1], skills: ['boarding_mastery', 'battle_morale', 'agile_maneuvers'], crew: 130, price: 6200,
+    desc: '다층 누각(야구라)을 얹은 일본 수군의 주력 대형 전함. 화력보다 다수의 무사를 태운 백병전에 강하다.' },
+  { id: 'oda_tekkosen', name: '철갑 아타케부네 (鉄甲船)', class: 'xlarge', role: 'combat', type: 'tekkosen',
+    country: 'JP', era: '1578', speed: 6, turnRate: 15, hp: 3000, cargo: 400, cannons: 49, cannonSlotTiers: [3, 3, 2, 2, 2, 1], skills: ['ironclad_defense', 'damage_control', 'reinforced_ram', 'battle_morale'], crew: 200, price: 18500,
+    desc: '오다 노부나가가 모리 수군의 화공선에 맞서 건조시킨 쇠판 장갑 대형 아타케부네. 압도적인 방어력으로 적의 화공과 포격을 무력화한다 — 전 함선 중 최고의 내구도를 지녔다.' },
+  { id: 'sekibune', name: '세키부네 (関船)', class: 'medium', role: 'combat', type: 'sekibune',
+    country: 'JP', era: '1467~1800s', speed: 11, turnRate: 58, hp: 560, cargo: 130, cannons: 7, cannonSlotTiers: [2, 1], skills: ['rapid_reload', 'agile_maneuvers'], crew: 45, price: 2600,
+    desc: '각지 다이묘 수군의 표준 중형 전선. 노와 돛을 병용해 기동성이 뛰어나다.' },
+  { id: 'bezaisen', name: '벤자이센 (弁才船)', class: 'medium', role: 'trade', type: 'bezaisen',
+    country: 'JP', era: '1600~1800s', speed: 10, turnRate: 44, hp: 600, cargo: 240, cannons: 4, cannonSlotTiers: [1, 1], skills: ['savvy_haggler', 'frugal_voyage'], crew: 26, price: 2100,
+    desc: '에도 시대 기타마에부네 항로를 오간 일본의 대표적 연안 상선.' },
+  { id: 'kobaya', name: '고바야 (小早)', class: 'small', role: 'adventure', type: 'kobaya',
+    country: 'JP', era: '1400~1800s', speed: 13, turnRate: 80, hp: 260, cargo: 45, cannons: 2, cannonSlotTiers: [1], skills: ['nimble_helm'], crew: 14, price: 750,
+    desc: '일본 수군의 초쾌속 소형 정찰·전령선. 뛰어난 선회력으로 척후 임무에 쓰였다.' },
+
+  // ── 해적 전용 선박 (구매 불가, purchasable: false) ──
+  // 어느 나라에도 속하지 않는(country: 'PR') 해적 자체 무장선 — 조선소에서 살 수 없고
+  // 오직 해적 NPC로만 등장한다. 잡몹(슬루프) → 엘리트(브리건틴) → 보스(기함) 3단 위협
+  // 등급을 이루며, entities/pirate.js가 spawn 데이터의 tier에 따라 이 배들의 hp·화력에
+  // 추가 배율을 얹는다(같은 배라도 등장 지역에 따라 조금씩 강해질 수 있다는 뜻).
+  { id: 'pirate_sloop', name: '해적 슬루프', class: 'small', role: 'combat', type: 'sloop',
+    country: 'PR', era: '1650~1800s', speed: 13, turnRate: 62, hp: 350, cargo: 60, cannons: 5, cannonSlotTiers: [2], skills: ['assault_speed'], crew: 24, price: 1100,
+    desc: '세계 각지 해역에 출몰하는 흔한 해적 소형 쾌속선. 무리 지어 다니지만 개별 전투력은 약하다.', purchasable: false },
+  { id: 'pirate_brigantine', name: '해적 브리건틴', class: 'medium', role: 'combat', type: 'brigantine',
+    country: 'PR', era: '1650~1800s', speed: 12, turnRate: 50, hp: 620, cargo: 140, cannons: 10, cannonSlotTiers: [2, 2], skills: ['rapid_reload', 'assault_speed'], crew: 55, price: 2600,
+    desc: '노련한 해적 선장이 지휘하는 중형 무장선. 상선단을 통째로 노릴 만큼 위협적이다.', purchasable: false },
+  { id: 'pirate_flagship_kraken', name: '[보스] 해적 기함 크라켄의 이빨호', class: 'xlarge', role: 'combat', type: 'pirate_flagship',
+    country: 'PR', era: '1650~1800s', speed: 8, turnRate: 24, hp: 2600, cargo: 300, cannons: 78, cannonSlotTiers: [4, 4, 2, 2, 1, 1], skills: ['multi_cannon', 'rapid_reload', 'boarding_mastery', 'battle_morale'], crew: 190, price: 16000,
+    desc: '악명 높은 해적왕의 기함. 각지에 소문으로만 떠돌던 전설적인 초대형 사략선으로, 마주치면 상당한 전투력을 각오해야 한다.', purchasable: false },
 ];
 
 export function getShip(id) {
@@ -193,6 +265,7 @@ export const COUNTRY_COLORS = {
   KR: '#3f7d5c', JP: '#bf2a37', CN: '#8b1e1e', VN: '#c0392b',
   SM: '#d4a017', BU: '#a0522d', AC: '#6b8e23', BN: '#f1c40f',
   MT: '#c8102e', RG: '#5a3e8a', OM: '#b03a2e', SC: '#1e5b8a',
+  PR: '#1a1613', // 해적 전용 선박(어느 나라에도 속하지 않음) — 검은 깃발
 };
 
 export const COUNTRY_NAMES = {
@@ -202,4 +275,5 @@ export const COUNTRY_NAMES = {
   KR: '조선', JP: '일본', CN: '중국', VN: '베트남',
   SM: '샴', BU: '버마', AC: '아체', BN: '브루나이',
   MT: '몰타 기사단', RG: '라구사', OM: '오만', SC: '스코틀랜드',
+  PR: '해적',
 };

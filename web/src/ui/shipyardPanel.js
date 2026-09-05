@@ -57,7 +57,9 @@ function renderBuyTab() {
   renderBuyFilterRow();
   const owned = new Set([state.currentShipId, ...state.fleet.map((f) => f.shipId)]);
   const fleetFull = state.fleet.length + 1 >= FLEET_CAP;
-  const filtered = buyRoleFilter === 'all' ? SHIPS : SHIPS.filter((s) => s.role === buyRoleFilter);
+  // 해적 전용 선박(purchasable: false)은 조선소에서 살 수 없다 — 오직 해적 NPC로만 등장.
+  const purchasableShips = SHIPS.filter((s) => s.purchasable !== false);
+  const filtered = buyRoleFilter === 'all' ? purchasableShips : purchasableShips.filter((s) => s.role === buyRoleFilter);
   const rows = [...filtered].sort(SORT_MODES[buySortMode].cmp).map((s) => {
     const isOwned = owned.has(s.id);
     const role = SHIP_ROLES[s.role];
