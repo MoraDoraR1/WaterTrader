@@ -144,7 +144,11 @@ function goToCity(cityId) {
   const eventNote = !event.active ? '' : event.type === 'boom'
     ? ` 🔥 대호황! 전 품목 시세 ${Math.round(event.mul * 100)}% (${event.daysLeft}일 후 종료)`
     : ` 💥 대폭락! 전 품목 시세 ${Math.round(event.mul * 100)}% (${event.daysLeft}일 후 종료)`;
-  hud.toast(`${citySceneObj.city.name}에 정박했습니다.${wageNote}${eventNote}`);
+  // 소형 항구는 조선소(조선소 기사 NPC)가 아예 없다 — 배 구매·건조·수리·부품 전부 불가능하니
+  // 직접 걸어다니며 헤매기 전에 미리 알려준다.
+  const hasShipyard = citySceneObj.city.npcs.some((n) => n.role === 'shipwright');
+  const shipyardNote = hasShipyard ? '' : ' 🔨 이 항구엔 조선소가 없습니다.';
+  hud.toast(`${citySceneObj.city.name}에 정박했습니다.${wageNote}${eventNote}${shipyardNote}`);
 
   // 항로 개척 3부작의 마지막 단계(항해)는 여기, 목적지 항구에 정박하는 순간 자동 완료된다.
   const voyageQuest = checkVoyageArrival(cityId);
@@ -223,6 +227,17 @@ wireShipyardTabs();
 subscribe((patch) => {
   if (patch.shipChanged) seaScene?.rebuildShip();
   if (patch.fleetChanged) seaScene?.rebuildEscorts();
+});
+
+// 항구(도시 화면)에 있는 동안엔 seaScene의 매 프레임 갱신이 멈추기 때문에, 시장 거래·의뢰
+// 완료·은행·선원 고용처럼 항구에서만 가능한 행동들이 골드/선원 수를 바꿔도 상단 바(top-bar)가
+// 갱신되지 않고 도킹 순간 값에 멈춰 있었다. 관련 변화가 있을 때마다 화면과 무관하게 새로고침.
+subscribe((patch) => {
+  if (state.screen === 'title') return;
+  if (!(patch.goldChanged || patch.inventoryChanged || patch.questChanged || patch.crewChanged)) return;
+  hud.setGold(state.gold);
+  const shipDef = getShip(state.currentShipId);
+  if (shipDef) hud.setCrewCount(state.crewCount ?? shipDef.crew, shipDef.crew, getCurrentMinCrew());
 });
 
 function refreshRank() {
@@ -428,5 +443,5 @@ window.__debug = {
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
   checkDiscoveryEvents, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
-  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS,
+  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity,
 };

@@ -487,8 +487,18 @@ export class SeaScene {
         notify({ inventoryChanged: true });
       }
     }
-    if (loot.materials > 0) { state.materials += loot.materials; bits.push(`자재 +${loot.materials}`); }
-    if (loot.cannonballs > 0) { state.cannonballs += loot.cannonballs; bits.push(`포탄 +${loot.cannonballs}`); }
+    // 자재·포탄은 식량/식수와 같은 화물칸을 나눠 쓰는 자원이라(오크/철갑판과 달리), 노획도
+    // 구매와 똑같이 남은 공간만큼만 실어야 한다 — 안 그러면 전투로만 화물칸 정원을 넘길 수 있었다.
+    if (loot.materials > 0) {
+      const space = Math.max(0, getCargoCapacity() - getCargoUsed());
+      const qty = Math.min(loot.materials, space);
+      if (qty > 0) { state.materials += qty; bits.push(`자재 +${qty}`); }
+    }
+    if (loot.cannonballs > 0) {
+      const space = Math.max(0, getCargoCapacity() - getCargoUsed());
+      const qty = Math.min(loot.cannonballs, space);
+      if (qty > 0) { state.cannonballs += qty; bits.push(`포탄 +${qty}`); }
+    }
     if (loot.oakTimber > 0) { state.oakTimber += loot.oakTimber; bits.push(`상급 조선용 참나무 +${loot.oakTimber}`); }
     if (loot.ironcladPlating > 0) { state.ironcladPlating += loot.ironcladPlating; bits.push(`전설 해적기함의 철갑판 +${loot.ironcladPlating}`); }
 

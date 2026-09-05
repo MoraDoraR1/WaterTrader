@@ -52,6 +52,7 @@ export const state = {
   seenRespawnIntro: false, // 엘리트/보스 리스폰·강화 시스템 설명을 한 번이라도 봤는지
   marketState: {}, // cityId -> goodId -> { mul, updatedAt } — 플레이어 매매로 흔들린 뒤 시간이 지나며 되돌아오는 시세 배율
   marketCycle: {}, // cityId -> goodId -> { mul, bucket } — 항해일자 5일 주기로 한 걸음씩 오르내리는 시세 사이클(주식 종가 개념)
+  marketVolume: {}, // cityId -> goodId -> { remaining, updatedAt } — 한 항구에서 한 번에 소화 가능한 거래량 상한(VOLUME_CAP), 시간이 지나며 회복
   cityEvents: {}, // cityId -> { type: 'boom'|'crash'|null, mul, endBucket, checkedBucket } — 도시 전체에 걸리는 대호황(150~170%)/대폭락(40~50%) 사건
   audioMuted: false,
   endingShown: false, // 최고 랭크(바다의 제독) 도달 엔딩 화면을 이미 본 적 있는지

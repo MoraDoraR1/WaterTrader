@@ -174,6 +174,7 @@ export class CityScene {
     if (npc.role === 'shipwright') {
       hud.showDialogue(npc.name, npc.line, [
         { label: '배 구매', onClick: () => { hud.hideDialogue(); openShipyard('buy'); } },
+        { label: '건조', onClick: () => { hud.hideDialogue(); openShipyard('build'); } },
         { label: '수리', onClick: () => { hud.hideDialogue(); openShipyard('repair'); } },
         { label: '부품', onClick: () => { hud.hideDialogue(); openShipyard('parts'); } },
         { label: '닫기', onClick: () => hud.hideDialogue() },
