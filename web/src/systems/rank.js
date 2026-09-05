@@ -1,13 +1,12 @@
 import { state } from '../state.js';
 import { RANKS } from '../data/ranks.js';
 
-// 재산 + 나포/의뢰 완료 실적 + 함대 규모 + 각국 우호도 총합을 하나의 "명성 점수"로 합산한다.
+// 재산 + 해적 토벌/의뢰 완료 실적 + 함대 규모 + 각국 우호도 총합을 하나의 "명성 점수"로 합산한다.
 export function computeScore() {
   const completedQuests = Object.values(state.quests || {}).filter((v) => v === 'completed').length;
   const repSum = Object.values(state.reputation || {}).reduce((a, b) => a + b, 0);
   return Math.round(
     (state.gold || 0)
-    + (state.captureCount || 0) * 800
     + (state.pirateBounty || 0) * 400
     + completedQuests * 300
     + (state.fleet || []).length * 600

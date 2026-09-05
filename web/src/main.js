@@ -231,12 +231,12 @@ function refreshRank() {
   hud.setRank(info.rank.label);
   if (info.isMax && !state.endingShown) {
     state.endingShown = true;
-    audio.playCaptureFanfare();
+    audio.playEndingFanfare();
     const completedQuests = Object.values(state.quests || {}).filter((v) => v === 'completed').length;
     hud.showEnding([
       { val: `${state.gold.toLocaleString('ko-KR')} 두캇`, label: '재산' },
       { val: `${state.fleet.length + 1}척`, label: '함대 규모' },
-      { val: `${state.captureCount || 0}회`, label: '나포 성공' },
+      { val: `${state.pirateBounty || 0}회`, label: '해적 토벌' },
       { val: `${completedQuests}건`, label: '완료한 의뢰' },
     ]);
   }

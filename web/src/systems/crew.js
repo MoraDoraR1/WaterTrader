@@ -22,7 +22,7 @@ const CREW_LOSS_PCT_STARVED = 0.05; // 식량 고갈 1일당 정원의 5%
 const CREW_LOSS_PCT_DEHYDRATED = 0.07; // 식수 고갈 1일당 정원의 7%(갈증이 더 치명적)
 const CREW_RECOVER_PCT_ON_DOCK = 0.2; // 급여를 낼 수 있으면 입항할 때마다 정원의 20%만큼 새로 충원
 const HIRE_COST_PER_CREW = 4; // 항구에서 선원을 새로 고용할 때 1명당 드는 두캇(항해 전 정원을 채우는 용도)
-export const RESCUE_CREW_MIN = 1, RESCUE_CREW_MAX = 3; // 전투 승리(격침·나포 불문) 시 적선에서 구조/편입되는 인원 — 항구 없이도 바다에서 소폭 보충 가능
+export const RESCUE_CREW_MIN = 1, RESCUE_CREW_MAX = 3; // 전투 승리(격침) 시 적선에서 구조/편입되는 인원 — 항구 없이도 바다에서 소폭 보충 가능
 
 // 지금 배의 정원 대비 최소 필요 선원 수(반올림 올림 — 최소 1명). 소수 정예 승조 스킬은
 // 이 비율 자체를 낮춰(minCrewRatioAdd는 음수) 더 적은 인원으로도 출항할 수 있게 해준다.
@@ -113,7 +113,7 @@ export function hireCrew(count) {
   return { ok: true, count: actualCount, cost };
 }
 
-// 전투에서 이겼을 때(격침·나포 불문) 적선에서 소수의 선원을 구조/편입한다 — 항구까지 가지
+// 전투에서 이겼을 때(격침) 적선에서 소수의 선원을 구조/편입한다 — 항구까지 가지
 // 않고도 바다 한복판에서 소폭 보충할 수 있는 유일한 수단이라, 일부러 다수가 아니라
 // 1~3명으로 작게 잡았다(요청한 대로 대량 보충 수단은 아님).
 export function rescueCrewFromVictory() {

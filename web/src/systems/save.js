@@ -39,7 +39,6 @@ export function saveGame() {
     crewMorale: state.crewMorale,
     crewCount: state.crewCount,
     fleet: state.fleet,
-    captureCount: state.captureCount,
     oakTimber: state.oakTimber,
     ironcladPlating: state.ironcladPlating,
     pirateEscalation: state.pirateEscalation,
@@ -92,7 +91,6 @@ export function applySave(data) {
   if (typeof data.crewMorale === 'number') state.crewMorale = data.crewMorale;
   if (typeof data.crewCount === 'number') state.crewCount = data.crewCount;
   state.fleet = Array.isArray(data.fleet) ? data.fleet : [];
-  state.captureCount = typeof data.captureCount === 'number' ? data.captureCount : 0;
   state.oakTimber = typeof data.oakTimber === 'number' ? data.oakTimber : 0;
   state.ironcladPlating = typeof data.ironcladPlating === 'number' ? data.ironcladPlating : 0;
   state.pirateEscalation = data.pirateEscalation && typeof data.pirateEscalation === 'object' ? data.pirateEscalation : {};

@@ -477,7 +477,8 @@ export class SeaScene {
     const loot = rollCombatLoot(npc);
     if (loot.cargoGoodId && loot.cargoQty > 0) {
       const space = Math.max(0, getCargoCapacity() - getCargoUsed());
-      const qty = Math.min(loot.cargoQty, space);
+      const boostedQty = Math.round(loot.cargoQty * mulSkillEffect(this.ship.shipDef, 'lootQtyMul', 1));
+      const qty = Math.min(boostedQty, space);
       if (qty > 0) {
         const good = getGood(loot.cargoGoodId);
         const item = state.inventory.find((it) => it.id === loot.cargoGoodId);

@@ -1,6 +1,6 @@
 // Web Audio API로 전부 절차적으로 합성하는 사운드 엔진 — 외부 오디오 파일을 전혀 쓰지 않는다
 // (단일 HTML 아티팩트라 외부 리소스를 가져올 수 없다). 파도/항구 앰비언트 루프와 포격·충돌·
-// 백병전·나포 등 원샷 효과음을 모두 노이즈/오실레이터 합성으로 만든다.
+// 백병전·격침 등 원샷 효과음을 모두 노이즈/오실레이터 합성으로 만든다.
 class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -203,7 +203,7 @@ class AudioEngine {
 
   playWinStinger() { if (this.ctx) this._stinger([440, 554, 659, 880], this.ctx.currentTime); }
   playLoseStinger() { if (this.ctx) this._stinger([392, 349, 294], this.ctx.currentTime); }
-  playCaptureFanfare() { if (this.ctx) this._stinger([523, 659, 784, 1047], this.ctx.currentTime); }
+  playEndingFanfare() { if (this.ctx) this._stinger([523, 659, 784, 1047], this.ctx.currentTime); }
 }
 
 export const audio = new AudioEngine();
