@@ -140,8 +140,9 @@ function renderBuildTab() {
       },
     };
   });
+  const heldMats = `보유 — 자재 ${state.materials} · 상급 조선용 참나무 ${state.oakTimber} · 전설 해적기함의 철갑판 ${state.ironcladPlating}`;
   hud.renderShipyard({
-    title: `조선소 — 건조 (재료는 엘리트·보스 해적 격침으로 노획 — 구매 불가 최상위 함선, 최대 ${FLEET_CAP}척)`,
+    title: `조선소 — 건조 (재료는 엘리트·보스 해적 격침으로 노획, ${heldMats} — 구매 불가 최상위 함선, 최대 ${FLEET_CAP}척)`,
     gold: state.gold,
     rows,
   });
