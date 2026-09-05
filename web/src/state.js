@@ -37,6 +37,7 @@ export const state = {
   reputation: {}, // 국가코드 -> 우호도(시장 가격에 반영)
   pirateBounty: 0, // 완료한 해적 토벌 의뢰 수
   crewMorale: 100, // 0~100 — 백병전 전투력에 반영
+  visitedCities: {}, // cityId -> true — 한 번이라도 정박한 항구(랭크 점수의 탐험 지표로 쓰인다)
   fleet: [], // 예비 함대 — { uid, shipId, shipHp, shipParts, name } — 항구에 정박해 있는(현재 조종 중이 아닌) 배들
   // ---- 건조 전용 재료 ----
   // 화물칸을 차지하지 않는 별도 자원(골드처럼 취급) — 오직 조선소 "건조" 탭에서만 소모된다.
@@ -49,6 +50,10 @@ export const state = {
   pirateEscalation: {},
   pirateEscalationResetDate: null, // 마지막으로 자정 초기화를 처리한 날짜 문자열(Date#toDateString)
   seenRespawnIntro: false, // 엘리트/보스 리스폰·강화 시스템 설명을 한 번이라도 봤는지
+  // 평시 항해 중(항로 개척 항해 의뢰가 없어도) 가끔 뜨는 소소한 발견 이벤트의 다음 발동
+  // 시각(state.dayTimer 기준) — 새로고침으로 쿨다운을 초기화해 반복 획득하는 걸 막기 위해
+  // 카운트다운이 아니라 리스폰 시스템과 같은 방식(절대 시각)으로 저장한다.
+  nextAmbientDiscoveryAt: null,
   marketState: {}, // cityId -> goodId -> { mul, updatedAt } — 플레이어 매매로 흔들린 뒤 시간이 지나며 되돌아오는 시세 배율
   marketCycle: {}, // cityId -> goodId -> { mul, bucket } — 항해일자 5일 주기로 한 걸음씩 오르내리는 시세 사이클(주식 종가 개념)
   marketVolume: {}, // cityId -> goodId -> { remaining, updatedAt } — 한 항구에서 한 번에 소화 가능한 거래량 상한(VOLUME_CAP), 시간이 지나며 회복

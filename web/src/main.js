@@ -19,11 +19,11 @@ import { payWagesOnDock, getCurrentMinCrew } from './systems/crew.js';
 import { openCrew } from './ui/crewPanel.js';
 import { repairAtSea, getCannonSlotCount, buyShip, buildShip } from './systems/shipyard.js';
 import { audio } from './systems/audio.js';
-import { getRankInfo } from './systems/rank.js';
+import { getRankInfo, computeScore } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood } from './systems/market.js';
 import { SUPPLY_DEFS } from './systems/supplies.js';
 import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUnlock.js';
-import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
+import { checkDiscoveryEvents, checkAmbientDiscovery } from './systems/discoveryEvents.js';
 import { RANKS } from './data/ranks.js';
 import {
   checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
@@ -149,7 +149,12 @@ function goToCity(cityId) {
   // 직접 걸어다니며 헤매기 전에 미리 알려준다.
   const hasShipyard = citySceneObj.city.npcs.some((n) => n.role === 'shipwright');
   const shipyardNote = hasShipyard ? '' : ' 🔨 이 항구엔 조선소가 없습니다.';
-  hud.toast(`${citySceneObj.city.name}에 정박했습니다.${wageNote}${eventNote}${shipyardNote}`);
+  // 처음 와보는 항구면 방문 기록에 남긴다(랭크 점수의 탐험 지표) — 완료한 의뢰·함대
+  // 규모처럼 명성에 직접 기여하니, 첫 방문임을 알려준다.
+  const isFirstVisit = !state.visitedCities[cityId];
+  if (isFirstVisit) { state.visitedCities = { ...state.visitedCities, [cityId]: true }; notify({ visitedCitiesChanged: true }); }
+  const firstVisitNote = isFirstVisit ? ' 🧭 첫 방문!' : '';
+  hud.toast(`${citySceneObj.city.name}에 정박했습니다.${wageNote}${eventNote}${shipyardNote}${firstVisitNote}`);
 
   // 항로 개척 3부작의 마지막 단계(항해)는 여기, 목적지 항구에 정박하는 순간 자동 완료된다.
   const voyageQuest = checkVoyageArrival(cityId);
@@ -443,6 +448,6 @@ window.__debug = {
   get citySceneObj() { return citySceneObj; },
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
-  checkDiscoveryEvents, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
-  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity,
+  checkDiscoveryEvents, checkAmbientDiscovery, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
+  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity, computeScore,
 };

@@ -22,7 +22,7 @@ import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { checkBountyKill } from '../systems/quests.js';
-import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
+import { checkDiscoveryEvents, checkAmbientDiscovery } from '../systems/discoveryEvents.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
 import { RANKS } from '../data/ranks.js';
 import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory } from '../systems/crew.js';
@@ -677,7 +677,10 @@ export class SeaScene {
         : this.ship.baseWindSensitivity;
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
       this._checkRouteLockWarning(delta);
-      checkDiscoveryEvents(delta);
+      const onSpecialVoyage = checkDiscoveryEvents(delta);
+      // 항로 개척 항해 의뢰용 발견 이벤트와 겹쳐 뜨지 않도록, 그게 진행 중이 아닐 때만
+      // 평시 발견 이벤트를 확인한다 — 전투 중에는 분위기가 안 맞으니 제외.
+      if (!onSpecialVoyage && !state.inCombat) checkAmbientDiscovery();
     }
     this._updateWake(delta);
     for (const escort of this.escorts) escort.update(delta, this.ship);

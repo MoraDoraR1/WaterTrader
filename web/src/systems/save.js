@@ -38,12 +38,14 @@ export function saveGame() {
     pirateBounty: state.pirateBounty,
     crewMorale: state.crewMorale,
     crewCount: state.crewCount,
+    visitedCities: state.visitedCities,
     fleet: state.fleet,
     oakTimber: state.oakTimber,
     ironcladPlating: state.ironcladPlating,
     pirateEscalation: state.pirateEscalation,
     pirateEscalationResetDate: state.pirateEscalationResetDate,
     seenRespawnIntro: state.seenRespawnIntro,
+    nextAmbientDiscoveryAt: state.nextAmbientDiscoveryAt,
     marketState: state.marketState,
     marketCycle: state.marketCycle,
     marketVolume: state.marketVolume,
@@ -91,12 +93,14 @@ export function applySave(data) {
   if (typeof data.pirateBounty === 'number') state.pirateBounty = data.pirateBounty;
   if (typeof data.crewMorale === 'number') state.crewMorale = data.crewMorale;
   if (typeof data.crewCount === 'number') state.crewCount = data.crewCount;
+  state.visitedCities = data.visitedCities && typeof data.visitedCities === 'object' ? data.visitedCities : {};
   state.fleet = Array.isArray(data.fleet) ? data.fleet : [];
   state.oakTimber = typeof data.oakTimber === 'number' ? data.oakTimber : 0;
   state.ironcladPlating = typeof data.ironcladPlating === 'number' ? data.ironcladPlating : 0;
   state.pirateEscalation = data.pirateEscalation && typeof data.pirateEscalation === 'object' ? data.pirateEscalation : {};
   state.pirateEscalationResetDate = typeof data.pirateEscalationResetDate === 'string' ? data.pirateEscalationResetDate : null;
   state.seenRespawnIntro = !!data.seenRespawnIntro;
+  state.nextAmbientDiscoveryAt = typeof data.nextAmbientDiscoveryAt === 'number' ? data.nextAmbientDiscoveryAt : null;
   state.marketState = data.marketState && typeof data.marketState === 'object' ? data.marketState : {};
   state.marketCycle = data.marketCycle && typeof data.marketCycle === 'object' ? data.marketCycle : {};
   state.marketVolume = data.marketVolume && typeof data.marketVolume === 'object' ? data.marketVolume : {};
