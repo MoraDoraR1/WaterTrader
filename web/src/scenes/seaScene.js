@@ -16,12 +16,14 @@ import { getCombatants, getCombatPower, getNpcCombatPower } from '../systems/com
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
-import { seaRegionAt } from '../data/seaRegions.js';
+import { seaRegionAt, getSeaLockBucket } from '../data/seaRegions.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { checkBountyKill } from '../systems/quests.js';
+import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
+import { RANKS } from '../data/ranks.js';
 import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory } from '../systems/crew.js';
 import { FLEET_CAP } from '../systems/shipyard.js';
 import { audio } from '../systems/audio.js';
@@ -114,6 +116,7 @@ export class SeaScene {
     this.shakeTrauma = 0;
     this.wakeTrail = new WakeTrail();
     this._wakeTimer = 0;
+    this._routeWarnCooldown = 0; // 잠긴 항로 접근 경고 토스트 도배 방지
 
     hud.initThrottle(-3, 5);
 
@@ -283,6 +286,9 @@ export class SeaScene {
   }
 
   _isBlocked(x, z) {
+    // 아직 해금되지 않은 원양 항로는 항구 반경 예외보다도 우선한다 — 잠긴 항로 안의 항구를
+    // 근해 우회로 슬쩍 정박하는 일이 없도록, 육지처럼 아예 못 들어가는 벽으로 막는다.
+    if (!isRouteUnlocked(getSeaLockBucket(x, z))) return true;
     // 항구 반경(HARBOR_CLEAR_RADIUS) 안은 실제 해안선 모양과 무관하게 항상 바다로 취급한다
     // (테주강 하구의 리스본처럼, 실제 해안선을 그대로 쓰면 진입로가 배 한 척 폭으로 좁아지는
     // 항구가 있다 — 대신 도시 정중앙(moundColliders)만은 여전히 배가 못 들어가게 막는다).
@@ -299,6 +305,27 @@ export class SeaScene {
       if (dx * dx + dz * dz < m.r * m.r) return true;
     }
     return false;
+  }
+
+  // 진행 방향으로 조금 앞을 미리 살펴, 아직 안 열린 원양 항로 경계에 다가가고 있으면
+  // (실제로 막히기 전에 미리) 왜 못 지나가는지 안내 토스트를 띄운다 — 그냥 육지처럼 조용히
+  // 막히기만 하면 "잠긴 항로"라는 걸 알아채기 어렵다.
+  _checkRouteLockWarning(delta) {
+    this._routeWarnCooldown = Math.max(0, this._routeWarnCooldown - delta);
+    if (this._routeWarnCooldown > 0) return;
+    const LOOKAHEAD = 25;
+    const ax = this.ship.pos.x + Math.sin(this.ship.heading) * LOOKAHEAD;
+    const az = this.ship.pos.y + Math.cos(this.ship.heading) * LOOKAHEAD;
+    const bucket = getSeaLockBucket(ax, az);
+    if (!bucket || isRouteUnlocked(bucket)) return;
+    if (isRouteUnlocked(getSeaLockBucket(this.ship.pos.x, this.ship.pos.y))) {
+      // 지금 서 있는 곳은 열린 해역인데 진행 방향 바로 앞이 잠긴 항로일 때만 경고한다
+      // (이미 잠긴 항로 한복판이면 _isBlocked가 애초에 못 들어오게 막았을 것이므로 해당 없음).
+      const info = getRouteUnlockInfo(bucket);
+      const rankLabel = info ? RANKS[info.unlock.rankIndex]?.label : null;
+      hud.toast(`🔒 이 항로는 아직 열리지 않았습니다.${rankLabel ? ` (필요 랭크: ${rankLabel} 이상)` : ''}`, 2600);
+      this._routeWarnCooldown = 4;
+    }
   }
 
   // 자신이 받는 피해에 곱하는 총 배율 — 장갑판 부품(armor 스탯)과 전투 스킬(철갑 방어 등)의
@@ -633,6 +660,7 @@ export class SeaScene {
         ? this.ship.baseWindSensitivity * mulSkillEffect(this.ship.shipDef, 'stormWindResistMul', 1)
         : this.ship.baseWindSensitivity;
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
+      this._checkRouteLockWarning(delta);
     }
     this._updateWake(delta);
     for (const escort of this.escorts) escort.update(delta, this.ship);

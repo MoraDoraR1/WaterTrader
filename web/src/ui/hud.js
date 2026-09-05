@@ -452,13 +452,14 @@ export const hud = {
   showWorldMap(v) { $('world-map-panel').classList.toggle('hidden', !v); },
   isWorldMapOpen() { return !$('world-map-panel').classList.contains('hidden'); },
 
-  setWorldMapHeader(name, subtitle, idx, total) {
-    $('world-map-title').textContent = name;
+  setWorldMapHeader(name, subtitle, idx, total, locked) {
+    $('world-map-title').textContent = locked ? `🔒 ${name}` : name;
+    $('world-map-title').classList.toggle('wm-locked', !!locked);
     $('world-map-subtitle').textContent = subtitle;
     $('world-map-page').textContent = `${idx + 1} / ${total}`;
   },
 
-  renderWorldMapReal({ landPolygons, bounds, cities, regionBoxes, ship }) {
+  renderWorldMapReal({ landPolygons, bounds, cities, regionBoxes, ship, locked, lockInfo }) {
     const canvas = $('world-map-canvas');
     const w = canvas.width, h = canvas.height;
     const ctx = canvas.getContext('2d');
@@ -552,6 +553,30 @@ export const hud = {
       ctx.moveTo(tip[0], tip[1]); ctx.lineTo(bl[0], bl[1]); ctx.lineTo(br[0], br[1]);
       ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+    }
+
+    // 아직 해금되지 않은 항로 — 지도 위에 어둡게 덧씌우고 자물쇠 + 해금 조건을 크게 띄운다.
+    // 지형·도시는 그 아래로 옅게 비쳐 보이게 둬서 "존재는 하지만 아직 못 가는 곳"이라는
+    // 느낌을 준다.
+    if (locked) {
+      ctx.fillStyle = 'rgba(4,7,10,0.72)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 14;
+      ctx.font = `${Math.round(Math.min(w, h) * 0.14)}px sans-serif`;
+      ctx.fillStyle = 'rgba(230,225,210,0.92)';
+      ctx.fillText('🔒', w / 2, h / 2 - 6);
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = '#f3d98a';
+      ctx.fillText('아직 열리지 않은 항로', w / 2, h / 2 + 40);
+      if (lockInfo?.rankLabel) {
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = '#cfe0ea';
+        ctx.fillText(`해금 조건: 랭크 "${lockInfo.rankLabel}" 이상`, w / 2, h / 2 + 66);
+      }
+      ctx.restore();
     }
   },
 

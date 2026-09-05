@@ -21,6 +21,8 @@ import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent } from './systems/market.js';
 import { SUPPLY_DEFS } from './systems/supplies.js';
+import { checkRouteUnlocks, isRouteUnlocked } from './systems/routeUnlock.js';
+import { RANKS } from './data/ranks.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const displayCanvas = document.createElement('canvas');
@@ -153,11 +155,13 @@ function regionBoundsToWorld(b) {
 
 function renderWorldMapPage() {
   const region = WORLD_REGIONS[worldMapIndex];
-  hud.setWorldMapHeader(region.name, region.subtitle, worldMapIndex, WORLD_REGIONS.length);
+  const locked = !!region.unlock && !isRouteUnlocked(region.id);
+  const lockInfo = locked ? { rankLabel: RANKS[region.unlock.rankIndex]?.label } : null;
+  hud.setWorldMapHeader(region.name, region.subtitle, worldMapIndex, WORLD_REGIONS.length, locked);
   const ship = seaScene ? { x: seaScene.ship.pos.x, z: seaScene.ship.pos.y, heading: seaScene.ship.heading } : null;
   // 대호황/대폭락은 실시간으로 바뀌므로 지도를 열 때마다(페이지 넘길 때도) 매번 새로 조회한다.
   const worldMapCities = worldMapCityBase.map((c) => ({ ...c, event: getCityEvent(c.id) }));
-  hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: regionBoundsToWorld(region.bounds), cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship });
+  hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: regionBoundsToWorld(region.bounds), cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship, locked, lockInfo });
 }
 
 // 캔버스 width/height 속성을 뷰포트에 맞춰 직접 키운다(= 내부 해상도와 표시 크기가 항상
@@ -337,6 +341,7 @@ function animate(now) {
   const elapsed = now / 1000;
 
   if (state.screen !== 'title') {
+    checkRouteUnlocks();
     const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen();
     if (consumeJustPressed('KeyM') && !anyBigPanelOpen) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();

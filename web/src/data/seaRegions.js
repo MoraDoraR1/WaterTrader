@@ -44,3 +44,30 @@ export function seaRegionAt(x, z) {
   }
   return '공해';
 }
+
+// ---- 항로 해금 구역 ----
+// 이름 있는 해역을 "서유럽 항로/북해·발트해/지중해"(항상 열림) 대 세 개의 잠긴 원양 항로
+// (systems/routeUnlock.js, data/worldRegions.js) 중 하나로 묶는다. 목록에 없는 해역(도버
+// 해협·북해·지중해 등 유럽 근해 전부와, 어느 상자에도 안 걸리는 미분류 공해)은 전부
+// 기본적으로 열려 있다고 취급한다 — 세계 지도를 촘촘히 다 채우지 못해 생기는 빈틈 때문에
+// 항해가 막히는 사고를 막기 위한 안전한 기본값이다.
+const REGION_LOCK_BUCKETS = {
+  기니만: 'west_africa',
+  멕시코만: 'new_world',
+  카리브해: 'new_world',
+  남대서양: 'new_world',
+  대서양: 'new_world',
+  남중국해: 'indian_ocean',
+  동중국해: 'indian_ocean',
+  인도양: 'indian_ocean',
+  태평양: 'indian_ocean',
+};
+
+// 이 좌표가 잠길 수 있는 원양 항로 중 어디에 속하는지 — west_africa/new_world/indian_ocean
+// 중 하나, 또는 항상 열려 있는 구역이면 null.
+export function getSeaLockBucket(x, z) {
+  for (const [name, poly] of REGIONS) {
+    if (pointInPolygon(x, z, poly)) return REGION_LOCK_BUCKETS[name] || null;
+  }
+  return null;
+}

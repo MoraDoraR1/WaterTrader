@@ -45,6 +45,10 @@ export const state = {
   cityEvents: {}, // cityId -> { type: 'boom'|'crash'|null, mul, endBucket, checkedBucket } — 도시 전체에 걸리는 대호황(150~170%)/대폭락(40~50%) 사건
   audioMuted: false,
   endingShown: false, // 최고 랭크(바다의 제독) 도달 엔딩 화면을 이미 본 적 있는지
+  // 원양 항로 해금 여부 — systems/routeUnlock.js가 랭크에 따라 true로 바꾼다(한 번 열리면
+  // 이후 랭크 점수가 일시적으로 내려가도 다시 잠기지 않는다). 서유럽/북해·발트해/지중해는
+  // 이 목록에 없이 항상 열려 있다.
+  unlockedRoutes: { west_africa: false, new_world: false, indian_ocean: false },
 };
 
 export function initShipHp() {
