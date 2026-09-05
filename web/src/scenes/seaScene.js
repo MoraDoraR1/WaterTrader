@@ -22,6 +22,7 @@ import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { checkBountyKill } from '../systems/quests.js';
+import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
 import { RANKS } from '../data/ranks.js';
 import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory } from '../systems/crew.js';
@@ -661,6 +662,7 @@ export class SeaScene {
         : this.ship.baseWindSensitivity;
       this.ship.update(delta, elapsed, (x, z) => this._isBlocked(x, z), this.wind);
       this._checkRouteLockWarning(delta);
+      checkDiscoveryEvents(delta);
     }
     this._updateWake(delta);
     for (const escort of this.escorts) escort.update(delta, this.ship);

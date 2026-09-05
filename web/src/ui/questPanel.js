@@ -5,7 +5,7 @@ import { getCity } from '../data/cities.js';
 import { getGood } from '../data/goods.js';
 import {
   getQuestsForCity, getTurnInableAt, getActiveQuests, getQuestStatus,
-  acceptQuest, turnInDelivery,
+  acceptQuest, turnInDelivery, isQuestChainReady,
 } from '../systems/quests.js';
 
 function questSub(q) {
@@ -14,13 +14,25 @@ function questSub(q) {
     const destCity = getCity(q.destCityId);
     return `${q.desc} · ${good.name} ${q.qty}t → ${destCity.name}`;
   }
+  if (q.type === 'voyage') {
+    const destCity = getCity(q.targetCityId);
+    return `${q.desc} · 목적지: ${destCity.name}`;
+  }
   return q.desc;
+}
+
+function activeSub(q, cityId) {
+  if (q.type === 'delivery') return `${questSub(q)} (진행 중)`;
+  if (q.type === 'voyage') return `${q.desc} · 목적지: ${getCity(q.targetCityId).name} (진행 중 — 도착하면 자동 완료)`;
+  return `${q.desc} (진행 중 — 격침하면 자동 완료)`;
 }
 
 function renderBoard(cityId) {
   const city = getCity(cityId);
 
-  const available = getQuestsForCity(cityId).filter((q) => getQuestStatus(q.id) === 'available');
+  // 항로 개척 연계 의뢰(배달→토벌→항해)는 requires/minRankIndex/routePrereq 조건을
+  // 채우기 전까지 게시판에 아예 보이지 않는다 — isQuestChainReady가 그 가시성을 판정한다.
+  const available = getQuestsForCity(cityId).filter((q) => getQuestStatus(q.id) === 'available' && isQuestChainReady(q));
   const availableRows = available.map((q) => ({
     name: q.title,
     sub: questSub(q),
@@ -28,8 +40,13 @@ function renderBoard(cityId) {
     actionLabel: '수락',
     onAction: () => {
       const res = acceptQuest(q.id);
-      if (res.ok) { hud.toast(`의뢰를 수락했습니다: ${q.title}`); renderBoard(cityId); }
-      else hud.toast(res.reason);
+      if (!res.ok) { hud.toast(res.reason); return; }
+      renderBoard(cityId);
+      if (q.acceptLine) {
+        hud.showDialogue('항구 관리인', q.acceptLine, [{ label: '확인', onClick: () => hud.hideDialogue() }]);
+      } else {
+        hud.toast(`의뢰를 수락했습니다: ${q.title}`);
+      }
     },
   }));
 
@@ -55,7 +72,7 @@ function renderBoard(cityId) {
   const active = getActiveQuests().filter((q) => !(q.type === 'delivery' && q.destCityId === cityId));
   const activeRows = active.map((q) => ({
     name: q.title,
-    sub: q.type === 'delivery' ? `${questSub(q)} (진행 중)` : `${q.desc} (진행 중 — 격침하면 자동 완료)`,
+    sub: activeSub(q, cityId),
     priceLabel: `보상 ${q.reward.toLocaleString('ko-KR')} 두캇`,
     actionLabel: '진행 중',
     disabled: true,

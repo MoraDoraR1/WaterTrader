@@ -6,6 +6,8 @@ import { getCity } from '../data/cities.js';
 import { getGood } from '../data/goods.js';
 import { getShip } from '../data/ships.js';
 import { mulSkillEffect } from '../data/shipSkills.js';
+import { getRankInfo } from './rank.js';
+import { WORLD_REGIONS } from '../data/worldRegions.js';
 
 export function getQuestStatus(id) {
   return state.quests[id] || 'available';
@@ -24,6 +26,15 @@ export function getActiveQuests() {
   return QUESTS.filter((q) => getQuestStatus(q.id) === 'accepted');
 }
 
+// 항로 개척 연계 의뢰(배달→토벌→항해)가 지금 게시판에 뜰 준비가 됐는지 — 일반 의뢰는
+// 이런 조건이 아예 없으므로 항상 true를 반환한다.
+export function isQuestChainReady(q) {
+  if (q.requires && getQuestStatus(q.requires) !== 'completed') return false;
+  if (q.minRankIndex != null && getRankInfo().index < q.minRankIndex) return false;
+  if (q.routePrereq && !state.unlockedRoutes[q.routePrereq]) return false;
+  return true;
+}
+
 export function addReputation(country, amount) {
   if (!country) return;
   // 항구 친화 스킬은 평판이 오르는 속도 자체를 키운다(음수 방향/페널티에는 손대지 않는다 —
@@ -40,6 +51,7 @@ export function acceptQuest(id) {
   const q = getQuest(id);
   if (!q) return { ok: false, reason: '존재하지 않는 의뢰입니다.' };
   if (getQuestStatus(id) !== 'available') return { ok: false, reason: '이미 수락했거나 완료한 의뢰입니다.' };
+  if (!isQuestChainReady(q)) return { ok: false, reason: '아직 수락할 수 없는 의뢰입니다.' };
   state.quests = { ...state.quests, [id]: 'accepted' };
   notify({ questChanged: true });
   return { ok: true };
@@ -72,4 +84,37 @@ export function checkBountyKill(npcOwnerId) {
   state.pirateBounty = (state.pirateBounty || 0) + 1;
   notify({ questChanged: true });
   return q;
+}
+
+// 항해(voyage) 의뢰는 항구에 정박하는 순간 자동 완료된다 — 목적지에 직접 가는 것 자체가
+// 의뢰의 완수이므로 게시판에 따로 납품/보고할 필요가 없다. unlocksRoute가 있으면(항로 개척
+// 3부작의 마지막 단계) 그 항로를 영구히 연다 — state.unlockedRoutes는 이 시점 이후로만
+// true가 되며, 세이브에 저장된 완료 상태(state.quests)만으로 재접속 시에도 그대로 복원된다.
+export function checkVoyageArrival(cityId) {
+  const q = QUESTS.find((x) => x.type === 'voyage' && x.targetCityId === cityId);
+  if (!q || getQuestStatus(q.id) !== 'accepted') return null;
+  state.gold += q.reward;
+  state.quests = { ...state.quests, [q.id]: 'completed' };
+  if (q.unlocksRoute) {
+    state.unlockedRoutes = { ...state.unlockedRoutes, [q.unlocksRoute]: true };
+  }
+  addReputation(getCity(cityId)?.country, 8);
+  notify({ questChanged: true, routesUnlocked: q.unlocksRoute ? [q.unlocksRoute] : undefined });
+  return q;
+}
+
+export function getRouteChainName(routeId) {
+  return WORLD_REGIONS.find((r) => r.id === routeId)?.name || routeId;
+}
+
+// state.unlockedRoutes 자체는 세이브에 포함되지 않는다(항로 3개뿐이라 굳이 별도 저장하지
+// 않고, 이미 저장되는 state.quests의 완료 기록에서 매번 다시 계산한다). 그래서 저장된 게임을
+// 불러온 직후에는 반드시 이 함수를 한 번 호출해, 이미 항해(voyage) 3부를 끝낸 항로를
+// 도로 잠긴 상태로 되돌리지 않게 복원해야 한다.
+export function syncUnlockedRoutes() {
+  for (const q of QUESTS) {
+    if (q.type === 'voyage' && q.unlocksRoute && getQuestStatus(q.id) === 'completed' && !state.unlockedRoutes[q.unlocksRoute]) {
+      state.unlockedRoutes = { ...state.unlockedRoutes, [q.unlocksRoute]: true };
+    }
+  }
 }

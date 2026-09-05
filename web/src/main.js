@@ -5,6 +5,7 @@ import { CityScene } from './scenes/cityScene.js';
 import { state, setScreen, initShipHp, initCrewCount, subscribe, notify } from './state.js';
 import { hud } from './ui/hud.js';
 import { wireShipyardTabs } from './ui/shipyardPanel.js';
+import { openQuestBoard } from './ui/questPanel.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, project } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
@@ -21,8 +22,13 @@ import { audio } from './systems/audio.js';
 import { getRankInfo } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent } from './systems/market.js';
 import { SUPPLY_DEFS } from './systems/supplies.js';
-import { checkRouteUnlocks, isRouteUnlocked } from './systems/routeUnlock.js';
+import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUnlock.js';
+import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
 import { RANKS } from './data/ranks.js';
+import {
+  checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
+  getQuestStatus, isQuestChainReady, syncUnlockedRoutes,
+} from './systems/quests.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const displayCanvas = document.createElement('canvas');
@@ -139,6 +145,19 @@ function goToCity(cityId) {
     ? ` 🔥 대호황! 전 품목 시세 ${Math.round(event.mul * 100)}% (${event.daysLeft}일 후 종료)`
     : ` 💥 대폭락! 전 품목 시세 ${Math.round(event.mul * 100)}% (${event.daysLeft}일 후 종료)`;
   hud.toast(`${citySceneObj.city.name}에 정박했습니다.${wageNote}${eventNote}`);
+
+  // 항로 개척 3부작의 마지막 단계(항해)는 여기, 목적지 항구에 정박하는 순간 자동 완료된다.
+  const voyageQuest = checkVoyageArrival(cityId);
+  if (voyageQuest) {
+    const routeNote = voyageQuest.unlocksRoute
+      ? `\n\n🧭 "${getRouteChainName(voyageQuest.unlocksRoute)}" 항로가 열렸습니다!`
+      : '';
+    hud.showDialogue(
+      '항구 관리인',
+      `${voyageQuest.arriveLine}${routeNote}\n\n보상: ${voyageQuest.reward.toLocaleString('ko-KR')} 두캇`,
+      [{ label: '확인', onClick: () => hud.hideDialogue() }]
+    );
+  }
 }
 
 // ---- 전체 지도(월드맵): M키로 토글, 화살표로 해역 페이지 전환 ----
@@ -316,6 +335,7 @@ if (savedGame) {
 
 document.getElementById('continue-btn').addEventListener('click', () => {
   applySave(savedGame);
+  syncUnlockedRoutes();
   document.querySelectorAll('.gender-btn').forEach((b) => b.classList.toggle('active', b.dataset.gender === state.gender));
   const muteBtn = document.getElementById('mute-btn');
   muteBtn.textContent = state.audioMuted ? '🔇' : '🔊';
@@ -341,7 +361,7 @@ function animate(now) {
   const elapsed = now / 1000;
 
   if (state.screen !== 'title') {
-    checkRouteUnlocks();
+    checkQuestChainAnnouncements();
     const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen();
     if (consumeJustPressed('KeyM') && !anyBigPanelOpen) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
@@ -406,4 +426,6 @@ window.__debug = {
   get seaScene() { return seaScene; },
   get citySceneObj() { return citySceneObj; },
   state, notify,
+  acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
+  checkDiscoveryEvents, openQuestBoard,
 };

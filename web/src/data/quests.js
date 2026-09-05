@@ -51,6 +51,61 @@ export const QUESTS = [
     title: '해적선 북해의 늑대호 토벌', desc: '영불해협을 노리는 해적선이 있습니다. 상선들이 떨고 있어요.' },
   { id: 'bounty_pirate_med', type: 'bounty', cityId: 'genova', targetId: 'pirate_med', reward: 340,
     title: '바르바리 해적선 토벌', desc: '지중해 항로에 출몰하는 해적선을 처치해주십시오.' },
+
+  // ---- 항로 개척 연계 의뢰 (3부작) ----
+  // "배달 → 토벌 → 항해" 3부작. 1부(delivery)는 기존 배달 의뢰 관례대로 물품 원산지 도시
+  // (세비야/런던/베네치아)에서 수락해 리스본에 납품하고, 그 김에 이미 리스본에 도착해 있는
+  // 2부(토벌)·3부(항해)는 리스본 게시판에서 이어 받는다. 랭크가 충분해지면(minRankIndex)
+  // 1부가 뜨고, 1부를 완료해야(requires) 2부가, 2부를 완료해야 3부가 뜬다.
+  // 3부(voyage)는 targetCityId에 입항하는 순간 자동 완료되며 unlocksRoute 항로를 영구히 연다
+  // (systems/quests.js의 checkVoyageArrival). 인도양 3부작은 아프리카 항로가 먼저 열려
+  // 있어야(routePrereq) 1부가 뜬다 — 희망봉을 돌아가는 실제 항로 순서를 반영한다.
+
+  // -- 1) 아프리카 항로: 세비야 ↔ 리스본 포도주 보급 → 바르바리 해적 사령선 토벌 → 카나리아 제도 항해
+  { id: 'chain_africa_delivery', type: 'delivery', cityId: 'sevilla', destCityId: 'lisboa', goodId: 'wine', qty: 15, reward: 750,
+    minRankIndex: 1,
+    title: '[항로 개척 1/3] 포도주 15t → 리스본', desc: '리스본 함대 사령부가 남방 항해에 나설 선단에 보급할 포도주를 모으고 있습니다.',
+    acceptLine: '세비야 항구 관리인이 말합니다. "리스본 함대 사령부에서 전갈이 왔네. 남쪽 바다로 나갈 채비를 하는데 포도주가 급하다더군. 여기서 15t을 구해 리스본으로 가져다 주게."' },
+  { id: 'chain_africa_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_barbary_elite', reward: 1300,
+    requires: 'chain_africa_delivery',
+    title: '[항로 개척 2/3] 바르바리 해적 사령선 토벌', desc: '보급은 끝났지만, 남쪽 항로 어귀에 바르바리 해적 사령선이 버티고 있어 선단이 나설 수 없습니다. 먼저 처치해주십시오.',
+    acceptLine: '"고맙네만, 아직 배를 띄울 수가 없어. 바르바리 해적 사령선이 항로 어귀를 막고 있거든. 자네가 먼저 그놈을 가라앉혀주게."' },
+  { id: 'chain_africa_voyage', type: 'voyage', cityId: 'lisboa', targetCityId: 'canarias', reward: 900,
+    requires: 'chain_africa_bounty', unlocksRoute: 'west_africa',
+    title: '[항로 개척 3/3] 카나리아 제도까지 항해', desc: '길이 열렸습니다. 이제 직접 카나리아 제도까지 항해하여 항로가 안전한지 확인해주십시오.',
+    acceptLine: '"해적을 처치했다니 이제 길은 열렸네. 자네가 직접 카나리아 제도까지 항해해서 항로를 확인해주게 — 그래야 다른 선단도 안심하고 뒤따를 걸세."',
+    arriveLine: '거친 파도를 넘어 마침내 카나리아 제도, 라스팔마스 항에 닻을 내렸습니다. 뒤돌아본 수평선 너머로 유럽 해안선은 이미 보이지 않습니다 — 이제부터는 미지의 바다입니다.' },
+
+  // -- 2) 신대륙 항로: 런던 ↔ 리스본 주석 보급 → 카리브의 유령호 토벌 → 아조레스 제도 항해
+  { id: 'chain_newworld_delivery', type: 'delivery', cityId: 'london', destCityId: 'lisboa', goodId: 'tin', qty: 12, reward: 700,
+    minRankIndex: 2,
+    title: '[항로 개척 1/3] 주석 12t → 리스본', desc: '리스본 조선소가 대서양 횡단 선단의 선체 보강용 주석을 기다리고 있습니다.',
+    acceptLine: '런던 항구 관리인이 말합니다. "리스본에서 전갈이 왔네. 대서양을 건널 선단의 선체 보강에 주석이 필요하다더군. 여기서 12t을 구해 리스본으로 가져다 주게."' },
+  { id: 'chain_newworld_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_caribbean', reward: 1000,
+    requires: 'chain_newworld_delivery',
+    title: '[항로 개척 2/3] 해적선 카리브의 유령호 토벌', desc: '카리브해에 출몰하는 해적선 카리브의 유령호가 신대륙 항로 어귀를 떠돌고 있다는 첩보입니다. 처치해주십시오.',
+    acceptLine: '"보강은 끝났네만, 카리브해에 유령처럼 나타난다는 해적선이 하나 있어. 그놈부터 정리하지 않으면 아무도 그 항로로 나서지 않을 걸세."' },
+  { id: 'chain_newworld_voyage', type: 'voyage', cityId: 'lisboa', targetCityId: 'azores', reward: 850,
+    requires: 'chain_newworld_bounty', unlocksRoute: 'new_world',
+    title: '[항로 개척 3/3] 아조레스 제도까지 항해', desc: '대서양 한복판의 아조레스 제도까지 항해하여 신대륙으로 가는 중간 기착지를 확보해주십시오.',
+    acceptLine: '"이제 바다가 조용해졌겠지. 아조레스 제도까지 가서 그 섬이 우리 선단의 중간 기착지가 될 수 있는지 직접 확인해주게."',
+    arriveLine: '망망대해 한가운데, 화산섬 아조레스가 마침내 수평선 위로 솟아올랐습니다. 여기서부터는 신대륙까지 곧장 이어지는 대서양입니다.' },
+
+  // -- 3) 인도양 항로: 베네치아 ↔ 리스본 유리공예품 보급 → 계절풍의 습격자호 토벌 → 케이프타운 항해
+  // (아프리카 항로가 먼저 열려 있어야 함 — 희망봉을 돌아가는 실제 순서)
+  { id: 'chain_indianocean_delivery', type: 'delivery', cityId: 'venezia', destCityId: 'lisboa', goodId: 'glass', qty: 8, reward: 900,
+    minRankIndex: 3, routePrereq: 'west_africa',
+    title: '[항로 개척 1/3] 유리공예품 8t → 리스본', desc: '함대 사령부가 인도로 보낼 교역품 견본으로 베네치아 유리공예품을 원합니다.',
+    acceptLine: '베네치아 항구 관리인이 말합니다. "리스본 함대 사령부에서 전갈이 왔네. 희망봉을 돌아 인도까지 가는 선단에 줄 선물로 유리공예품이 필요하다더군. 여기서 8t을 구해 리스본으로 가져다 주게."' },
+  { id: 'chain_indianocean_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_indian_ocean', reward: 1600,
+    requires: 'chain_indianocean_delivery',
+    title: '[항로 개척 2/3] 해적선 계절풍의 습격자호 토벌', desc: '동남아 해역에서 계절풍을 타고 습격해온다는 해적선입니다. 인도양 항로를 열기 전에 처치해주십시오.',
+    acceptLine: '"준비는 끝났네만, 계절풍을 타고 나타난다는 해적선 하나가 골칫거리야. 그놈을 처치하기 전엔 어떤 선단도 그 바다로 보낼 수 없네."' },
+  { id: 'chain_indianocean_voyage', type: 'voyage', cityId: 'lisboa', targetCityId: 'cape_town', reward: 1200,
+    requires: 'chain_indianocean_bounty', unlocksRoute: 'indian_ocean',
+    title: '[항로 개척 3/3] 케이프타운(폭풍의 곶)까지 항해', desc: '아프리카 최남단, 뱃사람들이 "폭풍의 곶"이라 부르는 곳을 돌아 케이프타운까지 항해해주십시오.',
+    acceptLine: '"뱃사람들은 그곳을 폭풍의 곶이라 부르지. 그 곶을 돌아 케이프타운까지 가보게 — 거기서부터는 인도양과 극동으로 가는 길이 곧장 열릴 걸세."',
+    arriveLine: '악명 높은 폭풍의 곶을 무사히 돌아 케이프타운에 닻을 내렸습니다. 남쪽 바람이 잦아들자, 동쪽 수평선 너머로 인도양과 향신료의 바다가 펼쳐집니다.' },
 ];
 
 export function getQuest(id) {

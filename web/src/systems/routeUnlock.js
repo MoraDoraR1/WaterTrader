@@ -1,14 +1,19 @@
-// 원양 항로 해금 — data/worldRegions.js의 세 항로(아프리카/신대륙/인도양·극동)를 랭크
-// 순서대로 하나씩 연다. 서유럽/북해·발트해/지중해는 이 시스템과 무관하게 항상 열려 있다.
-// "한 번 열리면 다시 안 잠긴다"가 핵심 — 랭크 점수는 골드 지출 등으로 오르내릴 수 있어서,
-// 매번 실시간으로 재판정하면 배를 사거나 하는 순간 이미 밟아본 항로가 도로 잠기는 사고가
-// 난다. 그래서 state.unlockedRoutes에 한 번 true가 되면 영구히 저장해둔다.
-import { state, notify } from '../state.js';
+// 원양 항로 해금 — data/worldRegions.js의 세 항로(아프리카/신대륙/인도양·극동)는 더 이상
+// 랭크만으로 자동으로 열리지 않는다. 각 항로는 data/quests.js의 3부작 연계 의뢰(배달→토벌→
+// 항해)를 끝까지 완료해야 열리며, 실제로 state.unlockedRoutes를 true로 바꾸는 코드는
+// systems/quests.js의 checkVoyageArrival(항해 3부 완료 시점)에 있다. 이 파일은 그 항로가
+// "잠겼는지"만 읽는 순수 조회 기능과, 랭크가 충족돼 연계 의뢰 1부가 리스본 게시판에 새로
+// 올라왔음을 알려주는 안내 기능만 담당한다.
+// "한 번 열리면 다시 안 잠긴다"는 여전히 핵심이다 — state.quests에 항해 3부 완료 기록이
+// 세이브에 남으므로, 재접속 시에도 완료한 항로는 그대로 열려 있다(항로 자체를 별도로
+// 저장할 필요가 없다).
+import { state } from '../state.js';
 import { WORLD_REGIONS } from '../data/worldRegions.js';
 import { getRankInfo } from './rank.js';
+import { getQuestStatus } from './quests.js';
 import { hud } from '../ui/hud.js';
 
-// id -> { rankIndex } — WORLD_REGIONS 자체에 이미 있는 unlock 필드를 그대로 재사용한다.
+// id -> { rankIndex, questId } — WORLD_REGIONS 자체에 이미 있는 unlock 필드를 그대로 재사용한다.
 const LOCKED_ROUTES = WORLD_REGIONS.filter((r) => r.unlock);
 
 export function isRouteUnlocked(bucketId) {
@@ -20,23 +25,19 @@ export function getRouteUnlockInfo(bucketId) {
   return LOCKED_ROUTES.find((r) => r.id === bucketId) || null;
 }
 
-// 매 프레임 불러도 부담 없을 만큼 가볍다(랭크 계산 1회 + 배열 3개 순회). 새로 해금된 항로가
-// 있으면 그 목록을 반환해 호출부(main.js)가 축하 토스트를 띄울 수 있게 한다.
-export function checkRouteUnlocks() {
+// 매 프레임 불러도 부담 없을 만큼 가볍다(랭크 계산 1회 + 배열 3개 순회 + 퀘스트 상태 조회).
+// announcedThisSession은 일부러 state에 저장하지 않는다 — 매 프레임 조건이 계속 참인 동안
+// 토스트가 깜빡이며 반복 출력되는 것만 막으면 되는 세션 한정 가드이고, 새로고침 후 한 번 더
+// 뜨는 정도는(의뢰를 아직 안 받았다면) 오히려 놓치지 않게 도와준다.
+const announcedThisSession = new Set();
+
+export function checkQuestChainAnnouncements() {
   const { index } = getRankInfo();
-  const newlyUnlocked = [];
   for (const route of LOCKED_ROUTES) {
-    if (state.unlockedRoutes[route.id]) continue;
-    if (index >= route.unlock.rankIndex) {
-      state.unlockedRoutes = { ...state.unlockedRoutes, [route.id]: true };
-      newlyUnlocked.push(route);
-    }
+    if (state.unlockedRoutes[route.id] || announcedThisSession.has(route.id)) continue;
+    if (index < route.unlock.rankIndex) continue;
+    if (getQuestStatus(route.unlock.questId) !== 'available') continue;
+    announcedThisSession.add(route.id);
+    hud.toast(`📜 리스본 항구관리인에게 "${route.name} 개척" 의뢰가 새로 올라왔습니다!`, 3600);
   }
-  if (newlyUnlocked.length > 0) {
-    notify({ routesUnlocked: newlyUnlocked.map((r) => r.id) });
-    for (const route of newlyUnlocked) {
-      hud.toast(`🧭 새로운 항로가 열렸습니다: ${route.name}!`, 3200);
-    }
-  }
-  return newlyUnlocked;
 }

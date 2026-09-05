@@ -5,14 +5,17 @@
 //
 // ---- 항로 해금 ----
 // unlock: null이면 처음부터 열려 있는 항로(서유럽/북해·발트해/지중해 — 게임 시작 시
-// 플레이어가 있는 곳과 그 근해). 그 외 세 항로는 systems/routeUnlock.js가 랭크에 따라
-// 순차적으로 잠금을 푼다 — id가 그대로 data/seaRegions.js의 잠금 구역 키와 대응한다.
+// 플레이어가 있는 곳과 그 근해). 그 외 세 항로는 랭크만으로 자동 해금되지 않고,
+// data/quests.js에 정의된 3부작 연계 의뢰(배달→토벌→항해)를 끝까지 완료해야 열린다.
+// unlock.rankIndex는 그 연계 의뢰의 1부(questId)가 리스본 의뢰 게시판에 언제부터
+// 뜨는지를 정하는 조건일 뿐이며, 실제 해금은 systems/quests.js의 항해(voyage) 3부
+// 완료 시점에 이루어진다 — id가 그대로 data/seaRegions.js의 잠금 구역 키와 대응한다.
 export const WORLD_REGIONS = [
   { id: 'world', name: '전체 항로', subtitle: 'THE WORLD', bounds: { lonMin: -95, lonMax: 138, latMin: -42, latMax: 68 }, unlock: null },
   { id: 'western_europe', name: '서유럽 항로', subtitle: 'WESTERN EUROPE', bounds: { lonMin: -12, lonMax: 16, latMin: 34, latMax: 58 }, unlock: null },
   { id: 'north_baltic', name: '북해·발트해', subtitle: 'NORTH SEA & BALTIC', bounds: { lonMin: -4, lonMax: 30, latMin: 49, latMax: 67 }, unlock: null },
   { id: 'east_mediterranean', name: '지중해·흑해', subtitle: 'MEDITERRANEAN & BLACK SEA', bounds: { lonMin: -6, lonMax: 42, latMin: 29, latMax: 48 }, unlock: null },
-  { id: 'west_africa', name: '아프리카 항로', subtitle: 'AFRICAN COAST', bounds: { lonMin: -21, lonMax: 35, latMin: -36, latMax: 34 }, unlock: { rankIndex: 1 } },
-  { id: 'new_world', name: '신대륙 항로', subtitle: 'THE NEW WORLD', bounds: { lonMin: -92, lonMax: -34, latMin: -26, latMax: 47 }, unlock: { rankIndex: 2 } },
-  { id: 'indian_ocean', name: '인도양·극동 항로', subtitle: 'INDIAN OCEAN & THE FAR EAST', bounds: { lonMin: 63, lonMax: 133, latMin: -8, latMax: 36 }, unlock: { rankIndex: 3 } },
+  { id: 'west_africa', name: '아프리카 항로', subtitle: 'AFRICAN COAST', bounds: { lonMin: -21, lonMax: 35, latMin: -36, latMax: 34 }, unlock: { rankIndex: 1, questId: 'chain_africa_delivery' } },
+  { id: 'new_world', name: '신대륙 항로', subtitle: 'THE NEW WORLD', bounds: { lonMin: -92, lonMax: -34, latMin: -26, latMax: 47 }, unlock: { rankIndex: 2, questId: 'chain_newworld_delivery' } },
+  { id: 'indian_ocean', name: '인도양·극동 항로', subtitle: 'INDIAN OCEAN & THE FAR EAST', bounds: { lonMin: 63, lonMax: 133, latMin: -8, latMax: 36 }, unlock: { rankIndex: 3, questId: 'chain_indianocean_delivery' } },
 ];
