@@ -64,7 +64,7 @@ export const QUESTS = [
   // -- 1) 아프리카 항로: 세비야 ↔ 리스본 포도주 보급 → 바르바리 해적 사령선 토벌 → 카나리아 제도 항해
   { id: 'chain_africa_delivery', type: 'delivery', cityId: 'sevilla', destCityId: 'lisboa', goodId: 'wine', qty: 15, reward: 750,
     minRankIndex: 1,
-    title: '[항로 개척 1/3] 포도주 15t → 리스본', desc: '리스본 함대 사령부가 남방 항해에 나설 선단에 보급할 포도주를 모으고 있습니다.',
+    title: '[항로 개척 1/3] 포도주 15t → 리스본', desc: '리스본 함대 사령부가 남방 항해에 나설 선단에 보급할 포도주를 모으고 있습니다. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
     acceptLine: '세비야 항구 관리인이 말합니다. "리스본 함대 사령부에서 전갈이 왔네. 남쪽 바다로 나갈 채비를 하는데 포도주가 급하다더군. 여기서 15t을 구해 리스본으로 가져다 주게."' },
   { id: 'chain_africa_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_barbary_elite', reward: 1300,
     requires: 'chain_africa_delivery',
@@ -79,7 +79,7 @@ export const QUESTS = [
   // -- 2) 신대륙 항로: 런던 ↔ 리스본 주석 보급 → 카리브의 유령호 토벌 → 아조레스 제도 항해
   { id: 'chain_newworld_delivery', type: 'delivery', cityId: 'london', destCityId: 'lisboa', goodId: 'tin', qty: 12, reward: 700,
     minRankIndex: 2,
-    title: '[항로 개척 1/3] 주석 12t → 리스본', desc: '리스본 조선소가 대서양 횡단 선단의 선체 보강용 주석을 기다리고 있습니다.',
+    title: '[항로 개척 1/3] 주석 12t → 리스본', desc: '리스본 조선소가 대서양 횡단 선단의 선체 보강용 주석을 기다리고 있습니다. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
     acceptLine: '런던 항구 관리인이 말합니다. "리스본에서 전갈이 왔네. 대서양을 건널 선단의 선체 보강에 주석이 필요하다더군. 여기서 12t을 구해 리스본으로 가져다 주게."' },
   { id: 'chain_newworld_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_caribbean', reward: 1000,
     requires: 'chain_newworld_delivery',
@@ -95,7 +95,7 @@ export const QUESTS = [
   // (아프리카 항로가 먼저 열려 있어야 함 — 희망봉을 돌아가는 실제 순서)
   { id: 'chain_indianocean_delivery', type: 'delivery', cityId: 'venezia', destCityId: 'lisboa', goodId: 'glass', qty: 8, reward: 900,
     minRankIndex: 3, routePrereq: 'west_africa',
-    title: '[항로 개척 1/3] 유리공예품 8t → 리스본', desc: '함대 사령부가 인도로 보낼 교역품 견본으로 베네치아 유리공예품을 원합니다.',
+    title: '[항로 개척 1/3] 유리공예품 8t → 리스본', desc: '함대 사령부가 인도로 보낼 교역품 견본으로 베네치아 유리공예품을 원합니다. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
     acceptLine: '베네치아 항구 관리인이 말합니다. "리스본 함대 사령부에서 전갈이 왔네. 희망봉을 돌아 인도까지 가는 선단에 줄 선물로 유리공예품이 필요하다더군. 여기서 8t을 구해 리스본으로 가져다 주게."' },
   { id: 'chain_indianocean_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_indian_ocean', reward: 1600,
     requires: 'chain_indianocean_delivery',
