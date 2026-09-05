@@ -82,9 +82,12 @@ const SUPPLY_LOOT_CHANCE = { grunt: 0.3, elite: 0.3, boss: 0 };
 // ---- 건조 재료 드랍 ----
 // 상급 조선용 참나무 — 대형/초대형 건조에 쓰이는 오래 묵은 원목(엘리트 전용 드랍).
 // 전설 해적기함의 철갑판 — 격침한 전설적 해적 기함에서 노획한 보강 철물(보스 전용, 확정).
-const OAK_DROP_CHANCE = 0.45;
+// 수치는 실측 페이싱 플레이테스트로 보정됨 — 지역4(중국 연안) 파밍 거점을 실제 항해 거리로
+// 넓게 재배치한 뒤(쏠림 완화), 그로 인해 늘어난 이동시간만큼 드랍량을 올려 대형~30분·
+// 초대형~35~55분대의 원래 체감 페이싱을 유지한다(자세한 실측치는 로드맵 문서 참고).
+const OAK_DROP_CHANCE = 0.6;
 const OAK_DROP_QTY = [1, 2];
-const IRONCLAD_DROP_QTY = [1, 1];
+const IRONCLAD_DROP_QTY = [1, 2];
 
 function randInt([lo, hi]) {
   return lo + Math.floor(Math.random() * (hi - lo + 1));
