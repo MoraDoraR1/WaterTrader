@@ -14,7 +14,7 @@ import { getShip, COUNTRY_COLORS } from '../data/ships.js';
 import { getEffectiveShipDef } from '../data/shipParts.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 import { CITIES } from '../data/cities.js';
-import { LAND_POLYGONS, pointOnAnyLand, project } from '../data/coastline.js';
+import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
 import { seaRegionAt } from '../data/seaRegions.js';
 import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
@@ -182,7 +182,9 @@ export class SeaScene {
       const heuristicAngle = Math.atan2(hx, hz);
 
       const clearOfLandAndMounds = (px, pz) => {
-        if (pointOnAnyLand(px, pz)) return false;
+        // 항구 반경 안은 항상 열린 바다로 친다 — 그래야 도킹 지점 탐색이 실제 해안선의
+        // 좁은 하구 모양에 휘둘리지 않고 도시 바로 앞의 넉넉한 만에서 곧장 자리를 찾는다.
+        if (!this._isInHarborClearance(px, pz) && pointOnAnyLand(px, pz)) return false;
         for (const c2 of CITIES) {
           const dx = px - c2.pos[0], dz = pz - c2.pos[1];
           if (dx * dx + dz * dz < MOUND_COLLIDER_R * MOUND_COLLIDER_R) return false;
@@ -214,10 +216,28 @@ export class SeaScene {
   }
 
   _isBlocked(x, z) {
+    // 항구 반경(HARBOR_CLEAR_RADIUS) 안은 실제 해안선 모양과 무관하게 항상 바다로 취급한다
+    // (테주강 하구의 리스본처럼, 실제 해안선을 그대로 쓰면 진입로가 배 한 척 폭으로 좁아지는
+    // 항구가 있다 — 대신 도시 정중앙(moundColliders)만은 여전히 배가 못 들어가게 막는다).
+    if (this._isInHarborClearance(x, z)) {
+      for (const m of this.moundColliders) {
+        const dx = x - m.x, dz = z - m.z;
+        if (dx * dx + dz * dz < m.r * m.r) return true;
+      }
+      return false;
+    }
     if (pointOnAnyLand(x, z)) return true;
     for (const m of this.moundColliders) {
       const dx = x - m.x, dz = z - m.z;
       if (dx * dx + dz * dz < m.r * m.r) return true;
+    }
+    return false;
+  }
+
+  _isInHarborClearance(x, z) {
+    for (const c of CITIES) {
+      const dx = x - c.pos[0], dz = z - c.pos[1];
+      if (dx * dx + dz * dz < HARBOR_CLEAR_RADIUS * HARBOR_CLEAR_RADIUS) return true;
     }
     return false;
   }
@@ -708,6 +728,7 @@ export class SeaScene {
 
     this._drawWater(ctx, w, h);
     this._drawLand(ctx, w, h);
+    this._drawHarborClearings(ctx, w, h);
     for (const m of this.cityMarkers) this._drawCityMarker(ctx, w, h, m);
     this._drawWake(ctx, w, h);
     if (this.waypoint) this._drawWaypoint(ctx, w, h);
@@ -769,13 +790,37 @@ export class SeaScene {
     }
   }
 
+  // _isBlocked()가 항구 반경 안을 항상 바다로 취급하는 것과 시각적으로 맞추기 위해, 그
+  // 반경 안에 걸린 육지 위에 바닷물색 원을 덧그려 실제로 열린 만처럼 보이게 한다(등각
+  // 투영이라 원이 화면에선 회전된 타원으로 보이므로, 월드 원을 여러 점으로 샘플링해
+  // 각각 화면 좌표로 옮긴 다각형으로 그린다).
+  _drawHarborClearings(ctx, w, h) {
+    const SEGMENTS = 28;
+    ctx.fillStyle = WATER_LIGHT;
+    for (const city of CITIES) {
+      const center = this.iso.toScreen(this.camera, city.pos[0], city.pos[1], w, h);
+      const approxR = HARBOR_CLEAR_RADIUS * this.iso.scaleX;
+      if (center.x < -approxR - 20 || center.x > w + approxR + 20 || center.y < -approxR - 20 || center.y > h + approxR + 20) continue;
+      ctx.beginPath();
+      for (let i = 0; i <= SEGMENTS; i++) {
+        const a = (i / SEGMENTS) * Math.PI * 2;
+        const wx = city.pos[0] + Math.sin(a) * HARBOR_CLEAR_RADIUS;
+        const wz = city.pos[1] + Math.cos(a) * HARBOR_CLEAR_RADIUS;
+        const p = this.iso.toScreen(this.camera, wx, wz, w, h);
+        if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
   _drawCityMarker(ctx, w, h, marker) {
     const p = this.iso.toScreen(this.camera, marker.pos.x, marker.pos.y, w, h);
     if (p.x < -20 || p.x > w + 20 || p.y < -20 || p.y > h + 20) return;
     const icon = cityIconSprite(marker.country);
     // 국가별 대도시는 바다에서도 아이콘을 더 크게 그려 눈에 띄게 한다.
-    const s = marker.capital ? 1.5 : 1;
-    ctx.drawImage(icon, p.x - (icon.width * s) / 2, p.y - icon.height * s + 4, icon.width * s, icon.height * s);
+    const s = marker.capital ? 1.9 : 1.3;
+    ctx.drawImage(icon, p.x - (icon.width * s) / 2, p.y - icon.height * s + 6, icon.width * s, icon.height * s);
   }
 
   _drawWake(ctx, w, h) {

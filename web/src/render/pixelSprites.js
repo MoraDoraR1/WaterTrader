@@ -56,22 +56,53 @@ export function characterSprite(gender, roleColor, hanbok) {
 }
 
 // ---- 도시 마커(바다에서 보이는 항구 아이콘) ----
+// 예전엔 16x16짜리 작은 오두막 실루엣이라 바다 화면 축척에서 거의 안 보였다 — 캔버스를
+// 키우고, 실제 항구 등대(흰 몸통 + 빨간 띠 + 노란 등불)와 부두 잔교를 그려 훨씬 크고
+// 눈에 띄는 실루엣으로 바꿨다. 국가색은 등대 몸통 위쪽 밴드와 깃발 둘 다에 반영해 배색이
+// 또렷하게 드러나도록 한다.
 export function cityIconSprite(country) {
-  const key = `cityicon_${country}`;
+  const key = `cityicon2_${country}`;
   const flagColor = COUNTRY_COLORS[country] || '#999';
-  return cachedSprite(key, 16, 16, (ctx, w, h) => {
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.ellipse(w / 2, h - 2, 5, 2, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#c9b896';
-    ctx.beginPath(); ctx.arc(w / 2, h / 2, 6, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#8a7658'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = '#e8ddb5';
-    ctx.fillRect(w / 2 - 3, h / 2 - 5, 6, 5);
-    ctx.fillStyle = '#a8492f';
+  // 세로 레이아웃(위→아래, 캔버스 34px 안에 전부 들어오도록): 지붕 2 → 등롱 6~11 →
+  // 경고 밴드 11~15 → 몸통(국가색 밴드 포함) 15~24 → 부두 잔교 24~31 → 그림자 31.
+  return cachedSprite(key, 26, 34, (ctx, w, h) => {
+    const cx = w / 2;
+    // 그림자
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(cx, 31, 10, 3.2, 0, 0, Math.PI * 2); ctx.fill();
+    // 부두 잔교(바위/목재 받침)
+    ctx.fillStyle = '#7a6a52';
     ctx.beginPath();
-    ctx.moveTo(w / 2 - 4, h / 2 - 5); ctx.lineTo(w / 2, h / 2 - 9); ctx.lineTo(w / 2 + 4, h / 2 - 5);
+    ctx.moveTo(cx - 11, 31); ctx.lineTo(cx + 11, 31); ctx.lineTo(cx + 7, 24); ctx.lineTo(cx - 7, 24);
     ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#4f4534'; ctx.lineWidth = 1; ctx.stroke();
+    // 등대 몸통(아래로 갈수록 넓어지는 원뿔형 실루엣)
+    ctx.fillStyle = '#f2ece0';
+    ctx.beginPath();
+    ctx.moveTo(cx - 4.5, 15); ctx.lineTo(cx - 6.5, 24); ctx.lineTo(cx + 6.5, 24); ctx.lineTo(cx + 4.5, 15);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#b9ac93'; ctx.lineWidth = 1; ctx.stroke();
+    // 국가색 밴드(몸통 중간)
     ctx.fillStyle = flagColor;
-    ctx.fillRect(w / 2 - 1, h / 2 - 12, 3, 3);
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, 19); ctx.lineTo(cx - 5.3, 22); ctx.lineTo(cx + 5.3, 22); ctx.lineTo(cx + 5, 19);
+    ctx.closePath(); ctx.fill();
+    // 붉은 경고 밴드(등대 상징색)
+    ctx.fillStyle = '#b8412f';
+    ctx.beginPath();
+    ctx.moveTo(cx - 4.7, 11); ctx.lineTo(cx - 5.2, 15); ctx.lineTo(cx + 5.2, 15); ctx.lineTo(cx + 4.7, 11);
+    ctx.closePath(); ctx.fill();
+    // 등롱(램프실) — 검은 테두리의 유리방 + 노란 불빛
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(cx - 4.4, 6, 8.8, 5);
+    ctx.fillStyle = 'rgba(255,211,92,0.35)';
+    ctx.beginPath(); ctx.arc(cx, 8.5, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffd35c';
+    ctx.beginPath(); ctx.arc(cx, 8.5, 2.6, 0, Math.PI * 2); ctx.fill();
+    // 지붕
+    ctx.fillStyle = '#5a4636';
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, 6); ctx.lineTo(cx, 1); ctx.lineTo(cx + 6, 6);
+    ctx.closePath(); ctx.fill();
   });
 }
