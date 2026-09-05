@@ -48,26 +48,33 @@ export const SEA_NPC_SHIPS = [
     hp: 460, hostile: true, patrolRadius: 30, tier: 'grunt' },
 
   // ── 신규 해적 증원 — 지역별 컨셉 배치 ──
-  // 동아시아: 신규 아시아 선박(플레이어도 구매 가능한 세키부네·복선)을 그대로 탄 지역
-  // 해적들 — "유저가 살 수 있는 배를 해적도 몇 척은 탄다"는 컨셉을 동아시아 항로에도 심는다.
-  { id: 'pirate_wokou', type: 'pirate', name: '왜구선 아카츠키호', pos: project(129.6, 33.0), shipId: 'sekibune',
+  // 해적 선종 자체를 다양화해 배마다 자연스러운 난이도 곡선(잡몹→엘리트→보스)을 이루도록
+  // 했다. 판옥선·거북선처럼 각국 정규 수군이 "정의롭게" 쓴 배는 해적에게 넘기지 않고,
+  // 그 해역 해적이 실제로 즐겨 쓴 전용 선형(왜구 습격선/해적 정크/제벡선/라농선 등)을 새로
+  // 만들어 태운다.
+  { id: 'pirate_wokou', type: 'pirate', name: '왜구선 아카츠키호', pos: project(129.6, 33.0), shipId: 'wokou_raider',
     hp: 420, hostile: true, patrolRadius: 30, tier: 'grunt' },
-  { id: 'pirate_china_coast', type: 'pirate', name: '해적선 흑룡호', pos: project(116.5, 22.5), shipId: 'fuchuan',
+  { id: 'pirate_china_coast', type: 'pirate', name: '해적선 흑룡호', pos: project(116.5, 22.5), shipId: 'pirate_junk',
     hp: 1000, hostile: true, patrolRadius: 35, tier: 'elite' },
+  { id: 'pirate_sulu', type: 'pirate', name: '해적선 술루의 파도호', pos: project(119.5, 7.5), shipId: 'pirate_lanong',
+    hp: 480, hostile: true, patrolRadius: 35, tier: 'elite' },
 
-  // 바르바리(지중해 서부)·인도양·카리브해에는 어느 나라에도 속하지 않는 해적 전용 선박
-  // (해적 슬루프/브리건틴, purchasable: false)을 배치해 지역 위협도에 단계를 둔다.
-  { id: 'pirate_barbary_grunt', type: 'pirate', name: '바르바리 해적선', pos: project(2.2, 37.3), shipId: 'pirate_sloop',
+  // 바르바리(지중해 서부)에는 지역 고유 선형인 제벡선을 잡몹/엘리트 2단계로 배치한다.
+  { id: 'pirate_barbary_grunt', type: 'pirate', name: '바르바리 해적선', pos: project(2.2, 37.3), shipId: 'pirate_xebec',
     hp: 300, hostile: true, patrolRadius: 30, tier: 'grunt' },
-  { id: 'pirate_barbary_elite', type: 'pirate', name: '바르바리 해적 사령선', pos: project(15.3, 35.3), shipId: 'pirate_brigantine',
+  { id: 'pirate_barbary_elite', type: 'pirate', name: '바르바리 해적 사령선', pos: project(15.3, 35.3), shipId: 'pirate_xebec',
     hp: 550, hostile: true, patrolRadius: 35, tier: 'elite' },
   { id: 'pirate_caribbean_2', type: 'pirate', name: '해적선 죽음의 산호호', pos: project(-78.5, 20.0), shipId: 'pirate_sloop',
     hp: 320, hostile: true, patrolRadius: 40, tier: 'grunt' },
-  { id: 'pirate_indian_ocean', type: 'pirate', name: '해적선 계절풍의 습격자호', pos: project(101.0, 3.5), shipId: 'pirate_brigantine',
+  { id: 'pirate_indian_ocean', type: 'pirate', name: '해적선 계절풍의 습격자호', pos: project(101.0, 3.5), shipId: 'pirate_frigate',
     hp: 560, hostile: true, patrolRadius: 35, tier: 'elite' },
+  { id: 'pirate_baltic', type: 'pirate', name: '발트해 해적선', pos: project(15.5, 55.0), shipId: 'pirate_galliot',
+    hp: 300, hostile: true, patrolRadius: 30, tier: 'grunt' },
 
-  // 보스 — 대서양 한복판(아조레스 인근)에 드물게 출몰하는 전설적인 해적왕의 기함.
-  // 세계 전역에 딱 한 척뿐인 유일 개체로, 마주치면 상당한 각오가 필요하다.
+  // 보스 — 세계 전역에 딱 한 척뿐인 유일 개체 2기. 대서양(크라켄의 이빨호)과 남중국해
+  // (정씨 해적 선단 기함)에 각각 배치해 양 대륙에 하나씩 전설적인 조우를 심어둔다.
   { id: 'pirate_boss_kraken', type: 'pirate', name: '[보스] 해적 기함 크라켄의 이빨호', pos: project(-27.0, 36.0), shipId: 'pirate_flagship_kraken',
     hp: 2400, hostile: true, patrolRadius: 25, tier: 'boss' },
+  { id: 'pirate_boss_zheng', type: 'pirate', name: '[보스] 정씨 해적 선단 기함', pos: project(114.0, 21.5), shipId: 'pirate_junk_flagship',
+    hp: 2600, hostile: true, patrolRadius: 25, tier: 'boss' },
 ];

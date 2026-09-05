@@ -65,10 +65,34 @@ export const SHIP_TYPES = {
   sekibune: { label: '세키부네', era: '1467~1800s', nations: ['JP'], sizes: ['medium'] },
   bezaisen: { label: '벤자이센', era: '1600~1800s', nations: ['JP'], sizes: ['medium'] },
   kobaya: { label: '고바야', era: '1400~1800s', nations: ['JP'], sizes: ['small'] },
+  // ── 그 외 세계 각지 선종 — 인도(마라타·무굴)/오스만/오만/몰타/라구사/동남아 등.
+  // "이 게임은 배가 많이 중요하다"는 방향에 따라, 유럽·동아시아 외에도 실존했던 유명
+  // 선종을 폭넓게 담는다.
+  gallivat: { label: '갈리바트', era: '1700~1750s', nations: ['IN'], sizes: ['small'] },
+  grab: { label: '구랍(그랩)', era: '1700~1750s', nations: ['IN'], sizes: ['medium'] },
+  dhow: { label: '다우선', era: '1200~1800s', nations: ['IN', 'OM'], sizes: ['medium'] },
+  mughal_ship: { label: '무굴 대형 선', era: '1650~1700s', nations: ['IN'], sizes: ['large'] },
+  kadirga: { label: '카디르가', era: '1500~1700s', nations: ['OT'], sizes: ['medium'] },
+  ottoman_flagship: { label: '오스만 제독 기함', era: '1530~1540s', nations: ['OT'], sizes: ['xlarge'] },
+  omani_warship: { label: '오만 전열함', era: '1650~1750s', nations: ['OM'], sizes: ['large'] },
+  argosy: { label: '아르고시', era: '1400~1600s', nations: ['RG'], sizes: ['large'] },
+  scottish_carrack: { label: '스코틀랜드 대전함', era: '1511', nations: ['SC'], sizes: ['xlarge'] },
+  mong_dong: { label: '몽동선', era: '1200~1800s', nations: ['VN'], sizes: ['medium'] },
+  shuinsen: { label: '슈인센(주인선)', era: '1600~1630s', nations: ['JP'], sizes: ['medium'] },
+  burmese_warship: { label: '버마 병선', era: '1750~1850s', nations: ['BU'], sizes: ['medium'] },
   // ── 해적 전용 선종 — 어느 나라에도 속하지 않는(country: 'PR') 해적 자체 무장선.
+  // 지역별로 실제 그 해역 해적이 즐겨 쓴 선형을 따 왔다(지중해=제벡, 술루해=라농,
+  // 발트해=갤리엇 등) — 정규 수군이 정의롭게 쓴 배(거북선 등)와는 겹치지 않는다.
   sloop: { label: '슬루프', era: '1650~1800s', nations: [], sizes: ['small'] },
   brigantine: { label: '브리건틴', era: '1650~1800s', nations: [], sizes: ['medium'] },
   pirate_flagship: { label: '해적 기함', era: '1650~1800s', nations: [], sizes: ['xlarge'] },
+  xebec: { label: '제벡선', era: '1650~1800s', nations: [], sizes: ['medium'] },
+  lanong: { label: '라농선', era: '1750~1850s', nations: [], sizes: ['medium'] },
+  wokou_raider: { label: '왜구 습격선', era: '1350~1600s', nations: [], sizes: ['small'] },
+  pirate_junk: { label: '해적 정크', era: '1750~1820s', nations: [], sizes: ['large'] },
+  pirate_junk_flagship: { label: '해적 선단 기함', era: '1800~1810s', nations: [], sizes: ['xlarge'] },
+  galliot: { label: '갤리엇', era: '1650~1800s', nations: [], sizes: ['small'] },
+  pirate_frigate: { label: '해적 프리깃', era: '1690~1720s', nations: [], sizes: ['large'] },
 };
 
 export const SHIPS = [
@@ -229,6 +253,96 @@ export const SHIPS = [
     country: 'JP', era: '1400~1800s', speed: 13, turnRate: 80, hp: 260, cargo: 45, cannons: 2, cannonSlotTiers: [1], skills: ['nimble_helm'], crew: 14, price: 750,
     desc: '일본 수군의 초쾌속 소형 정찰·전령선. 뛰어난 선회력으로 척후 임무에 쓰였다.' },
 
+  // ── 인도(IN) — 마라타 해군·무굴 제국 ──
+  { id: 'gallivat', name: '갈리바트 (Gallivat)', class: 'small', role: 'adventure', type: 'gallivat',
+    country: 'IN', era: '1700~1750s', speed: 13, turnRate: 75, hp: 300, cargo: 55, cannons: 2, cannonSlotTiers: [1], skills: ['nimble_helm'], crew: 30, price: 950,
+    desc: '마라타 해군이 정찰과 기습에 활용한 노젓기 겸용 소형 쾌속선.' },
+  { id: 'grab', name: '구랍 (Grab)', class: 'medium', role: 'combat', type: 'grab',
+    country: 'IN', era: '1700~1750s', speed: 10, turnRate: 52, hp: 640, cargo: 150, cannons: 10, cannonSlotTiers: [2, 2], skills: ['boarding_mastery', 'reinforced_ram'], crew: 150, price: 2700,
+    desc: '칸호지 앙그리아의 마라타 해군이 영국·포르투갈 상선을 위협한 주력 중형 전선. 이물이 뾰족하고 낮아 접현·백병전에 유리하다.' },
+  { id: 'indian_dhow', name: '다우선 (Dhow)', class: 'medium', role: 'trade', type: 'dhow',
+    country: 'IN', era: '1200~1800s', speed: 10, turnRate: 48, hp: 580, cargo: 250, cannons: 4, cannonSlotTiers: [1, 1], skills: ['long_haul_logistics', 'savvy_haggler'], crew: 24, price: 1900,
+    desc: '삼각돛 하나로 계절풍을 타고 인도양을 오간 전통 교역선. 아라비아부터 인도까지 널리 쓰였다.' },
+  { id: 'ganj_i_sawai', name: '강지 사와이 (Ganj-i-Sawai)', class: 'large', role: 'trade', type: 'mughal_ship',
+    country: 'IN', era: '1650~1700s', speed: 7, turnRate: 26, hp: 1300, cargo: 500, cannons: 14, cannonSlotTiers: [2, 2, 1, 1], skills: ['standing_supply', 'port_friendly', 'skilled_carpenter'], crew: 70, price: 6000,
+    desc: '무굴 제국의 초대형 순례·무역선. 메카 순례자와 막대한 금은보화를 실어날라, 훗날 해적 헨리 에브리에게 나포되며 역사상 가장 유명한 해적질의 표적이 되었다.' },
+
+  // ── 오스만 제국(OT) ──
+  { id: 'ottoman_kadirga', name: '오스만 카디르가 (Kadirga)', class: 'medium', role: 'combat', type: 'kadirga',
+    country: 'OT', era: '1500~1700s', speed: 11, turnRate: 70, hp: 520, cargo: 60, cannons: 7, cannonSlotTiers: [2, 1], skills: ['rapid_reload', 'reinforced_ram'], crew: 160, price: 2000,
+    desc: '오스만 해군의 표준 갤리선. 지중해 전역에서 베네치아·스페인 함대와 맞섰다.' },
+  { id: 'barbarossa_flagship', name: '바르바로사의 기함 하이레딘호', class: 'xlarge', role: 'combat', type: 'ottoman_flagship',
+    country: 'OT', era: '1530~1540s', speed: 8, turnRate: 26, hp: 2500, cargo: 380, cannons: 46, cannonSlotTiers: [3, 3, 2, 2, 1, 1], skills: ['boarding_mastery', 'battle_morale', 'rapid_reload', 'reinforced_ram'], crew: 180, price: 16500,
+    desc: '지중해의 공포로 군림한 오스만 대제독 하이레딘 바르바로사의 기함. 갤리 함대를 이끌고 프레베자 해전에서 신성동맹 함대를 격파했다.' },
+
+  // ── 오만 술탄국(OM) ──
+  { id: 'omani_baghlah', name: '오만 바글라 (Baghlah)', class: 'medium', role: 'trade', type: 'dhow',
+    country: 'OM', era: '1650~1750s', speed: 9, turnRate: 42, hp: 600, cargo: 260, cannons: 4, cannonSlotTiers: [1, 1], skills: ['bulk_buyer', 'frugal_voyage'], crew: 22, price: 2000,
+    desc: '오만 상인들이 아프리카 동해안과 인도를 오가며 노예·상아·향료를 실어나른 대형 다우선.' },
+  { id: 'omani_warship', name: '오만 전열함 알 팔라크호', class: 'large', role: 'combat', type: 'omani_warship',
+    country: 'OM', era: '1650~1750s', speed: 9, turnRate: 30, hp: 1350, cargo: 300, cannons: 25, cannonSlotTiers: [3, 2, 1, 1], skills: ['ironclad_defense', 'multi_cannon', 'damage_control'], crew: 100, price: 6300,
+    desc: '잔지바르까지 세력을 뻗친 오만 술탄국 해군의 대형 전열함.' },
+
+  // ── 몰타 기사단(MT) ──
+  { id: 'malta_galley', name: '몰타 기사단 갤리', class: 'medium', role: 'combat', type: 'galley',
+    country: 'MT', era: '1530~1700s', speed: 11, turnRate: 68, hp: 560, cargo: 55, cannons: 10, cannonSlotTiers: [2, 2], skills: ['reinforced_ram', 'capture_expert'], crew: 170, price: 2900,
+    desc: '성 요한 기사단이 바르바리 해적 사냥에 앞장선 지중해의 정예 갤리. 나포한 이슬람 상선에서 막대한 전리품을 챙겼다.' },
+
+  // ── 라구사(RG, 두브로브니크) ──
+  { id: 'ragusan_argosy', name: '라구사 아르고시', class: 'large', role: 'trade', type: 'argosy',
+    country: 'RG', era: '1400~1600s', speed: 9, turnRate: 34, hp: 1200, cargo: 480, cannons: 14, cannonSlotTiers: [2, 2, 1, 1], skills: ['long_haul_logistics', 'port_friendly', 'savvy_haggler'], crew: 65, price: 5400,
+    desc: '지중해 최대의 중립 교역 도시국가 라구사(두브로브니크)의 대형 상선. "아르고시(Argosy)"라는 영어 단어 자체가 이 배의 이름에서 비롯됐다.' },
+
+  // ── 덴마크(DK) ──
+  { id: 'danish_indiaman', name: '덴마크 이스트인디언 크론보르호', class: 'large', role: 'trade', type: 'fullrig',
+    country: 'DK', era: '1620~1750s', speed: 10, turnRate: 32, hp: 1250, cargo: 520, cannons: 17, cannonSlotTiers: [2, 2, 2, 1], skills: ['standing_supply', 'long_haul_logistics', 'skilled_carpenter'], crew: 75, price: 6100,
+    desc: '덴마크 동인도회사가 트랑케바르(인도) 항로에 투입한 대형 상선.' },
+
+  // ── 스코틀랜드(SC) ──
+  { id: 'great_michael', name: '그레이트 마이클호 (Great Michael)', class: 'xlarge', role: 'combat', type: 'scottish_carrack',
+    country: 'SC', era: '1511', speed: 6, turnRate: 14, hp: 2900, cargo: 480, cannons: 73, cannonSlotTiers: [4, 3, 3, 2, 1, 1], skills: ['ironclad_defense', 'damage_control', 'battle_morale', 'multi_cannon'], crew: 300, price: 17500,
+    desc: '1511년 진수 당시 유럽 최대의 군함이었던 스코틀랜드 왕실 전함. 건조에 스코틀랜드 전역의 목재를 거의 다 썼다는 전설이 남아 있다.' },
+
+  // ── 베트남(VN) ──
+  { id: 'mong_dong', name: '몽동선 (Mông Đồng)', class: 'medium', role: 'combat', type: 'mong_dong',
+    country: 'VN', era: '1200~1800s', speed: 12, turnRate: 64, hp: 580, cargo: 120, cannons: 7, cannonSlotTiers: [2, 1], skills: ['agile_maneuvers', 'assault_speed'], crew: 50, price: 2400,
+    desc: '바익당강 전투로 유명한 베트남의 전통 병선. 얕은 강과 연안에서 뛰어난 기동력을 발휘했다.' },
+
+  // ── 시암(SM) ──
+  { id: 'siam_royal_junk', name: '시암 왕실 정크', class: 'medium', role: 'trade', type: 'junk',
+    country: 'SM', era: '1350~1750s', speed: 9, turnRate: 44, hp: 620, cargo: 270, cannons: 4, cannonSlotTiers: [1, 1], skills: ['savvy_haggler', 'bulk_buyer'], crew: 28, price: 2200,
+    desc: '아유타야 왕실이 중국·일본과의 조공 무역에 투입한 시암의 대형 정크선.' },
+
+  // ── 아체 술탄국(AC) ──
+  { id: 'aceh_galley', name: '아체 갤리', class: 'large', role: 'combat', type: 'galley',
+    country: 'AC', era: '1520~1650s', speed: 9, turnRate: 40, hp: 1100, cargo: 200, cannons: 25, cannonSlotTiers: [3, 2, 1, 1], skills: ['multi_cannon', 'boarding_mastery', 'reinforced_ram'], crew: 200, price: 5600,
+    desc: '포르투갈의 믈라카 지배에 맞선 아체 술탄국의 대형 갤리 함대. 유럽 화포 기술을 적극 받아들여 무장이 강력했다.' },
+
+  // ── 조선(KR) 추가 ──
+  { id: 'hyeopseon', name: '협선 (挾船)', class: 'small', role: 'adventure', type: 'panokseon',
+    country: 'KR', era: '1555~1800s', speed: 12, turnRate: 72, hp: 280, cargo: 50, cannons: 2, cannonSlotTiers: [1], skills: ['nimble_helm'], crew: 16, price: 780,
+    desc: '판옥선 함대를 뒤따르며 연락·정찰을 맡은 조선 수군의 소형 협선.' },
+
+  // ── 중국(CN) 추가 ──
+  { id: 'canton_trader', name: '광저우 대형 정크', class: 'large', role: 'trade', type: 'junk',
+    country: 'CN', era: '1700~1840s', speed: 8, turnRate: 28, hp: 1400, cargo: 550, cannons: 14, cannonSlotTiers: [2, 2, 1, 1], skills: ['long_haul_logistics', 'port_friendly', 'standing_supply'], crew: 90, price: 6400,
+    desc: '광저우 십삼행을 거점으로 동남아·일본까지 오간 청나라의 대형 교역용 정크선.' },
+
+  // ── 일본(JP) 추가 ──
+  { id: 'shuinsen', name: '슈인센 (朱印船)', class: 'medium', role: 'trade', type: 'shuinsen',
+    country: 'JP', era: '1600~1630s', speed: 11, turnRate: 46, hp: 680, cargo: 230, cannons: 7, cannonSlotTiers: [2, 1], skills: ['long_haul_logistics', 'savvy_haggler'], crew: 40, price: 3000,
+    desc: '에도 막부의 주인장(朱印狀)을 받아 동남아 각지와 교역한 일본의 대형 무역선. 서양식 선체에 일본식 삭구를 결합한 혼성 구조가 특징.' },
+
+  // ── 브루나이(BN) ──
+  { id: 'brunei_war_junk', name: '브루나이 대형 정크 전선', class: 'large', role: 'combat', type: 'junk',
+    country: 'BN', era: '1500~1600s', speed: 9, turnRate: 32, hp: 1150, cargo: 280, cannons: 25, cannonSlotTiers: [3, 2, 1, 1], skills: ['boarding_mastery', 'multi_cannon', 'agile_maneuvers'], crew: 140, price: 5500,
+    desc: '필리핀 군도까지 세력을 뻗친 브루나이 술탄국의 대형 정크 전선.' },
+
+  // ── 버마(BU) ──
+  { id: 'burmese_warship', name: '버마 병선', class: 'medium', role: 'combat', type: 'burmese_warship',
+    country: 'BU', era: '1750~1850s', speed: 10, turnRate: 56, hp: 540, cargo: 110, cannons: 7, cannonSlotTiers: [2, 1], skills: ['agile_maneuvers', 'rapid_reload'], crew: 60, price: 2300,
+    desc: '이라와디강과 안다만 해안을 오간 콘바웅 왕조의 병선. 강과 바다를 가리지 않는 얕은 흘수가 특징.' },
+
   // ── 해적 전용 선박 (구매 불가, purchasable: false) ──
   // 어느 나라에도 속하지 않는(country: 'PR') 해적 자체 무장선 — 조선소에서 살 수 없고
   // 오직 해적 NPC로만 등장한다. 잡몹(슬루프) → 엘리트(브리건틴) → 보스(기함) 3단 위협
@@ -243,6 +357,27 @@ export const SHIPS = [
   { id: 'pirate_flagship_kraken', name: '[보스] 해적 기함 크라켄의 이빨호', class: 'xlarge', role: 'combat', type: 'pirate_flagship',
     country: 'PR', era: '1650~1800s', speed: 8, turnRate: 24, hp: 2600, cargo: 300, cannons: 78, cannonSlotTiers: [4, 4, 2, 2, 1, 1], skills: ['multi_cannon', 'rapid_reload', 'boarding_mastery', 'battle_morale'], crew: 190, price: 16000,
     desc: '악명 높은 해적왕의 기함. 각지에 소문으로만 떠돌던 전설적인 초대형 사략선으로, 마주치면 상당한 전투력을 각오해야 한다.', purchasable: false },
+  { id: 'pirate_xebec', name: '해적 제벡선', class: 'medium', role: 'combat', type: 'xebec',
+    country: 'PR', era: '1650~1800s', speed: 14, turnRate: 66, hp: 480, cargo: 90, cannons: 7, cannonSlotTiers: [2, 1], skills: ['assault_speed', 'reinforced_ram'], crew: 70, price: 1900,
+    desc: '지중해 바르바리 해적이 애용한 삼각돛 쾌속 제벡선. 노와 돛을 겸용해 무풍에도 빠르게 접근한다.', purchasable: false },
+  { id: 'pirate_lanong', name: '해적 라농선', class: 'medium', role: 'combat', type: 'lanong',
+    country: 'PR', era: '1750~1850s', speed: 12, turnRate: 70, hp: 500, cargo: 80, cannons: 7, cannonSlotTiers: [2, 1], skills: ['boarding_mastery', 'assault_speed'], crew: 90, price: 1800,
+    desc: '술루해와 믈라카 해협을 누빈 이라눈족 해적의 대형 노잡이 습격선. 수십 명의 전사를 태우고 빠르게 상선을 덮친다.', purchasable: false },
+  { id: 'wokou_raider', name: '왜구 습격선', class: 'small', role: 'combat', type: 'wokou_raider',
+    country: 'PR', era: '1350~1600s', speed: 12, turnRate: 64, hp: 320, cargo: 60, cannons: 2, cannonSlotTiers: [1], skills: ['assault_speed'], crew: 40, price: 1000,
+    desc: '조선·중국·일본 연안을 가리지 않고 약탈한 왜구의 소형 쾌속 습격선. 정규 수군보다 가볍고 빠르다.', purchasable: false },
+  { id: 'pirate_junk', name: '해적 대형 정크', class: 'large', role: 'combat', type: 'pirate_junk',
+    country: 'PR', era: '1750~1820s', speed: 8, turnRate: 26, hp: 1300, cargo: 250, cannons: 28, cannonSlotTiers: [3, 2, 2, 1], skills: ['multi_cannon', 'boarding_mastery', 'damage_control'], crew: 160, price: 6000,
+    desc: '남중국해를 장악한 해적 선단의 대형 무장 정크. 수십 척이 무리 지어 상선단을 통째로 노린다.', purchasable: false },
+  { id: 'pirate_junk_flagship', name: '[보스] 정씨 해적 선단 기함', class: 'xlarge', role: 'combat', type: 'pirate_junk_flagship',
+    country: 'PR', era: '1800~1810s', speed: 7, turnRate: 18, hp: 2800, cargo: 350, cannons: 73, cannonSlotTiers: [4, 3, 3, 2, 1, 1], skills: ['multi_cannon', 'boarding_mastery', 'battle_morale', 'damage_control'], crew: 220, price: 17500,
+    desc: '한때 수만 명을 거느리며 청 제국 해군마저 압도했던 전설적 여해적 정이수(鄭一嫂)의 선단 기함.', purchasable: false },
+  { id: 'pirate_galliot', name: '발트해 해적 갤리엇', class: 'small', role: 'combat', type: 'galliot',
+    country: 'PR', era: '1650~1800s', speed: 11, turnRate: 58, hp: 380, cargo: 70, cannons: 2, cannonSlotTiers: [1], skills: ['assault_speed'], crew: 22, price: 1050,
+    desc: '북해·발트해 연안을 노리는 해적 소형 갤리엇. 거친 파도에도 잘 버틴다.', purchasable: false },
+  { id: 'pirate_frigate', name: '인도양 해적 프리깃', class: 'large', role: 'combat', type: 'pirate_frigate',
+    country: 'PR', era: '1690~1720s', speed: 13, turnRate: 44, hp: 1350, cargo: 280, cannons: 36, cannonSlotTiers: [3, 3, 1, 1], skills: ['precision_fire', 'rapid_reload', 'boarding_mastery'], crew: 150, price: 7200,
+    desc: '마다가스카르를 근거지로 삼아 무굴 순례선단을 노린 "해적의 황금시대" 프리깃. 인도양 최고의 표적을 노린다.', purchasable: false },
 ];
 
 export function getShip(id) {
@@ -266,6 +401,8 @@ export const COUNTRY_COLORS = {
   SM: '#d4a017', BU: '#a0522d', AC: '#6b8e23', BN: '#f1c40f',
   MT: '#c8102e', RG: '#5a3e8a', OM: '#b03a2e', SC: '#1e5b8a',
   PR: '#1a1613', // 해적 전용 선박(어느 나라에도 속하지 않음) — 검은 깃발
+  IN: '#d9861e', // 인도(마라타·무굴) — 선박 국가 색상. 게임 내 인도 항구는 전부 식민 세력(PT) 소속이라
+                  // 도시 국가로는 등장하지 않지만, 선박은 원산지 그대로 인도로 표기한다.
 };
 
 export const COUNTRY_NAMES = {
@@ -276,4 +413,5 @@ export const COUNTRY_NAMES = {
   SM: '샴', BU: '버마', AC: '아체', BN: '브루나이',
   MT: '몰타 기사단', RG: '라구사', OM: '오만', SC: '스코틀랜드',
   PR: '해적',
+  IN: '인도',
 };
