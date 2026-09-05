@@ -9,8 +9,9 @@
 // 저장할 필요가 없다).
 import { state } from '../state.js';
 import { WORLD_REGIONS } from '../data/worldRegions.js';
-import { getRankInfo } from './rank.js';
-import { getQuestStatus } from './quests.js';
+import { getQuest } from '../data/quests.js';
+import { getCity } from '../data/cities.js';
+import { getQuestStatus, isQuestChainReady } from './quests.js';
 import { hud } from '../ui/hud.js';
 
 // id -> { rankIndex, questId } — WORLD_REGIONS 자체에 이미 있는 unlock 필드를 그대로 재사용한다.
@@ -32,12 +33,17 @@ export function getRouteUnlockInfo(bucketId) {
 const announcedThisSession = new Set();
 
 export function checkQuestChainAnnouncements() {
-  const { index } = getRankInfo();
   for (const route of LOCKED_ROUTES) {
     if (state.unlockedRoutes[route.id] || announcedThisSession.has(route.id)) continue;
-    if (index < route.unlock.rankIndex) continue;
-    if (getQuestStatus(route.unlock.questId) !== 'available') continue;
+    const q = getQuest(route.unlock.questId);
+    // isQuestChainReady가 랭크(minRankIndex)뿐 아니라 routePrereq(예: 인도양은 아프리카
+    // 항로가 먼저 열려 있어야 함)까지 함께 확인한다 — 이걸 빼먹으면 아직 게시판에 뜨지도
+    // 않은 의뢰를 "새로 올라왔다"고 잘못 알리는 사고가 난다(실제로 한 번 발견된 버그).
+    if (!q || getQuestStatus(q.id) !== 'available' || !isQuestChainReady(q)) continue;
     announcedThisSession.add(route.id);
-    hud.toast(`📜 리스본 항구관리인에게 "${route.name} 개척" 의뢰가 새로 올라왔습니다!`, 3600);
+    // 1부(배달) 의뢰는 리스본이 아니라 물품 원산지 도시(세비야/런던/베네치아)에서 뜬다 —
+    // q.cityId로 실제 위치를 가리켜야 플레이어가 엉뚱하게 리스본만 뒤지는 일이 없다.
+    const cityName = getCity(q.cityId)?.name || '항구';
+    hud.toast(`📜 ${cityName} 항구관리인에게 "${route.name} 개척" 의뢰가 새로 올라왔습니다!`, 3600);
   }
 }

@@ -78,7 +78,7 @@ export function turnInDelivery(id) {
 // 수락 상태였다면 자동으로 완료 처리한다(항구로 돌아가 보고할 필요 없음).
 export function checkBountyKill(npcOwnerId) {
   const q = QUESTS.find((x) => x.type === 'bounty' && x.targetId === npcOwnerId);
-  if (!q || getQuestStatus(q.id) !== 'accepted') return null;
+  if (!q || getQuestStatus(q.id) !== 'accepted' || !isQuestChainReady(q)) return null;
   state.gold += q.reward;
   state.quests = { ...state.quests, [q.id]: 'completed' };
   state.pirateBounty = (state.pirateBounty || 0) + 1;
@@ -92,7 +92,7 @@ export function checkBountyKill(npcOwnerId) {
 // true가 되며, 세이브에 저장된 완료 상태(state.quests)만으로 재접속 시에도 그대로 복원된다.
 export function checkVoyageArrival(cityId) {
   const q = QUESTS.find((x) => x.type === 'voyage' && x.targetCityId === cityId);
-  if (!q || getQuestStatus(q.id) !== 'accepted') return null;
+  if (!q || getQuestStatus(q.id) !== 'accepted' || !isQuestChainReady(q)) return null;
   state.gold += q.reward;
   state.quests = { ...state.quests, [q.id]: 'completed' };
   if (q.unlocksRoute) {
