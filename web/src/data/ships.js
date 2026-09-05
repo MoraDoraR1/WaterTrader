@@ -145,7 +145,7 @@ export const SHIPS = [
     desc: '네덜란드가 개발한 대량 물자 수송 특화 상선. 동급 최대 적재량.' },
   { id: 'caravel_war', name: '카라벨라 데 아르마다 (Caravela de Armada)', class: 'medium', role: 'combat', type: 'caravel',
     country: 'PT', era: '1500s', speed: 12, turnRate: 50, hp: 660, cargo: 140, cannons: 18, cannonSlotTiers: [3, 1], skills: ['precision_fire', 'ironclad_defense'], crew: 48, price: 2500,
-    acquire: 'build', buildCost: { gold: 2500, materials: 15 },
+    acquire: 'build', buildCost: { gold: 2500, materials: 15, oakTimber: 2 },
     desc: '무장을 강화한 포르투갈 호위용 카라벨 — 조선소에서 직접 건조해야 하는 상위 전투함.' },
 
   // ── 스쿠너 (18세기 후반, 종범 위주 쾌속 범선) ──
@@ -154,7 +154,7 @@ export const SHIPS = [
     desc: '개프세일(종범) 위주로 바람을 거슬러도 잘 나아가는 신형 쾌속 연락선.' },
   { id: 'topsail_schooner', name: '톱세일 스쿠너 (Topsail Schooner)', class: 'medium', role: 'combat', type: 'schooner',
     country: 'NL', era: '1800s', speed: 13, turnRate: 54, hp: 700, cargo: 180, cannons: 10, cannonSlotTiers: [2, 2], skills: ['multi_cannon', 'assault_speed'], crew: 55, price: 3200,
-    acquire: 'build', buildCost: { gold: 3200, materials: 18 },
+    acquire: 'build', buildCost: { gold: 3200, materials: 18, oakTimber: 4 },
     desc: '앞돛대에 사각돛을 겸용해 화력과 속도를 함께 갖춘 개량형 스쿠너 — 조선소에서 직접 건조해야 하는 상위 전투함.' },
 
   // ── 대형선 (전투/장거리 교역) ──
@@ -228,7 +228,7 @@ export const SHIPS = [
   // ── 조선(KR) ──
   { id: 'panokseon', name: '판옥선 (板屋船)', class: 'medium', role: 'combat', type: 'panokseon',
     country: 'KR', era: '1555~1800s', speed: 9, turnRate: 55, hp: 700, cargo: 160, cannons: 18, cannonSlotTiers: [3, 1], skills: ['ironclad_defense', 'damage_control'], crew: 60, price: 2800,
-    acquire: 'build', buildCost: { gold: 2800, materials: 16 },
+    acquire: 'build', buildCost: { gold: 2800, materials: 16, oakTimber: 3 },
     desc: '평저선 특유의 안정된 선체를 포격 플랫폼으로 삼은 조선 수군의 주력 전선. 천자총통 등 대형 화포를 실을 수 있었다 — 조선소에서 직접 건조해야 하는 상위 전투함.' },
   { id: 'geobukseon', name: '거북선 (龜船)', class: 'xlarge', role: 'combat', type: 'geobukseon',
     country: 'KR', era: '1592', speed: 8, turnRate: 34, hp: 2700, cargo: 450, cannons: 92, cannonSlotTiers: [4, 4, 3, 2, 2, 1], skills: ['reinforced_ram', 'ironclad_defense', 'agile_maneuvers', 'damage_control'], crew: 190, price: 17000,

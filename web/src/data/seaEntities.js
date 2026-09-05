@@ -105,11 +105,14 @@ export const SEA_NPC_SHIPS = [
   // 해적이 실제로 즐겨 쓴 전용 선형(왜구 습격선/해적 정크)을 새로 만들어 태운다.
   { id: 'pirate_wokou', type: 'pirate', name: '왜구선 아카츠키호', pos: project(129.6, 33.0), shipId: 'wokou_raider',
     hp: 420, hostile: true, patrolRadius: 30, tier: 'grunt', region: 4 },
-  { id: 'pirate_china_coast', type: 'pirate', name: '[엘리트] 해적선 흑룡호', pos: project(116.5, 22.5), shipId: 'pirate_junk',
+  // 정씨 해적 연합("홍기방" 등 6개 함대 연합)은 하이난 앞바다부터 푸젠 연안까지 남중국해
+  // 해안 전역을 세력권으로 삼았다 — 실제 활동 범위를 반영해 세 척을 광둥(주강 하구)·
+  // 푸젠(타이완 해협)·하이난(퉁킹만) 앞바다로 넓게 흩어 배치한다.
+  { id: 'pirate_china_coast', type: 'pirate', name: '[엘리트] 해적선 흑룡호', pos: project(108.0, 20.0), shipId: 'pirate_junk',
     hp: 1000, hostile: true, patrolRadius: 35, tier: 'elite', region: 4 },
   // 장바오자이(張保仔) — 정이수의 양자이자 최측근 지휘관이었던 실존 해적. 한때 남중국해
   // 해적 연합의 실질적 야전 사령관으로, 훗날 청 조정에 투항해 관직까지 받았다.
-  { id: 'pirate_elite_zhangbaozai', type: 'pirate', name: '[엘리트] 장바오자이의 해적선', pos: project(114.3, 22.2), shipId: 'pirate_junk',
+  { id: 'pirate_elite_zhangbaozai', type: 'pirate', name: '[엘리트] 장바오자이의 해적선', pos: project(120.2, 25.0), shipId: 'pirate_junk',
     hp: 900, hostile: true, patrolRadius: 35, tier: 'elite', region: 4 },
   { id: 'pirate_boss_zheng', type: 'pirate', name: '[보스] 정씨 해적 선단 기함', pos: project(114.0, 21.5), shipId: 'pirate_junk_flagship',
     hp: 2600, hostile: true, patrolRadius: 25, tier: 'boss', region: 4 },
