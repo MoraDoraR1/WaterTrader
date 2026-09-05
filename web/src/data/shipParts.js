@@ -8,6 +8,8 @@
 // effects: cannonsAdd(화력) / hpAdd(최대 내구도) / cargoAdd(적재량) / armorAdd(방어력,
 //          피격 데미지 감소율 %) — 가산. speedMul / turnRateMul — 현재 장착 중인 배의
 //          기준 스탯에 곱연산으로 적용.
+// 참고: armor는 cannons와 달리 장갑판 없이도 0이 아니다 — 배 등급(class)·역할(role)에 따른
+// 기본 방어력이 깔려 있고(getBaseArmor 참고) 장갑판은 그 위에 armorAdd만큼 더해진다.
 import { mulSkillEffect } from './shipSkills.js';
 
 export const PART_SLOTS = {
@@ -70,6 +72,18 @@ export const SHIP_PARTS = [
     desc: '용골 자체를 강화해 대폭 늘어난 적재량과 내구도를 지탱한다. 다소 둔중해진다.' },
 ];
 
+// 배 등급별 기본 방어력(장갑판을 하나도 안 달아도 갖는 값) — 큰 배일수록 선체 자체가
+// 두꺼워 원래 좀 더 잘 버틴다. 전투용(combat) 배는 애초에 실전을 상정하고 지어져
+// 선체를 보강해뒀다고 보고 추가로 5%p를 더 얹는다(레판토·무적함대급 갈레온, 전열함 등).
+const CLASS_BASE_ARMOR = { small: 0, medium: 3, large: 6, xlarge: 10 };
+const COMBAT_ROLE_ARMOR_BONUS = 5;
+
+export function getBaseArmor(shipDef) {
+  const classBase = CLASS_BASE_ARMOR[shipDef?.class] || 0;
+  const roleBonus = shipDef?.role === 'combat' ? COMBAT_ROLE_ARMOR_BONUS : 0;
+  return classBase + roleBonus;
+}
+
 export function partsBySlot(slot) {
   return SHIP_PARTS.filter((p) => p.slot === slot);
 }
@@ -110,7 +124,7 @@ export function getEffectiveShipDef(shipDef, shipParts) {
   const parts = getEquippedParts(shipParts);
   // cannons는 shipDef.cannons(슬롯을 전부 채웠을 때의 "최대치")와 무관하게 실제로 장착한
   // 대포 부품의 합으로만 정해진다 — 슬롯이 비어 있으면 0(대포 없이는 포격 자체가 불가능).
-  let hp = shipDef.hp, cargo = shipDef.cargo, cannons = 0, armor = 0;
+  let hp = shipDef.hp, cargo = shipDef.cargo, cannons = 0, armor = getBaseArmor(shipDef);
   let speedMul = mulSkillEffect(shipDef, 'speedMul', 1), turnRateMul = mulSkillEffect(shipDef, 'turnRateMul', 1);
   for (const p of parts) {
     const e = p.effects;

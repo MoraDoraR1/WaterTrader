@@ -9,7 +9,7 @@ import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, project } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
-import { getEffectiveShipDef, PART_SLOTS, getPart, partsBySlot } from './data/shipParts.js';
+import { getEffectiveShipDef, PART_SLOTS, getPart, partsBySlot, getBaseArmor } from './data/shipParts.js';
 import { getShipSkills } from './data/shipSkills.js';
 import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
@@ -227,9 +227,9 @@ const STAT_MAX = {
   cannons: Math.max(...SHIPS.map((s) => s.cannons)),
   turnRate: Math.max(...SHIPS.map((s) => s.turnRate)),
   speed: Math.max(...SHIPS.map((s) => s.speed)),
-  // armor는 배 자체가 아니라 장갑판 부품에서만 나오는 스탯이라, 달성 가능한 최댓값은
-  // 최고 등급 장갑판 하나의 armorAdd 값이다(슬롯이 1개뿐이라 여러 개를 겹쳐 낄 수 없다).
-  armor: Math.max(...partsBySlot('armor').map((p) => p.effects.armorAdd || 0)),
+  // armor 최댓값 = 등급별 기본 방어력(가장 높은 건 초대형+전투용) + 최고 등급 장갑판 하나
+  // (슬롯이 1개뿐이라 여러 개를 겹쳐 낄 수 없다).
+  armor: Math.max(...SHIPS.map(getBaseArmor)) + Math.max(...partsBySlot('armor').map((p) => p.effects.armorAdd || 0)),
 };
 
 function openShipInfo() {
