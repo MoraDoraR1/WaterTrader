@@ -307,11 +307,11 @@
   .sy-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;
     border: 1px solid rgba(200,180,120,0.25); border-radius: 8px; padding: 0.6rem 0.8rem; background: rgba(255,255,255,0.02); }
   .sy-row.highlight { border-color: rgba(111,200,224,0.5); background: rgba(111,200,224,0.06); }
-  .sy-row-main { min-width: 0; }
+  .sy-row-main { min-width: 0; flex: 1 1 auto; }
   .sy-row-name { font-size: 0.9rem; color: #f0e6d2; }
   .sy-row-sub { font-size: 0.72rem; color: #9fb8c9; margin-top: 3px; line-height: 1.4; }
-  .sy-row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
-  .sy-price { font-size: 0.78rem; color: #e6c15a; white-space: nowrap; }
+  .sy-row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; max-width: 44%; }
+  .sy-price { font-size: 0.78rem; color: #e6c15a; white-space: normal; text-align: right; }
   .sy-btn { background: rgba(230,193,90,0.16); border: 1px solid rgba(230,193,90,0.5); color: #f0e6d2;
     padding: 0.35rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; white-space: nowrap; }
   .sy-btn:hover:not(:disabled) { background: rgba(230,193,90,0.32); }
