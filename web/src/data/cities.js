@@ -217,6 +217,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 빈첸초', line: '나폴리 조선소는 왕실 함대를 책임집니다.' },
       { role: 'harbormaster', name: '항구 관리인 프란체스코', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '어부 도메니코', line: '베수비오가 조용한 날은 바다도 잔잔하지요.' },
+      { role: 'mentor', name: '고고학자 에르콜라노', line: '"이 아래 잠든 옛 도시들 말일세 — 유적을 읽는 법을 가르쳐주지."' },
     ],
   },
   {
@@ -227,6 +228,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 마르크', line: '지중해 무장상선이라면 이곳이 최고죠.' },
       { role: 'harbormaster', name: '항구 관리인 누리아', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '길드 상인 페레', line: '바르셀로나 상인 길드의 역사는 수백 년입니다.' },
+      { role: 'mentor', name: '지도 제작자 헤라르드', line: '"땅의 생김새엔 전부 사연이 있는 법이지. 지리학을 가르쳐주겠네."' },
     ],
   },
   {
@@ -257,6 +259,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 라스무스', line: '해협을 지키는 함대의 배는 저희가 만듭니다.' },
       { role: 'harbormaster', name: '관세관 크리스티안', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '어부 모르텐', line: '순드 해협 통행세 덕에 왕실 곳간이 넉넉하지요.' },
+      { role: 'mentor', name: '천문학자 소렌센', line: '"밤하늘의 별자리를 읽을 줄 알아야 진짜 항해사지. 천문학을 가르쳐주지."' },
     ],
   },
   {

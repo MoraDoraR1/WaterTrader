@@ -15,7 +15,7 @@ import { getEffectiveShipDef, armorDamageMul } from '../data/shipParts.js';
 import { getCombatants, getCombatPower, getNpcCombatPower } from '../systems/combatPower.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 import { PLAYER_SKILLS } from '../data/playerSkills.js';
-import { gainSkillExp, getSkillLevel, buffMul, buffAdd, castSkill } from '../systems/skills.js';
+import { gainSkillExp, getSkillLevel, buffMul, buffAdd, castSkill, isLearned } from '../systems/skills.js';
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
 import { seaRegionAt, getSeaLockBucket } from '../data/seaRegions.js';
@@ -355,14 +355,20 @@ export class SeaScene {
       const { category, site } = this._nearbySite;
       const found = state.compendium[category][site.id];
       const icon = category === 'archaeology' ? '🏺' : '🗺️';
-      if (!found && getSkillLevel(category) < site.minSkillLevel) {
+      if (!isLearned(category)) {
+        hud.showInteractPrompt(true, `🔒 ${PLAYER_SKILLS[category].name}을(를) 배우지 않았습니다`);
+      } else if (!found && getSkillLevel(category) < site.minSkillLevel) {
         hud.showInteractPrompt(true, `🔒 ${PLAYER_SKILLS[category].name} Lv.${site.minSkillLevel} 필요 (현재 Lv.${getSkillLevel(category)})`);
       } else {
         const label = found ? site.name : '미확인 지점';
         hud.showInteractPrompt(true, `G: ${icon} ${label} 조사`);
       }
     } else if (this._astroReady) {
-      hud.showInteractPrompt(true, '🔭 G: 별자리 관측');
+      if (!isLearned('astronomy')) {
+        hud.showInteractPrompt(true, '🔒 천문학을 배우지 않았습니다');
+      } else {
+        hud.showInteractPrompt(true, '🔭 G: 별자리 관측');
+      }
     } else {
       hud.showInteractPrompt(false);
     }
@@ -377,6 +383,13 @@ export class SeaScene {
   }
 
   _investigateSite({ category, site }) {
+    // 학문 3종도 처음부터 갖고 있지 않다 — 도시의 학자에게 배우기 전엔 조사 자체가 불가능하다
+    // (레벨 검사보다 먼저 걸어야 한다. 안 그러면 기본 레벨1로도 minSkillLevel1 사이트는
+    // 발견돼버린다).
+    if (!isLearned(category)) {
+      hud.toast(`🔒 ${PLAYER_SKILLS[category].name}을(를) 배우지 않았습니다. 도시의 학자를 찾아 사사하세요.`);
+      return;
+    }
     if ((this._investigateCooldowns[site.id] || 0) > 0) {
       hud.toast('방금 조사했습니다. 잠시 후 다시 시도하세요.');
       return;
@@ -408,6 +421,10 @@ export class SeaScene {
   }
 
   _observeSky() {
+    if (!isLearned('astronomy')) {
+      hud.toast('🔒 천문학을 배우지 않았습니다. 도시의 학자를 찾아 사사하세요.');
+      return;
+    }
     if (this._astroCooldown > 0) {
       hud.toast('방금 관측했습니다. 잠시 후 다시 시도하세요.');
       return;

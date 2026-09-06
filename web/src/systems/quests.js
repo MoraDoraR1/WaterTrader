@@ -9,7 +9,7 @@ import { mulSkillEffect } from '../data/shipSkills.js';
 import { getRankInfo } from './rank.js';
 import { WORLD_REGIONS } from '../data/worldRegions.js';
 import { hud } from '../ui/hud.js';
-import { getSkillLevel, buffMul } from './skills.js';
+import { getSkillLevel, buffMul, isLearned } from './skills.js';
 
 // 완료한 배달 의뢰가 다시 게시되기까지(항해일자 기준) — 항로 개척 3부작(id가 'chain_'로
 // 시작)은 스토리 게이트라 순환 대상에서 제외한다.
@@ -39,7 +39,9 @@ export function isQuestChainReady(q) {
   if (q.requires && getQuestStatus(q.requires) !== 'completed') return false;
   if (q.minRankIndex != null && getRankInfo().index < q.minRankIndex) return false;
   if (q.routePrereq && !state.unlockedRoutes[q.routePrereq]) return false;
-  // 학문(고고학/지리학/천문학) 조사·관측 의뢰 — skillId 스킬이 minSkillLevel 이상이어야 게시판에 뜬다.
+  // 학문(고고학/지리학/천문학) 조사·관측 의뢰 — 해당 학문을 배우지 않았으면(스승에게 사사하기
+  // 전) 아예 게시판에 뜨지 않고, 배웠어도 skillId 스킬이 minSkillLevel 이상이어야 뜬다.
+  if (q.minSkillLevel != null && !isLearned(q.skillId)) return false;
   if (q.minSkillLevel != null && getSkillLevel(q.skillId) < q.minSkillLevel) return false;
   return true;
 }

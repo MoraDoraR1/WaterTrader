@@ -1,7 +1,7 @@
-// 전투/교역 액티브 스킬은 처음부터 갖고 있지 않다 — 각 도시에 자리 잡은 스승(전투)이나
-// 스킬북 상인(교역)을 찾아가 골드를 내고 사사해야 비로소 배우게 된다. 전부 처음부터 항해
-// 가능한 서유럽·북해·지중해 항로 안에 있어 항로 개척 없이도 돌아다니며 전부 모을 수 있지만,
-// 유럽 전역에 흩어져 있어 실제로 그 도시까지 항해해야만 만날 수 있다.
+// 선장 개인 스킬 11종(전투4·교역4·학문3) 전부 처음부터 갖고 있지 않다 — 각 도시에 자리 잡은
+// 스승(전투)·스킬북 상인(교역)·학자(학문)를 찾아가 골드를 내고 사사해야 비로소 배우게 된다.
+// 전부 처음부터 항해 가능한 서유럽·북해·지중해 항로 안에 있어 항로 개척 없이도 돌아다니며
+// 전부 모을 수 있지만, 유럽 전역에 흩어져 있어 실제로 그 도시까지 항해해야만 만날 수 있다.
 export const SKILL_MENTORS = [
   { cityId: 'lisboa', mentorName: '상관 조합장 두아르트', role: 'trade', skillId: 'haggling', cost: 500,
     flavor: '"장사꾼이라면 값을 깎고 붙이는 눈치부터 배워야지. 흥정술을 가르쳐주겠네."' },
@@ -19,6 +19,13 @@ export const SKILL_MENTORS = [
     flavor: '"오스만 함대의 회피 기동술이지. 맞기 전에 피하는 법부터 배우게."' },
   { cityId: 'hamburg', mentorName: '군의관 프리츠', role: 'combat', skillId: 'combat_medic', cost: 1500,
     flavor: '"전장에서 응급 처치를 할 줄 알면 목숨이 여럿 산다네."' },
+  // ---- 학문 3종도 처음부터 갖고 있지 않다 — 이 셋 역시 배워야 조사·관측 자체가 가능해진다 ----
+  { cityId: 'napoli', mentorName: '고고학자 에르콜라노', role: 'academic', skillId: 'archaeology', cost: 600,
+    flavor: '"이 아래 잠든 옛 도시들 말일세 — 유적을 읽는 법을 가르쳐주지."' },
+  { cityId: 'barcelona', mentorName: '지도 제작자 헤라르드', role: 'academic', skillId: 'geography', cost: 600,
+    flavor: '"땅의 생김새엔 전부 사연이 있는 법이지. 지리학을 가르쳐주겠네."' },
+  { cityId: 'copenhagen', mentorName: '천문학자 소렌센', role: 'academic', skillId: 'astronomy', cost: 700,
+    flavor: '"밤하늘의 별자리를 읽을 줄 알아야 진짜 항해사지. 천문학을 가르쳐주지."' },
 ];
 
 export function getMentorAt(cityId) {

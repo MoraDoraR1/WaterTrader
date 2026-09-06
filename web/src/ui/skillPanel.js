@@ -1,11 +1,11 @@
 // 선장의 스킬 패널 — 3개 탭(퀵슬롯/보유 스킬/학문)으로 구성된다.
 // 퀵슬롯: 9칸 그리드, 장착된 스킬의 쿨다운/랭크를 보여주고 클릭하면 해제된다.
 // 보유 스킬: 스승에게 배운 전투/교역 스킬(최대 30개) 목록 — 랭크 진행도 + 장착/해제 버튼.
-// 학문: 고고학/지리학/천문학 3종 — 배울 필요 없이 항상 보유하며, 조사·관측으로만 성장하는
-// 순수 게이팅용 랭크라 장착 개념이 없다(읽기 전용).
+// 학문: 고고학/지리학/천문학 3종 — 이들도 도시의 학자에게 배워야 하며, 배운 뒤로는 조사·
+// 관측(G키)으로만 성장하는 순수 게이팅용 랭크라 퀵슬롯 장착 개념은 없다(읽기 전용).
 import { hud } from './hud.js';
 import { getAcademicSkills, SKILL_CATEGORIES, MAX_LEARNED_SKILLS, getSkillDef } from '../data/playerSkills.js';
-import { getSkillProgress, getSkillSlots, equipSkill, unequipSkill, getLearnedSkills, getSkillCooldown, getActiveBuffs } from '../systems/skills.js';
+import { getSkillProgress, getSkillSlots, equipSkill, unequipSkill, getLearnedSkills, getSkillCooldown, getActiveBuffs, isLearned } from '../systems/skills.js';
 
 function progressBar(ratio, color) {
   return `<div class="bar-track" style="margin-top:5px;"><div class="bar-fill" style="width:${Math.max(2, ratio * 100)}%;background:linear-gradient(90deg, ${color}, ${color}cc)"></div></div>`;
@@ -65,6 +65,13 @@ function renderLearnedTab() {
 }
 
 function academicSkillRow(skill) {
+  if (!isLearned(skill.id)) {
+    return {
+      name: `🔒 ${skill.icon} ${skill.name}`,
+      sub: `${skill.desc}<br>도시의 학자에게 배우지 않았습니다 — 사사하기 전엔 조사·관측 자체가 불가능합니다.`,
+      disabled: true,
+    };
+  }
   const prog = getSkillProgress(skill.id);
   const progLabel = prog.isMax ? '만렙' : `${prog.exp} / ${prog.need} 발견`;
   const sub = `${skill.desc}<br>Lv.${prog.level}${prog.isMax ? '(MAX)' : ''} — ${progLabel} (퀘스트 수주·발견 조건으로만 쓰입니다)`
