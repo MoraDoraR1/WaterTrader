@@ -7,7 +7,6 @@ function applyHpTier(el, ratio) {
   el.classList.toggle('hp-low', ratio < 0.25);
 }
 
-let toastTimer = null;
 let mmBounds = null;
 let mmLandPolygons = null;
 
@@ -172,9 +171,25 @@ export const hud = {
   showTitlesPanel(v) { $('titles-panel').classList.toggle('hidden', !v); },
   hideTitlesPanel() { $('titles-panel').classList.add('hidden'); },
   isTitlesPanelOpen() { return !$('titles-panel').classList.contains('hidden'); },
-  // rows: renderRowList와 같은 스키마 — 칭호 축(교역/모험/전투/악명) 하나당 한 행.
-  renderTitlesPanel(rows) {
-    renderRowList($('titles-body'), rows);
+  // sections: [{ heading, rows }] — 축(교역/모험/전투/악명)마다 소제목 하나 + 그 축에서
+  // 이미 달성한(잠금 여부와 무관하게 과거에 도달한) 칭호 전부를 행으로 나열한다.
+  // renderQuestBoard와 완전히 같은 구조(quest-section-title 재사용)로 그린다.
+  renderTitlesPanel(sections) {
+    const body = $('titles-body');
+    body.innerHTML = '';
+    for (const sec of sections) {
+      const heading = document.createElement('div');
+      heading.className = 'quest-section-title';
+      heading.textContent = sec.heading;
+      body.appendChild(heading);
+      const listWrap = document.createElement('div');
+      renderRowList(listWrap, sec.rows);
+      body.appendChild(listWrap.firstChild);
+    }
+  },
+  // 상단바 🎖 칭호 상자 — 장착한 칭호가 있으면 그 이름을, 없으면 기본 라벨을 보여준다.
+  setEquippedTitleLabel(text) {
+    $('rank-box').textContent = text;
   },
 
   initThrottle(min, max) {
@@ -701,11 +716,18 @@ export const hud = {
     }
   },
 
+  // 같은 프레임에 여러 알림이 뜰 수 있어(예: 교역 명성 승급 + 자산 마일스톤 보너스가 한
+  // 거래에서 동시에 터지는 경우), 하나만 덮어쓰지 않도록 쌓아서 보여주고 각자 독립적으로 사라진다.
   toast(msg, ms = 2200) {
     const el = $('toast');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+    const item = document.createElement('div');
+    item.className = 'toast-item';
+    item.textContent = msg;
+    el.appendChild(item);
+    requestAnimationFrame(() => item.classList.add('show'));
+    setTimeout(() => {
+      item.classList.remove('show');
+      setTimeout(() => item.remove(), 300);
+    }, ms);
   },
 };

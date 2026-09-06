@@ -34,8 +34,9 @@ import { openSkillPanel, wireSkillTabs } from './ui/skillPanel.js';
 import { openCompendiumPanel, wireCompendiumTabs } from './ui/compendiumPanel.js';
 import { openTitlesPanel } from './ui/titlesPanel.js';
 import {
-  decayInfamy, getInfamyTitle, getTradeTitle, getAdventureTitle, getCombatTitle,
+  decayInfamy, getInfamyTitle, getTradeTitle, getAdventureTitle, getCombatTitle, getEquippedTitleEntry,
   addTradeFame, addAdventureFame, addCombatFame, addInfamy, checkWealthMilestone, checkDiscoveryMilestone,
+  getAllTitleEntries, equipTitle, unequipTitle,
 } from './systems/fame.js';
 import { PLAYER_SKILLS, QUICKSLOT_COUNT, ACADEMIC_EXP_CURVE, SKILL_EXP_CURVE } from './data/playerSkills.js';
 import {
@@ -293,11 +294,14 @@ subscribe((patch) => {
 });
 
 // 이 게임에는 엔딩이 없다 — "바다의 제독"은 전투 축 칭호 사다리의 꼭대기일 뿐, 도달해도
-// 게임을 끝내지 않는다(data/titles.js). 여기서는 상단바의 악명 경고 칩만 갱신한다.
+// 게임을 끝내지 않는다(data/titles.js). 여기서는 상단바의 악명 경고 칩과, 장착한 칭호가
+// 있다면 그 이름을 🎖 상자에 갱신한다(없으면 기본 라벨로 되돌아간다).
 function refreshInfamyIndicator() {
   if (state.screen === 'title') return;
   const info = getInfamyTitle();
   hud.setInfamy(info.value, info.tier.label);
+  const equipped = getEquippedTitleEntry();
+  hud.setEquippedTitleLabel(equipped ? `🎖 ${equipped.tier.label}` : '🎖 칭호');
 }
 subscribe(refreshInfamyIndicator);
 document.getElementById('rank-box').addEventListener('click', () => {
@@ -529,5 +533,5 @@ window.__debug = {
   equipPart, unequipPart, checkCompendiumRewards, partsBySlot,
   getTradeTitle, getAdventureTitle, getCombatTitle, getInfamyTitle, decayInfamy,
   addTradeFame, addAdventureFame, addCombatFame, addInfamy, checkWealthMilestone, checkDiscoveryMilestone,
-  openTitlesPanel,
+  openTitlesPanel, getAllTitleEntries, getEquippedTitleEntry, equipTitle, unequipTitle,
 };

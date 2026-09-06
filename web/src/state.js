@@ -97,6 +97,10 @@ export const state = {
   // 악명 — 상단(무역 호송대) 격침으로만 오르고 시간이 지나면 저절로 가라앉는다(decayInfamy).
   // 0보다 크면 해군 NPC가 사거리 안에서 무조건 교전을 걸어온다(entities/pirate.js).
   infamy: 0,
+  // 악명이 감쇠해도 잃지 않는, 지금까지 도달한 악명 칭호 최고 인덱스(장착 가능 여부 판정용).
+  infamyPeakTier: 0,
+  // 지금 상단바에 내걸고 소량 버프를 받는 칭호 id(data/titles.js) — null이면 미장착.
+  equippedTitleId: null,
 };
 
 export function initShipHp() {

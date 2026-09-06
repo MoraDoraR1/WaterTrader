@@ -63,6 +63,9 @@ export function addInfamy(amount) {
   const prevIndex = getInfamyTitle().index;
   state.infamy = Math.max(0, (state.infamy || 0) + amount);
   const next = getInfamyTitle();
+  // 악명은 시간이 지나면 줄어들지만(decayInfamy), 한 번 밟은 단계는 잃지 않도록 최댓값만
+  // 갱신되는 별도 필드에 남겨둔다 — 장착 가능한 칭호 목록은 이 peak 기준으로 판단한다.
+  state.infamyPeakTier = Math.max(state.infamyPeakTier || 0, next.index);
   if (next.index > prevIndex) {
     hud.toast(`🏴‍☠️ 악명이 퍼져 "${next.tier.label}"(으)로 불리기 시작했습니다!`);
   }
@@ -108,4 +111,69 @@ export function checkDiscoveryMilestone() {
   state.adventureDiscoveryMilestone = idx;
   addAdventureFame(gained);
   hud.toast(`🧭 항해 도감 ${total}건 발견 — 모험 명성 +${gained}!`);
+}
+
+// ---- 장착 칭호(진열용 + 소량 버프) ----
+// 축 하나당 "지금 이 순간의 칭호"만 있는 게 아니라, 그 축에서 이미 지나온 낮은 단계까지
+// 전부 선택지가 된다 — 취향대로 아무 단계나 골라 상단바에 내걸고 그 단계의 소량 버프를
+// 받는다(데이터 자체는 data/titles.js effect 필드, 실제 적용은 systems/skills.js buffMul).
+const AXES = [
+  { key: 'trade', label: '교역', icon: '💰', tiers: TRADE_TITLES, getInfo: getTradeTitle },
+  { key: 'adventure', label: '모험', icon: '🧭', tiers: ADVENTURE_TITLES, getInfo: getAdventureTitle },
+  { key: 'combat', label: '전투', icon: '⚔', tiers: COMBAT_TITLES, getInfo: getCombatTitle },
+  { key: 'infamy', label: '악명', icon: '🏴‍☠️', tiers: INFAMY_TITLES, getInfo: getInfamyTitle },
+];
+
+// 그 축에서 지금까지 도달한 최고 단계 인덱스 — 교역/모험/전투는 명성이 줄지 않으므로 현재
+// 칭호 인덱스와 같고, 악명만 감쇠를 우회하기 위해 별도로 기록해둔 peak를 쓴다.
+function unlockedIndexFor(axis) {
+  if (axis.key === 'infamy') return state.infamyPeakTier || 0;
+  return axis.getInfo().index;
+}
+
+// 전체 축을 훑어 { axisKey, axisLabel, icon, tier, tierIndex, unlocked } 평면 목록으로 반환.
+export function getAllTitleEntries() {
+  const entries = [];
+  for (const axis of AXES) {
+    const unlockedIdx = unlockedIndexFor(axis);
+    axis.tiers.forEach((tier, i) => {
+      entries.push({
+        id: tier.id, axisKey: axis.key, axisLabel: axis.label, icon: axis.icon,
+        tier, tierIndex: i, unlocked: i <= unlockedIdx,
+      });
+    });
+  }
+  return entries;
+}
+
+export function isTitleUnlocked(id) {
+  const entry = getAllTitleEntries().find((e) => e.id === id);
+  return !!entry?.unlocked;
+}
+
+export function getEquippedTitleEntry() {
+  if (!state.equippedTitleId) return null;
+  const entry = getAllTitleEntries().find((e) => e.id === state.equippedTitleId);
+  return entry?.unlocked ? entry : null;
+}
+
+export function equipTitle(id) {
+  if (!isTitleUnlocked(id)) return { ok: false, reason: '아직 달성하지 못한 칭호입니다.' };
+  state.equippedTitleId = id;
+  notify({ fameChanged: true });
+  return { ok: true };
+}
+
+export function unequipTitle() {
+  state.equippedTitleId = null;
+  notify({ fameChanged: true });
+}
+
+// systems/skills.js의 buffMul(key, base)에서 호출 — 장착한 칭호의 effect.key가 일치할 때만
+// 곱연산으로 얹는다. 일치하지 않으면 base를 그대로 돌려줘 다른 계산식엔 전혀 영향을 주지 않는다.
+export function getTitleEffectMul(key, base) {
+  const entry = getEquippedTitleEntry();
+  const effect = entry?.tier.effect;
+  if (effect && effect.mode === 'mul' && effect.key === key) return base * effect.value;
+  return base;
 }

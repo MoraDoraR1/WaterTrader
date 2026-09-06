@@ -10,6 +10,7 @@ import {
   getSkillDef, castExpFor, lerpByLevel, curveFor,
 } from '../data/playerSkills.js';
 import { hud } from '../ui/hud.js';
+import { getTitleEffectMul } from './fame.js';
 
 export function getSkillState(id) {
   return state.playerSkills[id] || { level: 1, exp: 0 };
@@ -134,7 +135,9 @@ export function tickSkillBuffs(delta) {
 }
 
 // 활성 버프 중 key와 일치하는 효과를 곱/가산으로 모아 적용 — mulSkillEffect/sumSkillEffect
-// (배 자체의 고정 스킬)와 같은 계산식에 나란히 곱하거나 더해 쓴다.
+// (배 자체의 고정 스킬)와 같은 계산식에 나란히 곱하거나 더해 쓴다. 장착한 칭호(systems/fame.js)의
+// 상시 효과도 여기서 같이 얹는다 — 시전 중인 액티브 버프처럼 시간이 흐르진 않지만, 소비하는
+// 쪽(market.js/seaScene.js 등) 입장에선 이미 이 함수 하나만 거치면 되므로 호출부를 늘리지 않는다.
 export function buffMul(key, base) {
   let total = base;
   for (const [id, b] of Object.entries(activeBuffs)) {
@@ -143,7 +146,7 @@ export function buffMul(key, base) {
       if (eff.key === key && eff.mode === 'mul') total *= lerpByLevel(eff.v1, eff.v15, b.level);
     }
   }
-  return total;
+  return getTitleEffectMul(key, total);
 }
 
 export function buffAdd(key, base) {

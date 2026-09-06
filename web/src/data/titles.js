@@ -9,41 +9,50 @@
 // (data/quests.js minRankIndex) 등 내부 진행도 판정에만 쓰이는 숨은 점수이며, 플레이어에게
 // "칭호"로 보여주지 않는다(더 이상 rank-box에 표시되지 않는다).
 
+// 칭호마다 effect(장착 시 적용되는 소량의 상시 버프)를 함께 갖는다. 전부 mode:'mul'이라
+// systems/skills.js의 buffMul(key, base)에 곱연산으로 얹히므로, 그 key를 이미 소비하는
+// 기존 계산식(시장 매도가, 피격 데미지, 전투 노획량 등)에 자동으로 반영된다 — 새 계산식을
+// 만들지 않고 기존 버프 파이프라인에 다섯 번째 입력을 더한 것뿐이다. 플레이어는 언제든
+// (지금 도달한 단계뿐 아니라 과거에 지나온 낮은 단계까지) 하나만 골라 장착한다(systems/fame.js
+// equipTitle 참고) — 축마다 값이 커서 서로 겹치는 효과는 아니므로 단순 비교로 "이게 최선"이라
+// 말할 수 없게 하고, 순수히 취향으로 고르게 했다.
 export const TRADE_TITLES = [
-  { id: 'trade_0', label: '무역 견습생', minFame: 0 },
-  { id: 'trade_1', label: '행상인', minFame: 100 },
-  { id: 'trade_2', label: '물자 상인', minFame: 400 },
-  { id: 'trade_3', label: '거상', minFame: 1200 },
-  { id: 'trade_4', label: '상단주', minFame: 3000 },
-  { id: 'trade_5', label: '바다의 대상인', minFame: 6000 },
+  { id: 'trade_0', label: '무역 견습생', minFame: 0, effect: { key: 'sellPriceMul', mode: 'mul', value: 1.00 } },
+  { id: 'trade_1', label: '행상인', minFame: 100, effect: { key: 'sellPriceMul', mode: 'mul', value: 1.01 } },
+  { id: 'trade_2', label: '물자 상인', minFame: 400, effect: { key: 'sellPriceMul', mode: 'mul', value: 1.02 } },
+  { id: 'trade_3', label: '거상', minFame: 1200, effect: { key: 'sellPriceMul', mode: 'mul', value: 1.03 } },
+  { id: 'trade_4', label: '상단주', minFame: 3000, effect: { key: 'sellPriceMul', mode: 'mul', value: 1.045 } },
+  { id: 'trade_5', label: '바다의 대상인', minFame: 6000, effect: { key: 'sellPriceMul', mode: 'mul', value: 1.06 } },
 ];
 
 export const ADVENTURE_TITLES = [
-  { id: 'adv_0', label: '풋내기 항해사', minFame: 0 },
-  { id: 'adv_1', label: '견습 탐험가', minFame: 80 },
-  { id: 'adv_2', label: '항로 탐사자', minFame: 300 },
-  { id: 'adv_3', label: '대항해가', minFame: 700 },
-  { id: 'adv_4', label: '세계를 그린 자', minFame: 1400 },
-  { id: 'adv_5', label: '전설의 탐험가', minFame: 2500 },
+  { id: 'adv_0', label: '풋내기 항해사', minFame: 0, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.00 } },
+  { id: 'adv_1', label: '견습 탐험가', minFame: 80, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.02 } },
+  { id: 'adv_2', label: '항로 탐사자', minFame: 300, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.04 } },
+  { id: 'adv_3', label: '대항해가', minFame: 700, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.06 } },
+  { id: 'adv_4', label: '세계를 그린 자', minFame: 1400, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.08 } },
+  { id: 'adv_5', label: '전설의 탐험가', minFame: 2500, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.10 } },
 ];
 
 export const COMBAT_TITLES = [
-  { id: 'combat_0', label: '신참 선원', minFame: 0 },
-  { id: 'combat_1', label: '사략선원', minFame: 150 },
-  { id: 'combat_2', label: '전투함장', minFame: 600 },
-  { id: 'combat_3', label: '해상 사령관', minFame: 1500 },
-  { id: 'combat_4', label: '대양의 검', minFame: 3200 },
-  { id: 'combat_5', label: '바다의 제독', minFame: 6000 },
+  { id: 'combat_0', label: '신참 선원', minFame: 0, effect: { key: 'incomingDamageMul', mode: 'mul', value: 1.00 } },
+  { id: 'combat_1', label: '사략선원', minFame: 150, effect: { key: 'incomingDamageMul', mode: 'mul', value: 0.99 } },
+  { id: 'combat_2', label: '전투함장', minFame: 600, effect: { key: 'incomingDamageMul', mode: 'mul', value: 0.98 } },
+  { id: 'combat_3', label: '해상 사령관', minFame: 1500, effect: { key: 'incomingDamageMul', mode: 'mul', value: 0.97 } },
+  { id: 'combat_4', label: '대양의 검', minFame: 3200, effect: { key: 'incomingDamageMul', mode: 'mul', value: 0.955 } },
+  { id: 'combat_5', label: '바다의 제독', minFame: 6000, effect: { key: 'incomingDamageMul', mode: 'mul', value: 0.94 } },
 ];
 
 // 평판이 깨끗한 상태(0)에도 이름을 붙여, "칭호 없음"이 아니라 명시적인 트랙의 시작점으로 보이게 한다.
+// 악명은 시간이 지나면 감소하지만, 한 번 도달한 단계는 state.infamyPeakTier(항상 최댓값만
+// 갱신)로 따로 기록해 감쇠와 무관하게 계속 장착할 수 있게 한다(systems/fame.js 참고).
 export const INFAMY_TITLES = [
-  { id: 'infamy_0', label: '평판 깨끗함', minFame: 0 },
-  { id: 'infamy_1', label: '소문난 무법자', minFame: 30 },
-  { id: 'infamy_2', label: '현상수배범', minFame: 100 },
-  { id: 'infamy_3', label: '악명 높은 해적', minFame: 250 },
-  { id: 'infamy_4', label: '바다의 공포', minFame: 500 },
-  { id: 'infamy_5', label: '전설의 해적왕', minFame: 900 },
+  { id: 'infamy_0', label: '평판 깨끗함', minFame: 0, effect: { key: 'lootQtyMul', mode: 'mul', value: 1.00 } },
+  { id: 'infamy_1', label: '소문난 무법자', minFame: 30, effect: { key: 'lootQtyMul', mode: 'mul', value: 1.02 } },
+  { id: 'infamy_2', label: '현상수배범', minFame: 100, effect: { key: 'lootQtyMul', mode: 'mul', value: 1.05 } },
+  { id: 'infamy_3', label: '악명 높은 해적', minFame: 250, effect: { key: 'lootQtyMul', mode: 'mul', value: 1.08 } },
+  { id: 'infamy_4', label: '바다의 공포', minFame: 500, effect: { key: 'lootQtyMul', mode: 'mul', value: 1.11 } },
+  { id: 'infamy_5', label: '전설의 해적왕', minFame: 900, effect: { key: 'lootQtyMul', mode: 'mul', value: 1.15 } },
 ];
 
 // ---- 명성 획득량 ----

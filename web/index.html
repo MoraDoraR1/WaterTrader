@@ -55,7 +55,7 @@
     padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #cfe0ea; }
   #crew-box.crew-low { border-color: rgba(224,100,90,0.6); color: #e0645a; }
   #rank-box { background: rgba(8,18,26,0.6); border: 1px solid rgba(243,217,138,0.4); border-radius: 8px;
-    padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #f3d98a; cursor: pointer; pointer-events: auto; }
+    padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #f3d98a; cursor: pointer; pointer-events: auto; white-space: nowrap; }
   #rank-box:hover { background: rgba(243,217,138,0.15); }
   #infamy-box { background: rgba(40,10,10,0.7); border: 1px solid rgba(224,80,74,0.6); border-radius: 8px;
     padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #ff9a8a; animation: infamy-pulse 1.6s ease-in-out infinite; }
@@ -212,10 +212,14 @@
   #inventory-panel .close-hint { text-align: center; margin-top: 0.9rem; font-size: 0.72rem; color: #8fa6b4; }
 
   /* ---- Toast ---- */
-  #toast { position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 25; background: rgba(8,18,26,0.85);
-    border: 1px solid rgba(200,180,120,0.4); padding: 0.5rem 1.2rem; border-radius: 8px; font-size: 0.9rem;
-    opacity: 0; transition: opacity .3s; pointer-events: none; }
-  #toast.show { opacity: 1; }
+  /* 여러 개가 같은 순간에 뜨면 서로 덮어쓰지 않도록, #toast는 세로로 쌓는 빈 컨테이너만 맡고
+     실제 배경/테두리는 각 .toast-item이 독립적으로 갖는다(각자 타이머로 사라진다). */
+  #toast { position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 25;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+  #toast .toast-item { background: rgba(8,18,26,0.85); border: 1px solid rgba(200,180,120,0.4);
+    padding: 0.5rem 1.2rem; border-radius: 8px; font-size: 0.9rem; color: #eef4f8;
+    opacity: 0; transition: opacity .3s; white-space: nowrap; }
+  #toast .toast-item.show { opacity: 1; }
 
   #loading { position: fixed; inset: 0; z-index: 60; background: #05131c; display: flex; align-items: center; justify-content: center;
     color: #cfe0ea; letter-spacing: 0.2rem; }
@@ -433,7 +437,7 @@
   </div>
 
   <div id="top-bar" class="hidden">
-    <div id="rank-box" title="교역·모험·전투 칭호 보기">🎖 칭호</div>
+    <div id="rank-box" title="교역·모험·전투·악명 칭호 보기 및 장착(V)">🎖 칭호</div>
     <div id="infamy-box" class="hidden">🏴‍☠️ <span id="infamy-label">소문난 무법자</span></div>
     <div id="gold-box">💰 <span id="gold-amount">0</span> 두캇</div>
     <div id="morale-box">⚓ 사기 <span id="morale-amount">100</span>%</div>
