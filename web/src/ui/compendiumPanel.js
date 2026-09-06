@@ -5,10 +5,28 @@ import { state } from '../state.js';
 import { hud } from './hud.js';
 import { SKILL_CATEGORIES } from '../data/playerSkills.js';
 import { getSiteList } from '../data/compendium.js';
+import { getRewardParts, PART_SLOTS } from '../data/shipParts.js';
 
 const CATEGORY_LABEL = { archaeology: '고고학', geography: '지리학', astronomy: '천문학' };
 
 let activeTab = 'archaeology';
+
+// 그 학문의 3단계 도감 완주 보상(부품) 요약 행 — 몇 개를 더 발견해야 다음 단계가 풀리는지
+// 한눈에 보여준다. 상세 성능은 조선소 '부품' 탭에서 확인(장착도 거기서만 한다).
+function rewardSummaryRow(category, foundCount) {
+  const rewards = getRewardParts(category);
+  if (!rewards.length) return null;
+  const bits = rewards.map((p) => {
+    const unlocked = (state.compendiumRewards || []).includes(p.id);
+    const icon = PART_SLOTS[p.slot]?.icon || '';
+    return `${unlocked ? '✅' : '🔒'} ${p.milestone}단계 ${icon} ${p.name} (${p.requiredCount}개)`;
+  });
+  return {
+    name: '🏅 도감 완주 보상',
+    sub: `${bits.join(' · ')} — 조선소 '부품' 탭에서 무료로 장착`,
+    disabled: true,
+  };
+}
 
 function renderTab(category) {
   activeTab = category;
@@ -16,6 +34,7 @@ function renderTab(category) {
   const found = state.compendium[category] || {};
   const list = getSiteList(category);
   const foundCount = list.filter((s) => found[s.id]).length;
+  const summaryRow = rewardSummaryRow(category, foundCount);
   const rows = list.length
     ? list.map((s) => {
       const isFound = !!found[s.id];
@@ -29,7 +48,7 @@ function renderTab(category) {
     : [{ name: '아직 등록된 항목이 없습니다.', sub: '', disabled: true }];
   hud.renderCompendiumPanel({
     title: `${SKILL_CATEGORIES[category]?.label || CATEGORY_LABEL[category]} 도감 — ${foundCount} / ${list.length} 발견`,
-    rows,
+    rows: summaryRow ? [summaryRow, ...rows] : rows,
   });
 }
 

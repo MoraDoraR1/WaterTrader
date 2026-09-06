@@ -61,6 +61,7 @@ export function saveGame() {
     learnedSkills: state.learnedSkills,
     skillSlots: state.skillSlots,
     compendium: state.compendium,
+    compendiumRewards: state.compendiumRewards,
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -137,6 +138,7 @@ export function applySave(data) {
   state.compendium = data.compendium && typeof data.compendium === 'object'
     ? { archaeology: data.compendium.archaeology || {}, geography: data.compendium.geography || {}, astronomy: data.compendium.astronomy || {} }
     : { archaeology: {}, geography: {}, astronomy: {} };
+  state.compendiumRewards = Array.isArray(data.compendiumRewards) ? data.compendiumRewards : [];
 }
 
 export function deleteSave() {

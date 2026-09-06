@@ -84,6 +84,9 @@ export const state = {
   skillSlots: Array(9).fill(null),
   // 학문별 도감 등록 현황 — { archaeology: { [siteId]: true }, geography: {...}, astronomy: {...} }
   compendium: { archaeology: {}, geography: {}, astronomy: {} },
+  // 학문 도감 완주 보상으로 해금한 부품 id 목록(data/shipParts.js source:'compendium') —
+  // 여기 들어있어야만 조선소에서 무료로 장착할 수 있다(systems/compendiumRewards.js가 채운다).
+  compendiumRewards: [],
 };
 
 export function initShipHp() {

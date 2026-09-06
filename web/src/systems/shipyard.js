@@ -174,9 +174,15 @@ function cannonSlotsArray() {
 }
 
 // slotIndex는 cannon 슬롯에서만 쓰인다(armor/sail/hull은 여전히 슬롯당 1개뿐이라 무시).
+// source:'compendium'인 부품(학문 도감 완주 보상)은 골드로 사는 게 아니라 state.compendiumRewards에
+// 해금 등록돼 있어야만 장착할 수 있다 — 가격은 표시상 0이라 gold 체크/차감 자체를 건너뛴다.
 export function equipPart(slot, partId, slotIndex = 0) {
   const part = getPart(partId);
   if (!part || part.slot !== slot) return { ok: false, reason: '장착할 수 없는 부품입니다.' };
+  if (part.source === 'compendium' && !(state.compendiumRewards || []).includes(partId)) {
+    return { ok: false, reason: '아직 도감 보상으로 해금되지 않았습니다.' };
+  }
+  const price = part.source === 'compendium' ? 0 : part.price;
 
   if (slot === 'cannon') {
     const shipDef = getShip(state.currentShipId);
@@ -185,15 +191,15 @@ export function equipPart(slot, partId, slotIndex = 0) {
     if (part.tier > getCannonSlotMaxTier(shipDef, slotIndex)) return { ok: false, reason: '이 슬롯에는 장착할 수 없는 등급입니다.' };
     const current = cannonSlotsArray();
     if (current[slotIndex] === partId) return { ok: false, reason: '이미 장착 중입니다.' };
-    if (state.gold < part.price) return { ok: false, reason: '골드가 부족합니다.' };
-    state.gold -= part.price;
+    if (state.gold < price) return { ok: false, reason: '골드가 부족합니다.' };
+    state.gold -= price;
     const next = current.slice();
     next[slotIndex] = partId;
     state.shipParts = { ...state.shipParts, cannon: next };
   } else {
     if (state.shipParts[slot] === partId) return { ok: false, reason: '이미 장착 중입니다.' };
-    if (state.gold < part.price) return { ok: false, reason: '골드가 부족합니다.' };
-    state.gold -= part.price;
+    if (state.gold < price) return { ok: false, reason: '골드가 부족합니다.' };
+    state.gold -= price;
     state.shipParts = { ...state.shipParts, [slot]: partId };
   }
   const newMax = getCurrentEffectiveShipDef().hp;

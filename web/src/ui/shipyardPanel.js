@@ -4,6 +4,7 @@ import { state } from '../state.js';
 import { hud } from './hud.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_NAMES, getShip } from '../data/ships.js';
 import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef, getBaseArmor } from '../data/shipParts.js';
+import { SKILL_CATEGORIES } from '../data/playerSkills.js';
 import { getShipSkills } from '../data/shipSkills.js';
 import { getCombatPower } from '../systems/combatPower.js';
 import { getBuildMaterial } from '../data/buildMaterials.js';
@@ -29,12 +30,26 @@ function effectSummary(part) {
 
 // 대포/장갑판/돛/선체 보강 부품 이름에 붙이는 툴팁 — 부품은 어느 항구든 조선소에서 똑같이
 // 판다(도시별 시세 차이가 없다). effectSummary를 그대로 재사용해 sub 줄과 표기가 어긋나지 않게 한다.
+// source:'compendium'인 학문 도감 완주 보상 부품은 골드 구매가 아니므로 획득처를 다르게 표기한다.
 function partTip(part) {
+  const source = part.source === 'compendium'
+    ? `학문 도감 완주 보상 — ${SKILL_CATEGORIES[part.category]?.label || part.category} ${part.requiredCount}개 발견 시 해금(무료 장착)`
+    : '조선소 부품 상점 구매 (모든 항구 공통)';
   return itemTip(part.name, {
     desc: part.desc,
     effect: effectSummary(part) || '없음',
-    source: '조선소 부품 상점 구매 (모든 항구 공통)',
+    source,
   });
+}
+
+// 도감 보상 부품 전용 헬퍼 — 해금 여부와 "학문 도감 N/M 발견 시 해금" 진행도 문구.
+function isRewardPartUnlocked(part) {
+  return (state.compendiumRewards || []).includes(part.id);
+}
+function rewardProgressLabel(part) {
+  const count = Object.keys(state.compendium[part.category] || {}).length;
+  const label = SKILL_CATEGORIES[part.category]?.label || part.category;
+  return `${label} 도감 ${Math.min(count, part.requiredCount)}/${part.requiredCount} 발견 시 해금`;
 }
 
 // 배 이름에 붙이는 툴팁 — 원래 통계 sub 줄에는 안 나오는 역사/설정 설명(desc)을 보여준다.
@@ -334,14 +349,18 @@ function renderCannonSlot(slotIndex) {
   for (const p of partsBySlot('cannon')) {
     const isEquipped = equippedId === p.id;
     const overCap = p.tier > maxTier;
+    const isReward = p.source === 'compendium';
+    const locked = isReward && !isRewardPartUnlocked(p);
     rows.push({
-      name: `${partTip(p)} (Tier ${p.tier})`,
-      sub: overCap ? `이 슬롯은 Tier ${maxTier}까지만 장착 가능합니다.` : `${p.desc} · ${effectSummary(p)}`,
-      priceLabel: `${fmt(p.price)} 두캇`,
-      actionLabel: isEquipped ? '장착됨' : overCap ? '장착 불가' : '장착',
-      disabled: isEquipped || overCap,
+      name: `${partTip(p)} (Tier ${p.tier})${isReward ? ' 🏅' : ''}`,
+      sub: overCap ? `이 슬롯은 Tier ${maxTier}까지만 장착 가능합니다.`
+        : locked ? `🔒 ${rewardProgressLabel(p)}`
+        : `${p.desc} · ${effectSummary(p)}`,
+      priceLabel: isReward ? (locked ? '🔒 미해금' : '✅ 해금됨(무료)') : `${fmt(p.price)} 두캇`,
+      actionLabel: isEquipped ? '장착됨' : overCap ? '장착 불가' : locked ? '미해금' : '장착',
+      disabled: isEquipped || overCap || locked,
       highlight: isEquipped,
-      onAction: (isEquipped || overCap) ? null : () => {
+      onAction: (isEquipped || overCap || locked) ? null : () => {
         const res = equipPart('cannon', p.id, slotIndex);
         if (res.ok) { hud.toast(`${p.name} 장착 완료 (슬롯 ${slotIndex + 1}).`); renderCannonSlot(slotIndex); }
         else hud.toast(res.reason);
@@ -370,14 +389,16 @@ function renderPartsSlot(slot) {
   const rows = [{ name: '← 목록으로', sub: '', actionLabel: '뒤로', onAction: renderPartsOverview }];
   for (const p of partsBySlot(slot)) {
     const isEquipped = equippedId === p.id;
+    const isReward = p.source === 'compendium';
+    const locked = isReward && !isRewardPartUnlocked(p);
     rows.push({
-      name: `${partTip(p)} (Tier ${p.tier})`,
-      sub: `${p.desc} · ${effectSummary(p)}`,
-      priceLabel: `${fmt(p.price)} 두캇`,
-      actionLabel: isEquipped ? '장착됨' : '장착',
-      disabled: isEquipped,
+      name: `${partTip(p)} (Tier ${p.tier})${isReward ? ' 🏅' : ''}`,
+      sub: locked ? `🔒 ${rewardProgressLabel(p)}` : `${p.desc} · ${effectSummary(p)}`,
+      priceLabel: isReward ? (locked ? '🔒 미해금' : '✅ 해금됨(무료)') : `${fmt(p.price)} 두캇`,
+      actionLabel: isEquipped ? '장착됨' : locked ? '미해금' : '장착',
+      disabled: isEquipped || locked,
       highlight: isEquipped,
-      onAction: isEquipped ? null : () => {
+      onAction: (isEquipped || locked) ? null : () => {
         const res = equipPart(slot, p.id);
         if (res.ok) { hud.toast(`${p.name} 장착 완료.`); renderPartsSlot(slot); }
         else hud.toast(res.reason);

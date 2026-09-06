@@ -19,7 +19,8 @@ import { SEA_REGION_BOXES } from './data/seaRegions.js';
 import { hasSave, saveGame, loadSaveData, applySave, deleteSave } from './systems/save.js';
 import { payWagesOnDock, getCurrentMinCrew } from './systems/crew.js';
 import { openCrew } from './ui/crewPanel.js';
-import { repairAtSea, getCannonSlotCount, buyShip, buildShip } from './systems/shipyard.js';
+import { repairAtSea, getCannonSlotCount, buyShip, buildShip, equipPart, unequipPart } from './systems/shipyard.js';
+import { checkCompendiumRewards } from './systems/compendiumRewards.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo, computeScore } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood, sellGood, getStockInfo } from './systems/market.js';
@@ -522,4 +523,5 @@ window.__debug = {
   ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, openSkillPanel, openCompendiumPanel,
   learnSkill, equipSkill, unequipSkill, getLearnedSkills, getSkillSlots, getActiveBuffs, buffMul, buffAdd, castSkill,
   rewardForRank, getExtraSkillReqs, ACADEMIC_EXP_CURVE, SKILL_EXP_CURVE,
+  equipPart, unequipPart, checkCompendiumRewards, partsBySlot,
 };

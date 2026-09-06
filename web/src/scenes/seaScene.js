@@ -26,6 +26,7 @@ import { hud } from '../ui/hud.js';
 import { checkBountyKill, addReputation, checkQuestRespawns, checkInvestigateComplete, getExtraSkillReqs } from '../systems/quests.js';
 import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, ASTRONOMY_ENTRIES, rewardFor, rewardForRank } from '../data/compendium.js';
 import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
+import { checkCompendiumRewards } from '../systems/compendiumRewards.js';
 import { checkExplorationSite } from '../systems/exploration.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
 import { RANKS } from '../data/ranks.js';
@@ -440,6 +441,7 @@ export class SeaScene {
     const chainNote = matches.length ? ` + 연계 의뢰 완료(+${matches.reduce((a, q) => a + q.reward, 0).toLocaleString('ko-KR')})` : '';
     hud.toast(`${icon} 새로운 발견: '${site.name}'! 도감에 등록되었습니다. (+${gold.toLocaleString('ko-KR')} 두캇${chainNote})`);
     notify({ compendiumChanged: true });
+    checkCompendiumRewards(category);
   }
 
   _observeSky() {
@@ -471,6 +473,7 @@ export class SeaScene {
     const chainNote = matches.length ? ` + 연계 의뢰 완료(+${matches.reduce((a, q) => a + q.reward, 0).toLocaleString('ko-KR')})` : '';
     hud.toast(`🔭 새로운 별자리 관측: '${next.name}'! 도감에 등록되었습니다. (+${gold.toLocaleString('ko-KR')} 두캇${chainNote})`);
     notify({ compendiumChanged: true });
+    checkCompendiumRewards('astronomy');
   }
 
   // 퀵슬롯 시전(숫자키 1~9) — 실제 엔진(쿨다운/지속시간/exp)은 systems/skills.js에 공용화돼

@@ -10,6 +10,10 @@
 //          기준 스탯에 곱연산으로 적용.
 // 참고: armor는 cannons와 달리 장갑판 없이도 0이 아니다 — 배 등급(class)·역할(role)에 따른
 // 기본 방어력이 깔려 있고(getBaseArmor 참고) 장갑판은 그 위에 armorAdd만큼 더해진다.
+// source: 'compendium'인 항목은 골드로 못 사는 학문 도감 완주 보상 부품 — category(그
+// 부품을 주는 학문)·milestone(1~3단계)·requiredCount(해금에 필요한 그 학문 도감 발견
+// 개수)를 추가로 갖는다. 해금 판정은 systems/compendiumRewards.js, 장착 시 골드 대신
+// 해금 여부를 검사하는 쪽은 systems/shipyard.js equipPart 참고.
 import { mulSkillEffect } from './shipSkills.js';
 
 export const PART_SLOTS = {
@@ -70,6 +74,45 @@ export const SHIP_PARTS = [
   { id: 'hull_reinforced_keel', slot: 'hull', tier: 3, name: '강화 용골', price: 3200,
     effects: { cargoAdd: 220, hpAdd: 250, speedMul: 0.97 },
     desc: '용골 자체를 강화해 대폭 늘어난 적재량과 내구도를 지탱한다. 다소 둔중해진다.' },
+
+  // ── 학문 도감 완주 보상 전용 부품 — 골드로 살 수 없다(price 0, source:'compendium').
+  // 고고학은 도감이 유물·난파선 그 자체이니 발굴품으로 만든 대포, 지리학은 해류·계절풍을
+  // 아는 만큼 최적화된 돛, 천문학은 별자리로 재는 최단항로·마모 절감이라는 콘셉트로
+  // 선체 보강에 배정했다. requiredCount는 그 학문 도감 총량(고고학23·지리학22·천문학24)의
+  // 약 1/3·2/3·전체 지점 — 발견 개수가 그 수에 닿는 순간 systems/compendiumRewards.js의
+  // checkCompendiumRewards가 state.compendiumRewards에 등록해 무료로 장착 가능해진다(다른
+  // 부품처럼 조선소에서 골드로 사는 게 아니다 — price는 표시상 0). 마지막 단계(milestone 3,
+  // 도감 전체 발견)는 각 슬롯의 기존 최고 티어(대포4·돛3·선체3)를 명백히 뛰어넘는 진짜
+  // 엔드급 성능이다.
+  { id: 'cannon_relic_bronze', slot: 'cannon', tier: 2, name: '유물 청동포', price: 0, source: 'compendium', category: 'archaeology', milestone: 1, requiredCount: 8,
+    effects: { cannonsAdd: 9 },
+    desc: '침몰선에서 발굴해 그대로 손질한 청동 함포. 원형을 살린 덕에 무게 부담 없이 화력만 오른다.' },
+  { id: 'cannon_relic_salvaged', slot: 'cannon', tier: 3, name: '심해 인양 중포', price: 0, source: 'compendium', category: 'archaeology', milestone: 2, requiredCount: 16,
+    effects: { cannonsAdd: 22, turnRateMul: 0.97 },
+    desc: '여러 난파선에서 건진 포신을 이어붙여 재주조한 대형포. 기존 장사정포보다 강력하면서도 선회 손실은 더 적다.' },
+  { id: 'cannon_antikythera', slot: 'cannon', tier: 4, name: '안티키테라의 계시', price: 0, source: 'compendium', category: 'archaeology', milestone: 3, requiredCount: 23,
+    effects: { cannonsAdd: 40, turnRateMul: 1.0 },
+    desc: '고대 계산기의 톱니 원리를 함포 사격 기구에 그대로 옮겼다. 완벽하게 계산된 발사 타이밍이 반동까지 상쇄해, 이 화력을 얻고도 선회는 조금도 둔해지지 않는다.' },
+
+  { id: 'sail_current_charts', slot: 'sail', tier: 2, name: '해류 항적도 돛', price: 0, source: 'compendium', category: 'geography', milestone: 1, requiredCount: 8,
+    effects: { speedMul: 1.13 },
+    desc: '지도로 익힌 해류를 타도록 돛의 각도를 미리 맞춰 짠다. 부담 없이 속도를 크게 끌어올린다.' },
+  { id: 'sail_trade_winds', slot: 'sail', tier: 3, name: '무역풍 전용범', price: 0, source: 'compendium', category: 'geography', milestone: 2, requiredCount: 15,
+    effects: { speedMul: 1.22, turnRateMul: 0.98 },
+    desc: '계절마다 부는 무역풍의 길목을 알아, 그 바람만을 위해 재단한 전용 범포. 클리퍼식 전체돛보다도 빠르다.' },
+  { id: 'sail_seven_seas', slot: 'sail', tier: 4, name: '칠대양 풍해도', price: 0, source: 'compendium', category: 'geography', milestone: 3, requiredCount: 22,
+    effects: { speedMul: 1.32, turnRateMul: 1.05 },
+    desc: '세계 모든 대양의 해류·계절풍을 통달한 항해가만이 짤 수 있는 궁극의 범장. 속도를 극한까지 끌어올리면서도 바람의 결을 읽어 선회마저 더 예리해진다.' },
+
+  { id: 'hull_star_ribs', slot: 'hull', tier: 2, name: '성위관측 늑재', price: 0, source: 'compendium', category: 'astronomy', milestone: 1, requiredCount: 8,
+    effects: { hpAdd: 220, speedMul: 1.03 },
+    desc: '별자리로 미리 가늠한 최적 항로를 따르도록 선체 늑재를 재배치했다. 파도를 덜 맞는 만큼 내구도와 속도가 함께 오른다.' },
+  { id: 'hull_ecliptic_keel', slot: 'hull', tier: 3, name: '황도 항법 용골', price: 0, source: 'compendium', category: 'astronomy', milestone: 2, requiredCount: 16,
+    effects: { hpAdd: 450, speedMul: 1.06, cargoAdd: 80 },
+    desc: '태양과 별의 황도를 좇아 밤에도 최단항로를 잃지 않는 용골. 강화 용골보다도 튼튼하고 여유 공간까지 남는다.' },
+  { id: 'hull_celestial_sphere', slot: 'hull', tier: 4, name: '천구의 항법 정수', price: 0, source: 'compendium', category: 'astronomy', milestone: 3, requiredCount: 24,
+    effects: { hpAdd: 750, speedMul: 1.10, cargoAdd: 260 },
+    desc: '밤하늘 전체를 항법 좌표로 삼는 경지에 이른 천문학자의 결정판. 마모 없는 최단항로 항해가 내구도·속도·적재량 셋 모두를 이 게임 최고 수준으로 끌어올린다.' },
 ];
 
 // 배 등급별 기본 방어력(장갑판을 하나도 안 달아도 갖는 값) — 큰 배일수록 선체 자체가
@@ -90,6 +133,12 @@ export function partsBySlot(slot) {
 
 export function getPart(id) {
   return SHIP_PARTS.find((p) => p.id === id);
+}
+
+// 학문 도감 완주 보상 부품(source:'compendium') — category별로 milestone(1~3) 오름차순.
+export function getRewardParts(category) {
+  return SHIP_PARTS.filter((p) => p.source === 'compendium' && p.category === category)
+    .sort((a, b) => a.milestone - b.milestone);
 }
 
 // cannon 슬롯은 배열([슬롯0, 슬롯1, ...] — 빈 슬롯은 null/undefined)로 여러 개 담기고,
