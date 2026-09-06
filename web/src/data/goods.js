@@ -16,31 +16,54 @@
 //   KR/JP/CN 한국·일본·중국: 물물교환 전용(barter) — 인삼·도자기·비단·차 등, 두캇 매매 없음
 //   기타 동남아·신대륙·군소국: 각 지역 실제 원산지 특산품(정향=잔지바르, 후추=아체, 은=카야오 등)
 //     을 최저가로 배정해 "멀리 실어 나를수록 남는다"는 거리 프리미엄 구조가 자연히 성립한다.
+// desc: 시장 패널의 아이템 이름 툴팁(ui/tooltip.js)에 쓰이는 짧은 역사·설정 설명 —
+// 실제 매매가/기준가와는 무관한 순수 플레이버 텍스트다.
 export const GOODS = [
-  { id: 'pepper', name: '후추', category: 'spice', basePrice: 45 },
-  { id: 'cinnamon', name: '계피', category: 'spice', basePrice: 70 },
-  { id: 'clove', name: '정향', category: 'spice', basePrice: 150 },
-  { id: 'nutmeg', name: '육두구', category: 'spice', basePrice: 190 },
-  { id: 'wine', name: '포도주', category: 'goods', basePrice: 18 },
-  { id: 'silver', name: '은괴', category: 'goods', basePrice: 65 },
-  { id: 'sugar', name: '설탕', category: 'goods', basePrice: 42 },
-  { id: 'fur', name: '모피', category: 'goods', basePrice: 48 },
+  { id: 'pepper', name: '후추', category: 'spice', basePrice: 45,
+    desc: '인도양 향신료 무역의 대명사 — 유럽에서는 한때 같은 무게의 은과 맞바꿀 만큼 귀했다.' },
+  { id: 'cinnamon', name: '계피', category: 'spice', basePrice: 70,
+    desc: '실론(스리랑카) 원산의 방향성 향신료. 유럽 상류층의 요리와 약재에 두루 쓰였다.' },
+  { id: 'clove', name: '정향', category: 'spice', basePrice: 150,
+    desc: '몰루카 제도("향신료 제도")에서만 나던 희귀 향신료 — 원산지 독점을 둘러싸고 여러 나라가 전쟁까지 벌였다.' },
+  { id: 'nutmeg', name: '육두구', category: 'spice', basePrice: 190,
+    desc: '반다 제도가 유일한 원산지였던 초고가 향신료. 네덜란드가 원산지를 통째로 장악하려 했던 것으로 유명하다.' },
+  { id: 'wine', name: '포도주', category: 'goods', basePrice: 18,
+    desc: '지중해·대서양 연안 어디서나 나는 생필품이자 기호품 — 선원들의 사기와도 직결된다.' },
+  { id: 'silver', name: '은괴', category: 'goods', basePrice: 65,
+    desc: '신대륙 포토시 은광 등에서 채굴돼 유럽과 아시아를 잇는 국제 통화 구실을 했다.' },
+  { id: 'sugar', name: '설탕', category: 'goods', basePrice: 42,
+    desc: '카리브해·브라질 사탕수수 플랜테이션의 산물 — 대서양 삼각무역의 핵심 상품.' },
+  { id: 'fur', name: '모피', category: 'goods', basePrice: 48,
+    desc: '북방 한대림에서 나는 방한용 명물 — 발트해와 신대륙 양쪽에서 활발히 거래됐다.' },
   // 암스테르담(VOC)·제노바·베네치아가 각각 다른 무역로(아시아 항로/이탈리아 견직업/
   // 지중해 옛 향신료길)로 들여오는 명품 — 산지가 여럿이라 값도 도시마다 갈린다.
-  { id: 'silk', name: '비단', category: 'luxury', basePrice: 160 },
-  { id: 'porcelain', name: '도자기', category: 'luxury', basePrice: 85 },
-  { id: 'wool', name: '모직물', category: 'goods', basePrice: 25 },
-  { id: 'tin', name: '주석', category: 'goods', basePrice: 40 },
-  { id: 'amber', name: '호박', category: 'luxury', basePrice: 95 },
-  { id: 'glass', name: '유리공예품', category: 'luxury', basePrice: 90 },
-  { id: 'olive_oil', name: '올리브유', category: 'goods', basePrice: 20 },
+  { id: 'silk', name: '비단', category: 'luxury', basePrice: 160,
+    desc: '동서 교역을 상징하는 최고급 직물 — 중국·인도산이 유럽에서 값비싸게 팔렸다.' },
+  { id: 'porcelain', name: '도자기', category: 'luxury', basePrice: 85,
+    desc: '중국 경덕진 등지에서 구운 백자기 — 유럽에서는 "하얀 금"이라 불릴 만큼 귀했다.' },
+  { id: 'wool', name: '모직물', category: 'goods', basePrice: 25,
+    desc: '잉글랜드·플랑드르 지방의 주력 산업 산물 — 유럽 대륙 곳곳에서 수요가 높았다.' },
+  { id: 'tin', name: '주석', category: 'goods', basePrice: 40,
+    desc: '청동 합금 재료이자 도금에도 쓰인 산업 금속 — 콘월·말라야가 대표적인 산지였다.' },
+  { id: 'amber', name: '호박', category: 'luxury', basePrice: 95,
+    desc: '발트해 연안에서만 나는 화석화된 송진 — 보석·장식품으로 각광받았다.' },
+  { id: 'glass', name: '유리공예품', category: 'luxury', basePrice: 90,
+    desc: '베네치아 무라노 섬이 독점하다시피 한 정교한 유리 세공품.' },
+  { id: 'olive_oil', name: '올리브유', category: 'goods', basePrice: 20,
+    desc: '지중해 연안의 필수 산물 — 식용은 물론 등불·비누 원료로도 쓰였다.' },
   // 전세계 항로 확장으로 추가된 신대륙/아시아/아프리카 특산품.
-  { id: 'gold', name: '금', category: 'luxury', basePrice: 170 },
-  { id: 'cacao', name: '카카오', category: 'goods', basePrice: 40 },
-  { id: 'tea', name: '차', category: 'luxury', basePrice: 95 },
+  { id: 'gold', name: '금', category: 'luxury', basePrice: 170,
+    desc: '황금해안(엘미나)을 비롯한 서아프리카가 주요 산지였던 최고가 귀금속.' },
+  { id: 'cacao', name: '카카오', category: 'goods', basePrice: 40,
+    desc: '중남미 원산의 초콜릿 원료 — 유럽에 전해진 뒤 상류층 기호품으로 자리 잡았다.' },
+  { id: 'tea', name: '차', category: 'luxury', basePrice: 95,
+    desc: '중국이 원산지인 기호음료 — 18세기 이후 유럽, 특히 잉글랜드에서 폭발적인 수요를 낳았다.' },
   // 한국 특산품 — 물물교환 항구(한국·일본·중국)의 가치 환산 기준(basePrice)에도 그대로 쓰인다.
-  { id: 'ginseng', name: '인삼', category: 'luxury', basePrice: 80 },
+  { id: 'ginseng', name: '인삼', category: 'luxury', basePrice: 80,
+    desc: '조선의 대표 특산품 — 약효가 뛰어나 동아시아 전역에서 귀한 대접을 받았다.' },
 ];
+
+export const GOOD_CATEGORY_LABELS = { spice: '향신료', luxury: '사치품·명품', goods: '일반 물자' };
 
 // 도시별 매입가(buy = 상인에게 살 때 지불)/매도가(sell = 상인에게 팔 때 받음).
 // 포르투갈 리스본은 향신료 항로(희망봉 경유)의 관문이라 향신료+포도주가 싸고,

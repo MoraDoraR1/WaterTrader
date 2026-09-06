@@ -253,7 +253,7 @@ const DISTANCE_PREMIUM_K = 1.8; // 배율 = K * sqrt(거리) / 100
 const DISTANCE_PREMIUM_MAX_MUL = 3.0; // 아무리 멀어도 원산지 매입가의 이 배수를 넘지 않는다
 
 let originCache = null;
-function findOrigin(goodId) {
+export function findOrigin(goodId) {
   if (!originCache) originCache = {};
   if (goodId in originCache) return originCache[goodId];
   let bestCity = null, bestBuy = Infinity;

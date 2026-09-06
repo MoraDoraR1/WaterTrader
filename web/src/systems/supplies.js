@@ -6,11 +6,16 @@ import { getCargoCapacity, getCargoUsed } from './market.js';
 import { getShip } from '../data/ships.js';
 import { mulSkillEffect } from '../data/shipSkills.js';
 
+// desc/effect: ui/suppliesPanel.js가 이름 툴팁(ui/tooltip.js)을 만들 때 쓰는 설명·효과 텍스트.
 export const SUPPLY_DEFS = {
-  food: { id: 'food', name: '식량', icon: '🍖', price: 2 },
-  water: { id: 'water', name: '식수', icon: '💧', price: 1 },
-  materials: { id: 'materials', name: '자재', icon: '🪵', price: 8 },
-  cannonballs: { id: 'cannonballs', name: '포탄', icon: '💣', price: 4 },
+  food: { id: 'food', name: '식량', icon: '🍖', price: 2,
+    desc: '선원들이 매일 먹는 양식.', effect: '항해일자 1일당 선원 1인분 소모 — 바닥나면 사기·선체가 상하고 선원 수까지 줄어든다' },
+  water: { id: 'water', name: '식수', icon: '💧', price: 1,
+    desc: '선원들의 갈증을 달래는 식수 — 식량보다 값은 싸지만 부족했을 때 피해는 더 크다.', effect: '항해일자 1일당 1개 소모 — 바닥나면 사기·선체가 상하고 선원 수까지 줄어든다' },
+  materials: { id: 'materials', name: '자재', icon: '🪵', price: 8,
+    desc: '선체 응급 수리와 일부 함선 건조에 두루 쓰이는 목재·철물 등 잡다한 조선 자재.', effect: '바다 위 응급 수리 소모품 + 일부 함선의 건조 재료' },
+  cannonballs: { id: 'cannonballs', name: '포탄', icon: '💣', price: 4,
+    desc: '함포 발사에 쓰는 포탄 — 대포를 아무리 장착해도 이게 없으면 발사 자체가 불가능하다.', effect: '일제사격 1회당 1개 소모' },
 };
 
 export function buySupply(type, qty) {

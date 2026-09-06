@@ -7,6 +7,7 @@ import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef, getBaseArmor } f
 import { getShipSkills } from '../data/shipSkills.js';
 import { getCombatPower } from '../systems/combatPower.js';
 import { getBuildMaterial } from '../data/buildMaterials.js';
+import { itemTip } from './tooltip.js';
 import {
   buyShip, buildShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
   setActiveShip, sellFleetShip, FLEET_CAP, getCannonSlotCount, getCannonSlotMaxTier,
@@ -24,6 +25,30 @@ function effectSummary(part) {
   if (e.speedMul) bits.push(`속도 ${e.speedMul > 1 ? '+' : ''}${Math.round((e.speedMul - 1) * 100)}%`);
   if (e.turnRateMul) bits.push(`선회 ${e.turnRateMul > 1 ? '+' : ''}${Math.round((e.turnRateMul - 1) * 100)}%`);
   return bits.join(' · ');
+}
+
+// 대포/장갑판/돛/선체 보강 부품 이름에 붙이는 툴팁 — 부품은 어느 항구든 조선소에서 똑같이
+// 판다(도시별 시세 차이가 없다). effectSummary를 그대로 재사용해 sub 줄과 표기가 어긋나지 않게 한다.
+function partTip(part) {
+  return itemTip(part.name, {
+    desc: part.desc,
+    effect: effectSummary(part) || '없음',
+    source: '조선소 부품 상점 구매 (모든 항구 공통)',
+  });
+}
+
+// 배 이름에 붙이는 툴팁 — 원래 통계 sub 줄에는 안 나오는 역사/설정 설명(desc)을 보여준다.
+// 구매/건조/해적전용에 따라 획득처 문구를 다르게 조립한다.
+function shipTip(s) {
+  let source;
+  if (s.acquire === 'build') {
+    source = `조선소 "건조" 탭 전용 — ${fmt(s.buildCost.gold || 0)} 두캇 + 재료`;
+  } else if (s.purchasable === false) {
+    source = '구매·건조 불가 — 해당 해적을 바다에서 직접 조우해야만 등장';
+  } else {
+    source = `조선소에서 ${fmt(s.price)} 두캇에 구매`;
+  }
+  return itemTip(s.name, { desc: s.desc, source });
 }
 
 let buyRoleFilter = 'all';
@@ -72,7 +97,7 @@ function renderBuyTab() {
     // 기본 방어력·정원(백병전력)은 이미 반영된다. 부품을 달면 더 오른다.
     const combatPower = getCombatPower(s, {}).score;
     return {
-      name: s.name,
+      name: shipTip(s),
       badge: role.label, badgeColor: role.color,
       sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 전투력 ${combatPower}(구매 직후) · 스킬: ${skillNames}`,
       priceLabel: isOwned ? '보유 중' : `${fmt(s.price)} 두캇`,
@@ -93,15 +118,12 @@ function renderBuyTab() {
   hud.renderShipyard({ title: `조선소 — 배 구매 (구매한 배는 함대에 예비로 편입됩니다, 최대 ${FLEET_CAP}척)`, gold: state.gold, rows });
 }
 
-// 재료 이름에 마우스를 올리면 설명/효과/획득처가 뜨는 툴팁 span을 만든다 — index.html의
-// .item-tip/.tip-box CSS가 실제 표시를 담당한다(순수 CSS :hover, 별도 JS 이벤트 불필요).
+// 건조 재료 이름에 마우스를 올리면 설명/효과/획득처가 뜨는 툴팁 span을 만든다.
 function materialTip(id, qtyLabel) {
   const m = getBuildMaterial(id);
   if (!m) return qtyLabel != null ? `${id} ${qtyLabel}` : id;
   const label = qtyLabel != null ? `${m.name} ${qtyLabel}` : m.name;
-  return `<span class="item-tip">${label}<span class="tip-box"><b>${m.name}</b>${m.desc}`
-    + `<span class="tip-effect">효과: ${m.effect}</span>`
-    + `<span class="tip-source">획득처: ${m.source}</span></span></span>`;
+  return itemTip(label, { title: m.name, desc: m.desc, effect: m.effect, source: m.source });
 }
 
 // buildCostLabel: priceLabel(우측, textContent로만 렌더)에 쓸 축약 텍스트 — 툴팁 마크업 없음.
@@ -159,7 +181,7 @@ function renderBuildTab() {
     const skillNames = getShipSkills(s).map((sk) => sk.name).join(', ');
     const combatPower = getCombatPower(s, {}).score;
     return {
-      name: s.name,
+      name: shipTip(s),
       badge: role.label, badgeColor: role.color,
       sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 전투력 ${combatPower}(건조 직후) · 스킬: ${skillNames}`
         + `<br>필요 재료: ${buildCostTipLabel(s.buildCost)}`,
@@ -313,7 +335,7 @@ function renderCannonSlot(slotIndex) {
     const isEquipped = equippedId === p.id;
     const overCap = p.tier > maxTier;
     rows.push({
-      name: `${p.name} (Tier ${p.tier})`,
+      name: `${partTip(p)} (Tier ${p.tier})`,
       sub: overCap ? `이 슬롯은 Tier ${maxTier}까지만 장착 가능합니다.` : `${p.desc} · ${effectSummary(p)}`,
       priceLabel: `${fmt(p.price)} 두캇`,
       actionLabel: isEquipped ? '장착됨' : overCap ? '장착 불가' : '장착',
@@ -349,7 +371,7 @@ function renderPartsSlot(slot) {
   for (const p of partsBySlot(slot)) {
     const isEquipped = equippedId === p.id;
     rows.push({
-      name: `${p.name} (Tier ${p.tier})`,
+      name: `${partTip(p)} (Tier ${p.tier})`,
       sub: `${p.desc} · ${effectSummary(p)}`,
       priceLabel: `${fmt(p.price)} 두캇`,
       actionLabel: isEquipped ? '장착됨' : '장착',

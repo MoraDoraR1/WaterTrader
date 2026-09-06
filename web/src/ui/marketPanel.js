@@ -3,12 +3,26 @@ import { state } from '../state.js';
 import { hud } from './hud.js';
 import { getCity } from '../data/cities.js';
 import { COUNTRY_NAMES } from '../data/ships.js';
-import { CITY_MARKET, getGood } from '../data/goods.js';
-import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed, isBarterCity, barterGoods, goodValue, formatCityEventBadge } from '../systems/market.js';
+import { CITY_MARKET, getGood, GOOD_CATEGORY_LABELS } from '../data/goods.js';
+import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed, isBarterCity, barterGoods, goodValue, formatCityEventBadge, findOrigin } from '../systems/market.js';
 import { getReputation } from '../systems/quests.js';
+import { itemTip } from './tooltip.js';
 
 const STEP = 10;
 let barterGiveGood = null;
+
+// 교역품 이름 툴팁 — "효과" 자리에는 분류(향신료/사치품/일반 물자)를, "획득처" 자리에는
+// 이 품목이 실제로 가장 싼(=원산지) 항구를 동적으로 계산해 보여준다(데이터 하드코딩 없이
+// CITY_MARKET을 그대로 재사용 — systems/market.js findOrigin, 거리 프리미엄 계산과 동일한 기준).
+function goodTip(good) {
+  const originCity = getCity(findOrigin(good.id));
+  return itemTip(good.name, {
+    desc: good.desc,
+    effect: GOOD_CATEGORY_LABELS[good.category] || good.category,
+    effectLabel: '분류',
+    source: originCity ? `최저가 산지: ${originCity.name}` : '여러 항구에서 취급',
+  });
+}
 
 function renderMarket(cityId) {
   const city = getCity(cityId);
@@ -21,7 +35,7 @@ function renderMarket(cityId) {
     const marginLabel = ` · 기준가대비 ${marginPct >= 0 ? '+' : ''}${marginPct}%`;
     const cycleLabel = ` · <span style="color:${trendColor[trend]}">시세 ${pct}% ${trendArrow[trend]}</span>`;
     return {
-      name: good.name,
+      name: goodTip(good),
       sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${cycleLabel}${marginLabel}`,
       actions: [
         {
@@ -62,7 +76,7 @@ function renderBarter(cityId) {
   const cargo = `${getCargoUsed()} / ${getCargoCapacity()} t`;
   if (!barterGiveGood) {
     const rows = state.inventory.map((it) => ({
-      name: it.name,
+      name: getGood(it.id) ? goodTip(getGood(it.id)) : it.name,
       sub: `보유 ${it.qty}t · 환산 가치 ${goodValue(it.id)}/t`,
       actions: [{ label: '이 물품 내어주기', onAction: () => { barterGiveGood = it.id; renderBarter(cityId); } }],
     }));
@@ -84,7 +98,7 @@ function renderBarter(cityId) {
     const qty = Math.min(STEP, heldQty);
     const receiveQty = Math.floor((qty * goodValue(barterGiveGood)) / goodValue(goodId));
     rows.push({
-      name: good.name,
+      name: goodTip(good),
       sub: `${giveGood.name} ${qty}t → ${good.name} 약 ${receiveQty}t`,
       actions: [{
         label: '교환하기',

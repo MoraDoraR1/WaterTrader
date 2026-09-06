@@ -4,8 +4,10 @@ import { SeaScene } from './scenes/seaScene.js';
 import { CityScene } from './scenes/cityScene.js';
 import { state, setScreen, initShipHp, initCrewCount, subscribe, notify } from './state.js';
 import { hud } from './ui/hud.js';
-import { wireShipyardTabs } from './ui/shipyardPanel.js';
+import { wireShipyardTabs, openShipyard } from './ui/shipyardPanel.js';
 import { openQuestBoard } from './ui/questPanel.js';
+import { openMarket } from './ui/marketPanel.js';
+import { openSupplies } from './ui/suppliesPanel.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, project } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
@@ -453,5 +455,5 @@ window.__debug = {
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
   checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
   buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity, computeScore, checkExplorationSite,
-  hud, getQuestsForCity, QUESTS,
+  hud, getQuestsForCity, QUESTS, openMarket, openSupplies, openShipyard,
 };
