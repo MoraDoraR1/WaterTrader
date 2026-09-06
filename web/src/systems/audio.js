@@ -203,7 +203,8 @@ class AudioEngine {
 
   playWinStinger() { if (this.ctx) this._stinger([440, 554, 659, 880], this.ctx.currentTime); }
   playLoseStinger() { if (this.ctx) this._stinger([392, 349, 294], this.ctx.currentTime); }
-  playEndingFanfare() { if (this.ctx) this._stinger([523, 659, 784, 1047], this.ctx.currentTime); }
+  // 네 칭호 축(교역/모험/전투/악명) 중 하나가 최종 칭호에 닿을 때 울리는 팡파르(systems/fame.js).
+  playTitleFanfare() { if (this.ctx) this._stinger([523, 659, 784, 1047], this.ctx.currentTime); }
 }
 
 export const audio = new AudioEngine();

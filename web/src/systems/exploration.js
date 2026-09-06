@@ -4,6 +4,8 @@
 import { state, notify } from '../state.js';
 import { pointOnAnyLand } from '../data/coastline.js';
 import { hud } from '../ui/hud.js';
+import { addAdventureFame } from './fame.js';
+import { ADVENTURE_FAME_PER_EXPLORATION } from '../data/titles.js';
 
 const FIRST_DELAY = 90; // 항해를 시작하고 1분 30초 안에는 뜨지 않는다
 const COOLDOWN_MIN = 240, COOLDOWN_RANGE = 180; // 발견 후 다음 사이트까지 4~7분
@@ -35,6 +37,7 @@ export function checkExplorationSite(shipPos) {
     state.explorationCount = (state.explorationCount || 0) + 1;
     state.explorationSite = null;
     state.nextExplorationSiteAt = state.dayTimer + COOLDOWN_MIN + Math.random() * COOLDOWN_RANGE;
+    addAdventureFame(ADVENTURE_FAME_PER_EXPLORATION);
     hud.toast(`🗺️ 미지의 해역을 탐사했습니다! (+${gold.toLocaleString('ko-KR')} 두캇)`);
     notify({ explorationChanged: true });
     return;

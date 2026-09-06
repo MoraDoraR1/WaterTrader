@@ -53,7 +53,6 @@ export function saveGame() {
     cityEvents: state.cityEvents,
     marketStock: state.marketStock,
     audioMuted: state.audioMuted,
-    endingShown: state.endingShown,
     explorationSite: state.explorationSite,
     nextExplorationSiteAt: state.nextExplorationSiteAt,
     explorationCount: state.explorationCount,
@@ -62,6 +61,12 @@ export function saveGame() {
     skillSlots: state.skillSlots,
     compendium: state.compendium,
     compendiumRewards: state.compendiumRewards,
+    tradeFame: state.tradeFame,
+    adventureFame: state.adventureFame,
+    combatFame: state.combatFame,
+    tradeWealthMilestone: state.tradeWealthMilestone,
+    adventureDiscoveryMilestone: state.adventureDiscoveryMilestone,
+    infamy: state.infamy,
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -118,7 +123,6 @@ export function applySave(data) {
   state.cityEvents = data.cityEvents && typeof data.cityEvents === 'object' ? data.cityEvents : {};
   state.marketStock = data.marketStock && typeof data.marketStock === 'object' ? data.marketStock : {};
   state.audioMuted = !!data.audioMuted;
-  state.endingShown = !!data.endingShown;
   state.explorationSite = data.explorationSite && typeof data.explorationSite === 'object' ? data.explorationSite : null;
   state.nextExplorationSiteAt = typeof data.nextExplorationSiteAt === 'number' ? data.nextExplorationSiteAt : null;
   state.explorationCount = typeof data.explorationCount === 'number' ? data.explorationCount : 0;
@@ -139,6 +143,12 @@ export function applySave(data) {
     ? { archaeology: data.compendium.archaeology || {}, geography: data.compendium.geography || {}, astronomy: data.compendium.astronomy || {} }
     : { archaeology: {}, geography: {}, astronomy: {} };
   state.compendiumRewards = Array.isArray(data.compendiumRewards) ? data.compendiumRewards : [];
+  state.tradeFame = typeof data.tradeFame === 'number' ? data.tradeFame : 0;
+  state.adventureFame = typeof data.adventureFame === 'number' ? data.adventureFame : 0;
+  state.combatFame = typeof data.combatFame === 'number' ? data.combatFame : 0;
+  state.tradeWealthMilestone = typeof data.tradeWealthMilestone === 'number' ? data.tradeWealthMilestone : 0;
+  state.adventureDiscoveryMilestone = typeof data.adventureDiscoveryMilestone === 'number' ? data.adventureDiscoveryMilestone : 0;
+  state.infamy = typeof data.infamy === 'number' ? data.infamy : 0;
 }
 
 export function deleteSave() {

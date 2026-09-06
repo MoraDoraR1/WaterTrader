@@ -76,8 +76,11 @@ const CARGO_LOOT_POOL = {
   3: ['pepper', 'cinnamon', 'clove', 'nutmeg', 'silk'],
   4: ['silk', 'porcelain', 'tea', 'ginseng'],
 };
-const CARGO_LOOT_CHANCE = { grunt: 0.25, elite: 0.55, boss: 1, legendary: 1 };
-const CARGO_LOOT_QTY = { grunt: [1, 3], elite: [3, 6], boss: [8, 15], legendary: [15, 25] };
+// convoy(상단)는 위협 등급이 아니라 "약탈 대상"이라 tier를 갖지 않지만, 같은 노획 테이블을
+// 재사용하려고 여기서만 의사(pseudo) tier로 취급한다 — 확정으로, 그것도 잡몹/엘리트보다도
+// 훨씬 많이 준다("많은 량의 교역품"이 상단을 노리는 유일한 이유이므로).
+const CARGO_LOOT_CHANCE = { grunt: 0.25, elite: 0.55, boss: 1, legendary: 1, convoy: 1 };
+const CARGO_LOOT_QTY = { grunt: [1, 3], elite: [3, 6], boss: [8, 15], legendary: [15, 25], convoy: [18, 32] };
 
 // 자재·포탄 소량 노획 — 잡몹/엘리트만 해당(보스·레전더리는 대신 초대형 건조 전용 재료를
 // 확정으로 준다 — 아래 참고). 자재는 바다 위 응급수리, 포탄은 포격 자체의 필수 소모품이라
@@ -174,6 +177,12 @@ export class NpcShip {
     this.engaged = false; // 플레이어의 "전투" 선택 또는 강습으로만 true가 되며, attack 상태 진입 조건이다
     this.hostileOverride = false; // 원래 평화로운 NPC를 플레이어가 먼저 공격했을 때만 true
     this.ambushTimer = AMBUSH_CHECK_INTERVAL * (0.5 + Math.random());
+    // 상단(convoy) 격침 시 스폰되는 해군 추격대 전용 필드 — seaScene._spawnNavyResponder가
+    // 생성 직후 채워 넣는다. pursuitCenter가 있으면 update()가 매 프레임 "플레이어가 이
+    // 중심에서 pursuitRadius보다 멀어졌는지"를 검사해, 멀어졌다면 조용히 물러난다(despawned).
+    this.pursuitCenter = null;
+    this.pursuitRadius = null;
+    this.despawned = false;
   }
 
   // hp/화력을 티어·지역·강화(escalation) 배율로 (재)계산한다 — 최초 생성 시는 물론, 리스폰
@@ -229,6 +238,7 @@ export class NpcShip {
   // false를 반환하고, seaScene의 클릭 타겟팅/충돌/포격/렌더/미니맵이 전부 이 값을 확인해
   // 마치 존재하지 않는 것처럼 완전히 걸러낸다. requiresRoutes가 없는 일반 NPC는 항상 true.
   isActive() {
+    if (this.despawned) return false; // 해군 추격대가 추적 반경 밖으로 플레이어를 놓쳐 물러난 경우
     if (!this.def.requiresRoutes) return true;
     return this.def.requiresRoutes.every((r) => state.unlockedRoutes[r]);
   }
@@ -275,9 +285,32 @@ export class NpcShip {
     }
     if (!this.isActive()) return; // 잠금 해제 전 — AI 갱신 자체를 건너뛰어 완전히 비활성 상태로 둔다
 
+    // 상단(convoy) 격침 후 스폰된 해군 추격대 전용 — 플레이어가 격침 지점(pursuitCenter)에서
+    // pursuitRadius보다 멀어지면 추격을 포기하고 조용히 물러난다(despawned, isActive()가 이후
+    // 계속 false를 반환해 클릭·충돌·렌더링 전부에서 제외된다).
+    if (this.pursuitCenter) {
+      const dx = playerPos2.x - this.pursuitCenter.x, dz = playerPos2.y - this.pursuitCenter.y;
+      if (Math.hypot(dx, dz) > this.pursuitRadius) {
+        this.despawned = true;
+        return;
+      }
+    }
+
     const toPlayer = new Vec2(playerPos2.x - this.pos.x, playerPos2.y - this.pos.y);
     const distToPlayer = toPlayer.length();
     const hostile = this.isHostile();
+
+    // 해군(navy)은 평소엔 순찰만 하지만, 플레이어에게 악명(state.infamy)이 있는 상태로
+    // 상호작용 범위 안에 들어오면 확률 없이 무조건 교전을 걸어온다 — 해적의 강습(ambush)과
+    // 같은 자리를 쓰되, 조건이 "확률"이 아니라 "악명 유무"라는 점이 다르다.
+    if (this.def.type === 'navy' && !this.engaged && this.state !== 'sunk' && (state.infamy || 0) > 0) {
+      if (distToPlayer < this.interactionRange * visMul) {
+        this.hostileOverride = true;
+        this.engaged = true;
+        this.ambushTriggered = true;
+        if (this.state === 'patrol') this.state = 'chase';
+      }
+    }
 
     // 해적(원래 hostile)만 강습 대상이다 — 상호작용 범위 안에 플레이어가 있으면 주기적으로
     // 확률 판정을 굴려, 성공하면 플레이어의 선택과 무관하게 즉시 engaged가 된다.

@@ -19,7 +19,7 @@ import { gainSkillExp, getSkillLevel, buffMul, buffAdd, castSkill, isLearned } f
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
 import { seaRegionAt, getSeaLockBucket } from '../data/seaRegions.js';
-import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
+import { SEA_NPC_SHIPS, NAVY_RESPONDER_SHIP_BY_REGION } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
@@ -27,6 +27,8 @@ import { checkBountyKill, addReputation, checkQuestRespawns, checkInvestigateCom
 import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, ASTRONOMY_ENTRIES, rewardFor, rewardForRank } from '../data/compendium.js';
 import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
 import { checkCompendiumRewards } from '../systems/compendiumRewards.js';
+import { addAdventureFame, addCombatFame, addInfamy, checkDiscoveryMilestone } from '../systems/fame.js';
+import { ADVENTURE_FAME_PER_DISCOVERY, ADVENTURE_FAME_PER_EXPLORATION, COMBAT_FAME_BY_TIER, INFAMY_PER_CONVOY_KILL, NAVY_PURSUIT_RADIUS } from '../data/titles.js';
 import { checkExplorationSite } from '../systems/exploration.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
 import { RANKS } from '../data/ranks.js';
@@ -94,6 +96,8 @@ const DEFAULT_NPC_DIALOGUE = {
   merchant: '"이 근방 항구 시세가 심상치 않다던데... 조심해서 다니시게." 상인이 손을 흔들며 지나쳐 갑니다.',
   adventurer: '"신대륙 이야기 들었나? 나도 그쪽으로 가는 길일세!" 모험가가 활기차게 인사를 건넵니다.',
   notable: '위엄 있는 함대가 예를 갖춰 예포를 짧게 울리고는 항로를 계속합니다.',
+  convoy: '"우리 화물이 탐나시오? 함부로 덤빌 생각은 마시게." 호송대 책임자가 경계하는 눈빛을 보냅니다.',
+  navy: '정규 수군 함선이 항로를 순찰하고 있습니다. 죄를 짓지 않았다면 두려워할 것 없습니다.',
 };
 
 export class SeaScene {
@@ -442,6 +446,8 @@ export class SeaScene {
     hud.toast(`${icon} 새로운 발견: '${site.name}'! 도감에 등록되었습니다. (+${gold.toLocaleString('ko-KR')} 두캇${chainNote})`);
     notify({ compendiumChanged: true });
     checkCompendiumRewards(category);
+    addAdventureFame(ADVENTURE_FAME_PER_DISCOVERY);
+    checkDiscoveryMilestone();
   }
 
   _observeSky() {
@@ -474,6 +480,8 @@ export class SeaScene {
     hud.toast(`🔭 새로운 별자리 관측: '${next.name}'! 도감에 등록되었습니다. (+${gold.toLocaleString('ko-KR')} 두캇${chainNote})`);
     notify({ compendiumChanged: true });
     checkCompendiumRewards('astronomy');
+    addAdventureFame(ADVENTURE_FAME_PER_DISCOVERY);
+    checkDiscoveryMilestone();
   }
 
   // 퀵슬롯 시전(숫자키 1~9) — 실제 엔진(쿨다운/지속시간/exp)은 systems/skills.js에 공용화돼
@@ -734,6 +742,7 @@ export class SeaScene {
   // 티어별 확률로 얹힌다(rollCombatLoot). 현상금 의뢰가 그 npc를 노리고 있었다면 별도로 더 붙는다.
   _victoryToast(baseMsg, npc) {
     hud.flashCombatText('승리!', 'win');
+    addCombatFame(COMBAT_FAME_BY_TIER[npc.tier] || COMBAT_FAME_BY_TIER.grunt);
     const rescued = rescueCrewFromVictory();
     const bounties = checkBountyKill(npc.owner);
     const moraleAdd = sumSkillEffect(this.ship.shipDef, 'victoryMoraleAdd', 0);
@@ -775,6 +784,15 @@ export class SeaScene {
     if (rescued > 0) bits.push(`표류하던 선원 ${rescued}명을 구조해 편입했습니다.`);
     for (const bounty of bounties) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
 
+    // 상단(무역 호송대)을 약탈하면 골드·교역품과 별개로 악명이 쌓이고, 그 자리 근처에서
+    // 해군 추격대가 곧바로 출동한다 — "전투"가 아니라 "약탈"이라는 성격을 이렇게 구분한다.
+    if (npc.def.type === 'convoy') {
+      const infamyGain = INFAMY_PER_CONVOY_KILL[npc.region] || INFAMY_PER_CONVOY_KILL[1];
+      addInfamy(infamyGain);
+      this._spawnNavyResponder(npc.pos, npc.region);
+      bits.push(`😈 악명 +${infamyGain} — 인근 해군이 출동했습니다!`);
+    }
+
     // 엘리트/보스를 처음 잡아보는 순간 딱 한 번만 리스폰·강화 시스템을 설명해준다.
     if ((npc.tier === 'elite' || npc.tier === 'boss' || npc.tier === 'legendary') && !state.seenRespawnIntro) {
       state.seenRespawnIntro = true;
@@ -787,6 +805,27 @@ export class SeaScene {
   _confirmSink(npc) {
     npc.takeDamage(npc.maxHp);
     this._victoryToast(`백병전 승리! ${npc.def.name}을(를) 격침했습니다.`, npc);
+  }
+
+  // 상단(convoy) 격침 직후 호출 — 플레이어 근처에 그 해역 소속 해군을 즉시 스폰해 곧바로
+  // 추격을 시작하게 한다. 이 인스턴스는 스폰 목록(SEA_NPC_SHIPS)에 없는 런타임 전용 NPC라
+  // 리스폰·강화 시스템(entities/pirate.js)과는 무관하며, 플레이어가 killPos(격침 지점)에서
+  // NAVY_PURSUIT_RADIUS보다 멀어지면 조용히 물러난다(NpcShip.update의 pursuitCenter 검사).
+  _spawnNavyResponder(killPos, region) {
+    const ship = NAVY_RESPONDER_SHIP_BY_REGION[region] || NAVY_RESPONDER_SHIP_BY_REGION[1];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 90 + Math.random() * 60;
+    const spawnPos = [this.ship.pos.x + Math.cos(angle) * dist, this.ship.pos.y + Math.sin(angle) * dist];
+    const def = {
+      id: `navy_response_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
+      type: 'navy', name: ship.name, pos: spawnPos, shipId: ship.shipId,
+      hp: getShip(ship.shipId)?.hp || 500, hostile: true, patrolRadius: 40, country: ship.country, region,
+    };
+    const responder = new NpcShip(def);
+    responder.pursuitCenter = new Vec2(killPos.x, killPos.y);
+    responder.pursuitRadius = NAVY_PURSUIT_RADIUS;
+    responder.engage();
+    this.npcShips.push(responder);
   }
 
   _updateWake(delta) {
@@ -1260,7 +1299,7 @@ export class SeaScene {
       this._minimapBounds(),
       { x: this.ship.pos.x, z: this.ship.pos.y, heading: this.ship.heading },
       this.minimapCities,
-      this.npcShips.filter((n) => !n.dead && n.isActive()).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.isHostile() })),
+      this.npcShips.filter((n) => !n.dead && n.isActive()).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.isHostile(), kind: n.def.type })),
       this.wind.towardDirection,
       state.explorationSite,
       this._compendiumMinimapSites()
@@ -1327,6 +1366,13 @@ export class SeaScene {
     for (const e of this.escorts) {
       if (e.dead) continue;
       this._drawWorldHpBar(ctx, w, h, e.pos, e.maxHp > 0 ? e.hp / e.maxHp : 1, 'friendly');
+    }
+    // 상단(상행 NPC)/해군 라벨 — 손상 여부와 무관하게 항상 표시해 "🚩@@상단" 형식으로
+    // 바다 위에서 한눈에 식별할 수 있게 한다.
+    for (const n of this.npcShips) {
+      if (n.dead || !n.isActive()) continue;
+      if (n.def.type === 'convoy') this._drawNpcTag(ctx, w, h, n.pos, '🚩 상단', '#f3d98a');
+      else if (n.def.type === 'navy') this._drawNpcTag(ctx, w, h, n.pos, '⚓ 해군', '#5fb8cc');
     }
 
     this._drawCannonballs(ctx, w, h);
@@ -1557,6 +1603,22 @@ export class SeaScene {
       ? (ratio < 0.25 ? '#e0503f' : ratio < 0.5 ? '#e6c15a' : '#7fe0a0')
       : (ratio < 0.25 ? '#ff6a4a' : ratio < 0.5 ? '#e6c15a' : '#e0847a');
     ctx.fillRect(x, y, barW * ratio, barH);
+  }
+
+  // 상단(convoy)/해군(navy) 머리 위에 상시 표시하는 작은 라벨 — 손상 여부와 무관하게 항상
+  // 그려져 바다 위에서 두 유형을 한눈에 구분할 수 있게 한다.
+  _drawNpcTag(ctx, w, h, pos, text, color) {
+    const p = this.iso.toScreen(this.camera, pos.x, pos.y, w, h);
+    if (p.x < -60 || p.x > w + 60 || p.y < -60 || p.y > h + 60) return;
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const tw = ctx.measureText(text).width;
+    const x = p.x, y = p.y - 42;
+    ctx.fillStyle = 'rgba(8,10,10,0.6)';
+    ctx.fillRect(x - tw / 2 - 5, y - 12, tw + 10, 16);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
   }
 
   _drawWeatherOverlay(ctx, w, h) {

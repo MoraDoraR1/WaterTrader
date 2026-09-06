@@ -8,6 +8,8 @@ import { buffMul } from './skills.js';
 import { CITY_MARKET, getGood } from '../data/goods.js';
 import { getCity } from '../data/cities.js';
 import { getReputation } from './quests.js';
+import { addTradeFame, checkWealthMilestone } from './fame.js';
+import { TRADE_FAME_PER_TRADE } from '../data/titles.js';
 
 const REP_PRICE_EFFECT_MAX = 0.10; // 우호도가 REP_CAP에 도달하면 매입가 -10%/매도가 +10%
 const REP_CAP = 200;
@@ -405,6 +407,8 @@ export function buyGood(cityId, goodId, qty) {
     if (availableVolume(cityId, goodId) <= 0) return { ok: false, reason: '이 항구에 남은 물량이 없습니다. 시간이 지나면 다시 채워집니다.' };
     return { ok: false, reason: '골드가 부족합니다.' };
   }
+  addTradeFame(TRADE_FAME_PER_TRADE);
+  checkWealthMilestone();
   notify({ inventoryChanged: true });
   return { ok: true, qty: totalQty, cost: totalCost };
 }
@@ -439,6 +443,8 @@ export function barterGoods(cityId, giveGoodId, giveQty, receiveGoodId) {
   const recv = state.inventory.find((it) => it.id === receiveGoodId);
   if (recv) recv.qty += receiveQty;
   else state.inventory.push({ id: receiveGoodId, name: getGood(receiveGoodId).name, qty: receiveQty });
+  addTradeFame(TRADE_FAME_PER_TRADE);
+  checkWealthMilestone();
   notify({ inventoryChanged: true });
   return { ok: true, giveQty: actualGiveQty, receiveQty };
 }
@@ -470,6 +476,8 @@ export function sellGood(cityId, goodId, qty) {
     }
     return { ok: false, reason: '보유한 물량이 없습니다.' };
   }
+  addTradeFame(TRADE_FAME_PER_TRADE);
+  checkWealthMilestone();
   notify({ inventoryChanged: true });
   return { ok: true, qty: totalQty, revenue: totalRevenue };
 }

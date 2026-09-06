@@ -43,25 +43,6 @@
   #continue-summary { font-size: 0.72rem; color: #8fa6b4; }
   #title-hint { margin-top: 1.6rem; font-size: 0.8rem; color: #7f9aac; }
 
-  /* ---- 엔딩(결산) 화면 ---- */
-  #ending-screen { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(ellipse at 50% 30%, rgba(26,58,82,0.92) 0%, rgba(6,21,32,0.96) 70%, rgba(2,10,16,0.98) 100%); }
-  #ending-card { max-width: 560px; text-align: center; padding: 2.6rem 3rem; border: 1px solid rgba(243,217,138,0.4);
-    border-radius: 16px; background: rgba(10,22,32,0.55); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-  #ending-eyebrow { font-size: 0.78rem; letter-spacing: 0.35rem; color: #cfa855; margin-bottom: 0.8rem; }
-  #ending-title { font-size: 2.1rem; letter-spacing: 0.12rem; color: #f3d98a; margin: 0 0 1rem;
-    text-shadow: 0 0 24px rgba(243,217,138,0.4); }
-  #ending-desc { color: #cfe0ea; line-height: 1.7; font-size: 0.92rem; margin: 0 0 1.6rem; }
-  #ending-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.7rem; margin-bottom: 2rem; }
-  #ending-stats div { background: rgba(255,255,255,0.04); border: 1px solid rgba(200,180,120,0.2); border-radius: 8px;
-    padding: 0.6rem 0.5rem; }
-  #ending-stats .stat-val { display: block; font-size: 1.2rem; color: #f3d98a; font-variant-numeric: tabular-nums; }
-  #ending-stats .stat-label { display: block; font-size: 0.7rem; color: #9fb8c9; margin-top: 2px; }
-  #ending-close-btn { padding: 0.85rem 2.4rem; font-size: 1rem; letter-spacing: 0.2rem; border-radius: 8px; border: none;
-    background: linear-gradient(180deg, #f3d98a, #c9a24a); color: #241a05; font-weight: 700; cursor: pointer; }
-  #ending-close-btn:hover { filter: brightness(1.08); }
-
-
   /* ---- Top bars ---- */
   #top-bar { position: fixed; top: 14px; right: 14px; z-index: 15; pointer-events: none;
     display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
@@ -74,7 +55,11 @@
     padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #cfe0ea; }
   #crew-box.crew-low { border-color: rgba(224,100,90,0.6); color: #e0645a; }
   #rank-box { background: rgba(8,18,26,0.6); border: 1px solid rgba(243,217,138,0.4); border-radius: 8px;
-    padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #f3d98a; }
+    padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #f3d98a; cursor: pointer; pointer-events: auto; }
+  #rank-box:hover { background: rgba(243,217,138,0.15); }
+  #infamy-box { background: rgba(40,10,10,0.7); border: 1px solid rgba(224,80,74,0.6); border-radius: 8px;
+    padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #ff9a8a; animation: infamy-pulse 1.6s ease-in-out infinite; }
+  @keyframes infamy-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
   #mute-btn { position: fixed; top: 14px; left: 14px; z-index: 55; width: 40px; height: 40px;
     border-radius: 50%; border: 1px solid rgba(200,180,120,0.35); background: rgba(8,18,26,0.6);
@@ -342,6 +327,15 @@
   .skill-section-title:first-child { margin-top: 0; }
   #skill-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
 
+  /* ---- 칭호(교역/모험/전투/악명) 패널 — 탭 없이 4개 축을 한 목록으로 보여준다 ---- */
+  #titles-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
+  #titles-card { width: 560px; max-width: 92vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
+    border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+  #titles-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; margin-bottom: 0.9rem; }
+  #titles-body { max-height: 56vh; overflow-y: auto; }
+  #titles-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
+
   /* ---- 도감(고고학/지리학/천문학) 패널 — 조선소와 같은 탭 구조 재사용 ---- */
   #compendium-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
     background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
@@ -438,18 +432,9 @@
     <p id="title-hint">화면을 드래그하면 시점이 회전합니다 · 클릭은 상호작용/포격</p>
   </div>
 
-  <div id="ending-screen" class="hidden">
-    <div id="ending-card">
-      <div id="ending-eyebrow">엔딩 · 결산</div>
-      <h2 id="ending-title">바다의 제독으로 서다</h2>
-      <p id="ending-desc">신참 선장으로 시작해 마침내 대양을 호령하는 제독의 자리에 올랐습니다.<br>이 항해는 여기서 끝나지 않습니다 — 계속해서 새로운 바다로 나아갈 수 있습니다.</p>
-      <div id="ending-stats"></div>
-      <button id="ending-close-btn">항해 계속하기</button>
-    </div>
-  </div>
-
   <div id="top-bar" class="hidden">
-    <div id="rank-box">🎖 <span id="rank-label">신참 선장</span></div>
+    <div id="rank-box" title="교역·모험·전투 칭호 보기">🎖 칭호</div>
+    <div id="infamy-box" class="hidden">🏴‍☠️ <span id="infamy-label">소문난 무법자</span></div>
     <div id="gold-box">💰 <span id="gold-amount">0</span> 두캇</div>
     <div id="morale-box">⚓ 사기 <span id="morale-amount">100</span>%</div>
     <div id="crew-box">👥 선원 <span id="crew-amount">20</span>/<span id="crew-max">20</span></div>
@@ -588,6 +573,14 @@
       <div id="skill-quickslot-grid"></div>
       <div id="skill-body"></div>
       <div class="close-hint">1~9: 퀵슬롯 시전 · K 또는 ESC 로 닫기</div>
+    </div>
+  </div>
+
+  <div id="titles-panel" class="hidden">
+    <div id="titles-card">
+      <div id="titles-header-title">🎖 칭호</div>
+      <div id="titles-body"></div>
+      <div class="close-hint">V 또는 ESC 로 닫기</div>
     </div>
   </div>
 

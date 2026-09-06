@@ -128,6 +128,48 @@ export const SEA_NPC_SHIPS = [
   { id: 'pirate_boss_zheng', type: 'pirate', name: '[보스] 정씨 해적 선단 기함', pos: project(114.0, 21.5), shipId: 'pirate_junk_flagship',
     hp: 2600, hostile: true, patrolRadius: 25, tier: 'boss', region: 4 },
 
+  // ── [상행 NPC(상단) + 해군 NPC] — 해역 1~4마다 2척씩. ──
+  // 상단(convoy)은 평화롭지만(hostile:false) 격침하면 대량의 교역품을 노획할 수 있는 대신
+  // 악명이 쌓이고, 그 자리 근처로 해군 추격대가 즉시 출동한다(entities/pirate.js/seaScene.js
+  // _spawnNavyResponder 참고). 해군(navy)은 평소엔 순찰만 하는 정규 수군이지만, 플레이어에게
+  // 악명이 있는 상태로 사거리 안에 들어오면 무조건 교전을 걸어온다(systems/fame.js 악명 참고).
+  // 두 유형 모두 바다 화면에 "🚩 상단"/"⚓ 해군" 라벨이 상시 표시된다.
+  { id: 'convoy_europe_1', type: 'convoy', name: '[상단] 리스본 향신료 호송대', pos: project(-10.0, 39.5), shipId: 'east_indiaman',
+    hp: 1000, hostile: false, patrolRadius: 40, country: 'NL', region: 1, tier: 'convoy' },
+  { id: 'convoy_europe_2', type: 'convoy', name: '[상단] 베네치아 상단', pos: project(14.0, 43.0), shipId: 'galeone_veneziano',
+    hp: 1100, hostile: false, patrolRadius: 40, country: 'IT', region: 1, tier: 'convoy' },
+  { id: 'navy_europe_1', type: 'navy', name: '[해군] 스페인 해안 경비대', pos: project(-9.0, 44.0), shipId: 'galera_real',
+    hp: 480, hostile: false, patrolRadius: 45, country: 'ES', region: 1 },
+  { id: 'navy_europe_2', type: 'navy', name: '[해군] 몰타 기사단 순찰대', pos: project(16.0, 36.0), shipId: 'malta_galley',
+    hp: 560, hostile: false, patrolRadius: 45, country: 'IT', region: 1 },
+
+  { id: 'convoy_atlantic_1', type: 'convoy', name: '[상단] 카리브 설탕 호송대', pos: project(-81.5, 21.0), shipId: 'fluyt',
+    hp: 600, hostile: false, patrolRadius: 40, country: 'NL', region: 2, tier: 'convoy' },
+  { id: 'convoy_atlantic_2', type: 'convoy', name: '[상단] 대서양 상단', pos: project(-40.0, 30.0), shipId: 'nau_santa_maria',
+    hp: 900, hostile: false, patrolRadius: 40, country: 'PT', region: 2, tier: 'convoy' },
+  { id: 'navy_atlantic_1', type: 'navy', name: '[해군] 스페인 보물함대 호위대', pos: project(-81.0, 23.5), shipId: 'galera_real',
+    hp: 480, hostile: false, patrolRadius: 45, country: 'ES', region: 2 },
+  { id: 'navy_atlantic_2', type: 'navy', name: '[해군] 포르투갈 순찰함', pos: project(-28.0, 38.0), shipId: 'galera_real',
+    hp: 480, hostile: false, patrolRadius: 45, country: 'PT', region: 2 },
+
+  { id: 'convoy_indian_1', type: 'convoy', name: '[상단] 고아 향신료 상단', pos: project(71.0, 15.5), shipId: 'east_indiaman',
+    hp: 1000, hostile: false, patrolRadius: 40, country: 'PT', region: 3, tier: 'convoy' },
+  { id: 'convoy_indian_2', type: 'convoy', name: '[상단] 말라카 해협 상단', pos: project(100.5, 4.0), shipId: 'galeone_veneziano',
+    hp: 1100, hostile: false, patrolRadius: 40, country: 'PT', region: 3, tier: 'convoy' },
+  { id: 'navy_indian_1', type: 'navy', name: '[해군] 오만 해군', pos: project(59.5, 24.5), shipId: 'omani_warship',
+    hp: 1350, hostile: false, patrolRadius: 50, country: 'OM', region: 3 },
+  { id: 'navy_indian_2', type: 'navy', name: '[해군] 오스만 해군 분견대', pos: project(43.5, 12.5), shipId: 'ottoman_kadirga',
+    hp: 520, hostile: false, patrolRadius: 45, country: 'OT', region: 3 },
+
+  { id: 'convoy_asia_1', type: 'convoy', name: '[상단] 나가사키 무역 상단', pos: project(129.0, 32.5), shipId: 'fluyt',
+    hp: 600, hostile: false, patrolRadius: 40, country: 'NL', region: 4, tier: 'convoy' },
+  { id: 'convoy_asia_2', type: 'convoy', name: '[상단] 광둥 상단', pos: project(113.0, 22.0), shipId: 'nau_santa_maria',
+    hp: 900, hostile: false, patrolRadius: 40, country: 'PT', region: 4, tier: 'convoy' },
+  { id: 'navy_asia_1', type: 'navy', name: '[해군] 조선 수군', pos: project(128.5, 34.5), shipId: 'panokseon',
+    hp: 700, hostile: false, patrolRadius: 45, country: 'KR', region: 4 },
+  { id: 'navy_asia_2', type: 'navy', name: '[해군] 조선 수군 거북선대', pos: project(120.0, 24.0), shipId: 'geobukseon',
+    hp: 2700, hostile: false, patrolRadius: 45, country: 'KR', region: 4 },
+
   // ── [엔드게임: 세 항로를 모두 개척해야 조우하는 레전더리 해적] ──
   // requiresRoutes에 적힌 항로가 전부 해금되기 전까지는 entities/pirate.js의 isActive()가
   // false를 반환해 클릭·조준·렌더링·AI 갱신 전부에서 완전히 제외된다 — 그 자리를 미리
@@ -139,3 +181,12 @@ export const SEA_NPC_SHIPS = [
   { id: 'pirate_legendary_roberts', type: 'pirate', name: '[레전더리] 바르톨로뮤 로버츠의 로열 포춘호', pos: project(-20.0, 0.5), shipId: 'pirate_flagship_roberts',
     hp: 3600, hostile: true, patrolRadius: 30, tier: 'legendary', requiresRoutes: ['west_africa', 'new_world', 'indian_ocean'] },
 ];
+
+// 상단(convoy)을 격침한 순간 스폰되는 해군 추격대의 배 종류 — 그 해역의 정규 수군을 그대로
+// 재사용해(위 navy 스폰 목록과 동일한 배들) 갑자기 전혀 다른 배가 튀어나오는 어색함을 없앤다.
+export const NAVY_RESPONDER_SHIP_BY_REGION = {
+  1: { shipId: 'galera_real', country: 'ES', name: '[해군] 출동한 해안 경비대' },
+  2: { shipId: 'galera_real', country: 'ES', name: '[해군] 출동한 호위대' },
+  3: { shipId: 'omani_warship', country: 'OM', name: '[해군] 출동한 오만 해군' },
+  4: { shipId: 'panokseon', country: 'KR', name: '[해군] 출동한 조선 수군' },
+};

@@ -63,7 +63,6 @@ export const state = {
   // 항해일자 기준 절대 시각(resetAt, state.dayTimer 기준)에 도달하면 새 물량으로 재입고된다 — 구매 시점 기준 타이머가 아니라
   // 도시·품목별로 독립적으로 흘러가는 절대 시각이라 재입고 직전에 사재기해 타이머를 늦추는 식의 편법이 통하지 않는다.
   audioMuted: false,
-  endingShown: false, // 최고 랭크(바다의 제독) 도달 엔딩 화면을 이미 본 적 있는지
   // 원양 항로 해금 여부 — systems/routeUnlock.js가 랭크에 따라 true로 바꾼다(한 번 열리면
   // 이후 랭크 점수가 일시적으로 내려가도 다시 잠기지 않는다). 서유럽/북해·발트해/지중해는
   // 이 목록에 없이 항상 열려 있다.
@@ -87,6 +86,17 @@ export const state = {
   // 학문 도감 완주 보상으로 해금한 부품 id 목록(data/shipParts.js source:'compendium') —
   // 여기 들어있어야만 조선소에서 무료로 장착할 수 있다(systems/compendiumRewards.js가 채운다).
   compendiumRewards: [],
+  // ---- 칭호 시스템(data/titles.js, systems/fame.js) — 교역/모험/전투 세 축의 명성을 완전히
+  // 독립적으로 관리한다. 이 게임에는 엔딩이 없다: 칭호는 계속 오르내리는 지표일 뿐이다. ----
+  tradeFame: 0,
+  adventureFame: 0,
+  combatFame: 0,
+  // 다음에 검사할 자산/도감 마일스톤 인덱스 — 이미 지나친 구간의 중복 지급을 막는다.
+  tradeWealthMilestone: 0,
+  adventureDiscoveryMilestone: 0,
+  // 악명 — 상단(무역 호송대) 격침으로만 오르고 시간이 지나면 저절로 가라앉는다(decayInfamy).
+  // 0보다 크면 해군 NPC가 사거리 안에서 무조건 교전을 걸어온다(entities/pirate.js).
+  infamy: 0,
 };
 
 export function initShipHp() {

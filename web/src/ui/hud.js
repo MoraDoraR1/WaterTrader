@@ -161,14 +161,21 @@ export const hud = {
     $('crew-max').textContent = Math.round(max);
     $('crew-box').classList.toggle('crew-low', count < minCrew);
   },
-  setRank(label) { $('rank-label').textContent = label; },
-
-  showEnding(stats) {
-    const grid = $('ending-stats');
-    grid.innerHTML = stats.map((s) => `<div><span class="stat-val">${s.val}</span><span class="stat-label">${s.label}</span></div>`).join('');
-    $('ending-screen').classList.remove('hidden');
+  // 악명이 있을 때만 상단바에 나타나는 경고 칩 — 0이면 완전히 숨긴다.
+  setInfamy(value, label) {
+    const box = $('infamy-box');
+    if (!value || value <= 0) { box.classList.add('hidden'); return; }
+    $('infamy-label').textContent = `${label} (${Math.round(value)})`;
+    box.classList.remove('hidden');
   },
-  hideEnding() { $('ending-screen').classList.add('hidden'); },
+
+  showTitlesPanel(v) { $('titles-panel').classList.toggle('hidden', !v); },
+  hideTitlesPanel() { $('titles-panel').classList.add('hidden'); },
+  isTitlesPanelOpen() { return !$('titles-panel').classList.contains('hidden'); },
+  // rows: renderRowList와 같은 스키마 — 칭호 축(교역/모험/전투/악명) 하나당 한 행.
+  renderTitlesPanel(rows) {
+    renderRowList($('titles-body'), rows);
+  },
 
   initThrottle(min, max) {
     const row = $('notch-row');
@@ -436,7 +443,7 @@ export const hud = {
     for (const n of npcShips) {
       const [px, py] = mmToPx(n.x, n.z, w, h);
       if (px < -6 || px > w + 6 || py < -6 || py > h + 6) continue;
-      ctx.fillStyle = n.hostile ? '#e0503f' : '#cfe0ea';
+      ctx.fillStyle = n.kind === 'convoy' ? '#f3d98a' : n.kind === 'navy' ? '#5fb8cc' : n.hostile ? '#e0503f' : '#cfe0ea';
       ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI * 2); ctx.fill();
     }
 

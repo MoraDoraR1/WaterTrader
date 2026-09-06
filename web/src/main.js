@@ -22,7 +22,7 @@ import { openCrew } from './ui/crewPanel.js';
 import { repairAtSea, getCannonSlotCount, buyShip, buildShip, equipPart, unequipPart } from './systems/shipyard.js';
 import { checkCompendiumRewards } from './systems/compendiumRewards.js';
 import { audio } from './systems/audio.js';
-import { getRankInfo, computeScore } from './systems/rank.js';
+import { computeScore } from './systems/rank.js';
 import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood, sellGood, getStockInfo } from './systems/market.js';
 import { GOODS, CITY_MARKET } from './data/goods.js';
 import { SUPPLY_DEFS } from './systems/supplies.js';
@@ -32,6 +32,11 @@ import { checkExplorationSite } from './systems/exploration.js';
 import { initTooltips } from './ui/tooltip.js';
 import { openSkillPanel, wireSkillTabs } from './ui/skillPanel.js';
 import { openCompendiumPanel, wireCompendiumTabs } from './ui/compendiumPanel.js';
+import { openTitlesPanel } from './ui/titlesPanel.js';
+import {
+  decayInfamy, getInfamyTitle, getTradeTitle, getAdventureTitle, getCombatTitle,
+  addTradeFame, addAdventureFame, addCombatFame, addInfamy, checkWealthMilestone, checkDiscoveryMilestone,
+} from './systems/fame.js';
 import { PLAYER_SKILLS, QUICKSLOT_COUNT, ACADEMIC_EXP_CURVE, SKILL_EXP_CURVE } from './data/playerSkills.js';
 import {
   getSkillSlots, castSkill, tickSkillBuffs, getActiveBuffs, getSkillCooldown,
@@ -287,24 +292,17 @@ subscribe((patch) => {
   if (shipDef) hud.setCrewCount(state.crewCount ?? shipDef.crew, shipDef.crew, getCurrentMinCrew());
 });
 
-function refreshRank() {
+// 이 게임에는 엔딩이 없다 — "바다의 제독"은 전투 축 칭호 사다리의 꼭대기일 뿐, 도달해도
+// 게임을 끝내지 않는다(data/titles.js). 여기서는 상단바의 악명 경고 칩만 갱신한다.
+function refreshInfamyIndicator() {
   if (state.screen === 'title') return;
-  const info = getRankInfo();
-  hud.setRank(info.rank.label);
-  if (info.isMax && !state.endingShown) {
-    state.endingShown = true;
-    audio.playEndingFanfare();
-    const completedQuests = Object.values(state.quests || {}).filter((v) => v === 'completed').length;
-    hud.showEnding([
-      { val: `${state.gold.toLocaleString('ko-KR')} 두캇`, label: '재산' },
-      { val: `${state.fleet.length + 1}척`, label: '함대 규모' },
-      { val: `${state.pirateBounty || 0}회`, label: '해적 토벌' },
-      { val: `${completedQuests}건`, label: '완료한 의뢰' },
-    ]);
-  }
+  const info = getInfamyTitle();
+  hud.setInfamy(info.value, info.tier.label);
 }
-subscribe(refreshRank);
-document.getElementById('ending-close-btn').addEventListener('click', () => hud.hideEnding());
+subscribe(refreshInfamyIndicator);
+document.getElementById('rank-box').addEventListener('click', () => {
+  hud.isTitlesPanelOpen() ? hud.hideTitlesPanel() : openTitlesPanel();
+});
 
 // ---- 선박 정보 카드 ----
 const STAT_MAX = {
@@ -384,7 +382,7 @@ function enterGame() {
   audio.resume();
   audio.setMuted(!!state.audioMuted);
   goToSea();
-  refreshRank();
+  refreshInfamyIndicator();
 }
 
 const savedGame = hasSave() ? loadSaveData() : null;
@@ -424,8 +422,9 @@ function animate(now) {
 
   if (state.screen !== 'title') {
     checkQuestChainAnnouncements();
+    decayInfamy(delta);
     const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen()
-      || hud.isSkillPanelOpen() || hud.isCompendiumPanelOpen();
+      || hud.isSkillPanelOpen() || hud.isCompendiumPanelOpen() || hud.isTitlesPanelOpen();
     if (consumeJustPressed('KeyM') && !anyBigPanelOpen) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
     }
@@ -441,6 +440,9 @@ function animate(now) {
     }
     if (consumeJustPressed('KeyC') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isSkillPanelOpen()) {
       hud.isCompendiumPanelOpen() ? hud.hideCompendiumPanel() : openCompendiumPanel();
+    }
+    if (consumeJustPressed('KeyV') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isSkillPanelOpen() && !hud.isCompendiumPanelOpen()) {
+      hud.isTitlesPanelOpen() ? hud.hideTitlesPanel() : openTitlesPanel();
     }
     if (consumeJustPressed('KeyF')) {
       if (state.screen === 'city') citySceneObj?.handleInteract();
@@ -484,11 +486,12 @@ function animate(now) {
       hud.hideQuestBoard();
       hud.hideSkillPanel();
       hud.hideCompendiumPanel();
+      hud.hideTitlesPanel();
     }
   }
 
   if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()
-    && !hud.isSkillPanelOpen() && !hud.isCompendiumPanelOpen()) {
+    && !hud.isSkillPanelOpen() && !hud.isCompendiumPanelOpen() && !hud.isTitlesPanelOpen()) {
     const ctx = surface.ctx;
     ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
     // 퀵슬롯 쿨다운/지속시간은 바다·도시 공통으로 흐른다(교역 스킬은 도시에서 효과가 난다).
@@ -524,4 +527,7 @@ window.__debug = {
   learnSkill, equipSkill, unequipSkill, getLearnedSkills, getSkillSlots, getActiveBuffs, buffMul, buffAdd, castSkill,
   rewardForRank, getExtraSkillReqs, ACADEMIC_EXP_CURVE, SKILL_EXP_CURVE,
   equipPart, unequipPart, checkCompendiumRewards, partsBySlot,
+  getTradeTitle, getAdventureTitle, getCombatTitle, getInfamyTitle, decayInfamy,
+  addTradeFame, addAdventureFame, addCombatFame, addInfamy, checkWealthMilestone, checkDiscoveryMilestone,
+  openTitlesPanel,
 };
