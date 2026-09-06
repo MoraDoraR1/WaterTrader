@@ -54,11 +54,13 @@ export function buildShip(shipId) {
   if (state.materials < (cost.materials || 0)) return { ok: false, reason: '자재가 부족합니다.' };
   if (state.oakTimber < (cost.oakTimber || 0)) return { ok: false, reason: '상급 조선용 참나무가 부족합니다.' };
   if (state.ironcladPlating < (cost.ironcladPlating || 0)) return { ok: false, reason: '전설 해적기함의 철갑판이 부족합니다.' };
+  if (state.robertsRelic < (cost.robertsRelic || 0)) return { ok: false, reason: '로열 포춘호의 파편이 부족합니다.' };
 
   state.gold -= cost.gold || 0;
   state.materials -= cost.materials || 0;
   state.oakTimber -= cost.oakTimber || 0;
   state.ironcladPlating -= cost.ironcladPlating || 0;
+  state.robertsRelic -= cost.robertsRelic || 0;
   state.fleet = [...state.fleet, { uid: makeUid(), shipId, shipHp: target.hp, crewCount: target.crew, shipParts: {}, name: null }];
   notify({ fleetChanged: true });
   return { ok: true };

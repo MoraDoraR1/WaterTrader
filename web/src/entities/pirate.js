@@ -96,6 +96,11 @@ const IRONCLAD_DROP_QTY = [1, 2];
 // 레전더리(세 항로 완주 이후 등장)는 보스보다도 훨씬 큰 폭으로 철갑판을 준다 — "3부작을
 // 다 끝낸 뒤에도 남는 목표"가 되도록, 최상급 건조 재료의 최고 효율 파밍처를 여기에 둔다.
 const LEGENDARY_IRONCLAD_DROP_QTY = [3, 5];
+// 로열 포춘호의 파편 — 오직 레전더리 해적(바르톨로뮤 로버츠)에게서만 나오는 별도 전리품.
+// 철갑판과 달리 다른 보스는 절대 주지 않으며, "바르톨로뮤" 계열 엔드 컨텐츠 함선 3종의
+// 필수 건조 재료다. 확정 지급인 철갑판과 달리 낮은 확률(10~20% 구간 중 15%)로만 나와,
+// 항로 3부작을 다 끝낸 뒤에도 오래 걸리는 진짜 최종 목표로 남게 한다.
+const ROBERTS_RELIC_DROP_CHANCE = 0.15;
 
 function randInt([lo, hi]) {
   return lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -105,7 +110,7 @@ function randInt([lo, hi]) {
 // 실제 state 반영과 토스트 문구 조립은 seaScene._victoryToast가 담당한다.
 export function rollCombatLoot(npc) {
   const tier = npc.tier || 'grunt';
-  const loot = { cargoGoodId: null, cargoQty: 0, materials: 0, cannonballs: 0, oakTimber: 0, ironcladPlating: 0 };
+  const loot = { cargoGoodId: null, cargoQty: 0, materials: 0, cannonballs: 0, oakTimber: 0, ironcladPlating: 0, robertsRelic: 0 };
 
   if (Math.random() < (CARGO_LOOT_CHANCE[tier] ?? 0)) {
     const pool = CARGO_LOOT_POOL[npc.region] || CARGO_LOOT_POOL[1];
@@ -125,6 +130,7 @@ export function rollCombatLoot(npc) {
     loot.ironcladPlating = randInt(IRONCLAD_DROP_QTY);
   } else if (tier === 'legendary') {
     loot.ironcladPlating = randInt(LEGENDARY_IRONCLAD_DROP_QTY);
+    if (Math.random() < ROBERTS_RELIC_DROP_CHANCE) loot.robertsRelic = 1;
   }
   return loot;
 }

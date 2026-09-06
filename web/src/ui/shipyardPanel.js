@@ -6,6 +6,7 @@ import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_NAMES, getShip } from '../data
 import { PART_SLOTS, partsBySlot, getPart, getEffectiveShipDef, getBaseArmor } from '../data/shipParts.js';
 import { getShipSkills } from '../data/shipSkills.js';
 import { getCombatPower } from '../systems/combatPower.js';
+import { getBuildMaterial } from '../data/buildMaterials.js';
 import {
   buyShip, buildShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
   setActiveShip, sellFleetShip, FLEET_CAP, getCannonSlotCount, getCannonSlotMaxTier,
@@ -92,11 +93,34 @@ function renderBuyTab() {
   hud.renderShipyard({ title: `조선소 — 배 구매 (구매한 배는 함대에 예비로 편입됩니다, 최대 ${FLEET_CAP}척)`, gold: state.gold, rows });
 }
 
+// 재료 이름에 마우스를 올리면 설명/효과/획득처가 뜨는 툴팁 span을 만든다 — index.html의
+// .item-tip/.tip-box CSS가 실제 표시를 담당한다(순수 CSS :hover, 별도 JS 이벤트 불필요).
+function materialTip(id, qtyLabel) {
+  const m = getBuildMaterial(id);
+  if (!m) return qtyLabel != null ? `${id} ${qtyLabel}` : id;
+  const label = qtyLabel != null ? `${m.name} ${qtyLabel}` : m.name;
+  return `<span class="item-tip">${label}<span class="tip-box"><b>${m.name}</b>${m.desc}`
+    + `<span class="tip-effect">효과: ${m.effect}</span>`
+    + `<span class="tip-source">획득처: ${m.source}</span></span></span>`;
+}
+
+// buildCostLabel: priceLabel(우측, textContent로만 렌더)에 쓸 축약 텍스트 — 툴팁 마크업 없음.
 function buildCostLabel(cost) {
   const bits = [`${fmt(cost.gold || 0)} 두캇`];
   if (cost.materials) bits.push(`자재 ${cost.materials}`);
   if (cost.oakTimber) bits.push(`상급 조선용 참나무 ${cost.oakTimber}`);
   if (cost.ironcladPlating) bits.push(`전설 해적기함의 철갑판 ${cost.ironcladPlating}`);
+  if (cost.robertsRelic) bits.push(`로열 포춘호의 파편 ${cost.robertsRelic}`);
+  return bits.join(' + ');
+}
+
+// buildCostTipLabel: sub(innerHTML로 렌더)에 쓸 재료 목록 — 재료 이름마다 툴팁이 붙는다.
+function buildCostTipLabel(cost) {
+  const bits = [`${fmt(cost.gold || 0)} 두캇`];
+  if (cost.materials) bits.push(materialTip('materials', cost.materials));
+  if (cost.oakTimber) bits.push(materialTip('oakTimber', cost.oakTimber));
+  if (cost.ironcladPlating) bits.push(materialTip('ironcladPlating', cost.ironcladPlating));
+  if (cost.robertsRelic) bits.push(materialTip('robertsRelic', cost.robertsRelic));
   return bits.join(' + ');
 }
 
@@ -104,7 +128,8 @@ function canAffordBuild(cost) {
   return state.gold >= (cost.gold || 0)
     && state.materials >= (cost.materials || 0)
     && state.oakTimber >= (cost.oakTimber || 0)
-    && state.ironcladPlating >= (cost.ironcladPlating || 0);
+    && state.ironcladPlating >= (cost.ironcladPlating || 0)
+    && state.robertsRelic >= (cost.robertsRelic || 0);
 }
 
 // 건조 전용 선박(data/ships.js의 acquire:'build') 목록 — 구매가 아니라 골드+재료(자재/
@@ -113,6 +138,18 @@ function renderBuildTab() {
   const owned = new Set([state.currentShipId, ...state.fleet.map((f) => f.shipId)]);
   const fleetFull = state.fleet.length + 1 >= FLEET_CAP;
   const buildableShips = SHIPS.filter((s) => s.acquire === 'build' && s.buildCost);
+  // 목록 맨 위에 보유 재료 요약을 눌러도 아무 동작 없는 안내 행으로 얹는다 — title은
+  // textContent로만 렌더되어 툴팁 마크업이 안 먹으므로, innerHTML로 렌더되는 행의 sub를 쓴다.
+  const heldRow = {
+    name: '📦 보유 재료',
+    sub: [
+      materialTip('materials', state.materials),
+      materialTip('oakTimber', state.oakTimber),
+      materialTip('ironcladPlating', state.ironcladPlating),
+      materialTip('robertsRelic', state.robertsRelic),
+    ].join(' · '),
+    disabled: true,
+  };
   const rows = [...buildableShips].sort((a, b) => (a.buildCost.gold || 0) - (b.buildCost.gold || 0)).map((s) => {
     const isOwned = owned.has(s.id);
     const role = SHIP_ROLES[s.role];
@@ -124,7 +161,8 @@ function renderBuildTab() {
     return {
       name: s.name,
       badge: role.label, badgeColor: role.color,
-      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 전투력 ${combatPower}(건조 직후) · 스킬: ${skillNames}`,
+      sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 전투력 ${combatPower}(건조 직후) · 스킬: ${skillNames}`
+        + `<br>필요 재료: ${buildCostTipLabel(s.buildCost)}`,
       priceLabel: isOwned ? '보유 중' : buildCostLabel(s.buildCost),
       actionLabel: isOwned ? '보유 중' : fleetFull ? '함대 만석' : afford ? '건조' : '재료 부족',
       disabled,
@@ -140,11 +178,10 @@ function renderBuildTab() {
       },
     };
   });
-  const heldMats = `보유 — 자재 ${state.materials} · 상급 조선용 참나무 ${state.oakTimber} · 전설 해적기함의 철갑판 ${state.ironcladPlating}`;
   hud.renderShipyard({
-    title: `조선소 — 건조 (재료는 엘리트·보스 해적 격침으로 노획, ${heldMats} — 구매 불가 최상위 함선, 최대 ${FLEET_CAP}척)`,
+    title: `조선소 — 건조 (재료는 엘리트·보스·레전더리 해적 격침으로 노획 — 구매 불가 최상위 함선, 최대 ${FLEET_CAP}척)`,
     gold: state.gold,
-    rows,
+    rows: [heldRow, ...rows],
   });
 }
 

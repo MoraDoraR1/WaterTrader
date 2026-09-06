@@ -580,6 +580,7 @@ export class SeaScene {
     }
     if (loot.oakTimber > 0) { state.oakTimber += loot.oakTimber; bits.push(`상급 조선용 참나무 +${loot.oakTimber}`); }
     if (loot.ironcladPlating > 0) { state.ironcladPlating += loot.ironcladPlating; bits.push(`전설 해적기함의 철갑판 +${loot.ironcladPlating}`); }
+    if (loot.robertsRelic > 0) { state.robertsRelic += loot.robertsRelic; bits.push(`🏴‍☠️ 로열 포춘호의 파편 +${loot.robertsRelic}!`); }
 
     if (rescued > 0) bits.push(`표류하던 선원 ${rescued}명을 구조해 편입했습니다.`);
     for (const bounty of bounties) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);

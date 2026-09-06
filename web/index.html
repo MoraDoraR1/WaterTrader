@@ -321,6 +321,19 @@
   #shipyard-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
   .sy-row-side-actions { display: flex; flex-direction: row; gap: 5px; }
 
+  /* ---- 아이템 툴팁(건조 재료 등) — 이름에 마우스를 올리면 설명/효과/획득처가 뜬다 ---- */
+  .item-tip { position: relative; display: inline-block; border-bottom: 1px dotted rgba(230,193,90,0.65);
+    cursor: help; color: #e6c15a; }
+  .item-tip .tip-box { position: absolute; top: 125%; left: 0; width: 240px; max-width: 62vw;
+    background: rgba(8,14,20,0.98); border: 1px solid rgba(230,193,90,0.5); border-radius: 8px;
+    padding: 0.55rem 0.7rem; font-size: 0.7rem; line-height: 1.5; color: #e6ede8; text-align: left;
+    white-space: normal; opacity: 0; transform: translateY(-3px); pointer-events: none; z-index: 70;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.55); transition: opacity 0.12s ease, transform 0.12s ease; }
+  .item-tip .tip-box b { display: block; color: #f3d98a; margin-bottom: 3px; font-size: 0.74rem; }
+  .item-tip .tip-box .tip-effect { display: block; margin-top: 3px; color: #9ee08a; }
+  .item-tip .tip-box .tip-source { display: block; margin-top: 3px; color: #9fb8c9; }
+  .item-tip:hover .tip-box, .item-tip:focus .tip-box { opacity: 1; transform: translateY(0); }
+
   /* ---- 의뢰 게시판 ---- */
   #quest-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
     background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }

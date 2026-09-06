@@ -95,6 +95,12 @@ export const SHIP_TYPES = {
   pirate_frigate: { label: '해적 프리깃', era: '1690~1720s', nations: [], sizes: ['large'] },
   pirate_flagship_every: { label: '해적 기함', era: '1690~1700s', nations: [], sizes: ['xlarge'] },
   pirate_flagship_roberts: { label: '해적 기함', era: '1719~1722s', nations: [], sizes: ['xlarge'] },
+  // ── 엔드 컨텐츠 전용 — 레전더리 해적(바르톨로뮤 로버츠) 격침 후 얻는 "로열 포춘호의
+  // 파편"으로만 건조 가능한 "바르톨로뮤" 계열 3종. 격침한 전설의 기함 잔해를 이어받아
+  // 다시 짓는다는 설정이라 선종명에 그 계보를 담았다.
+  roberts_warship: { label: '로버츠의 유산(전열함)', era: '1722~ (전설의 유산)', nations: ['PR'], sizes: ['xlarge'] },
+  roberts_clipper: { label: '로버츠의 유산(쾌속선)', era: '1722~ (전설의 유산)', nations: ['PR'], sizes: ['xlarge'] },
+  roberts_galleon: { label: '로버츠의 유산(수송선)', era: '1722~ (전설의 유산)', nations: ['PR'], sizes: ['xlarge'] },
 };
 
 export const SHIPS = [
@@ -225,6 +231,25 @@ export const SHIPS = [
     country: 'FR', era: '1670', speed: 7, turnRate: 19, hp: 2900, cargo: 520, cannons: 103, cannonSlotTiers: [4, 4, 3, 3, 2, 1], skills: ['precision_fire', 'boarding_mastery', 'capture_expert', 'battle_morale'], crew: 210, price: 19500,
     acquire: 'build', buildCost: { gold: 19500, oakTimber: 20, ironcladPlating: 3 },
     desc: '태양왕 루이 14세를 상징하는 프랑스 왕실 기함 — 조선소에서 직접 건조해야 하는 최상급 기함.' },
+
+  // ── 엔드 컨텐츠 전용: "바르톨로뮤" 계열 3종 ──
+  // 세 항로를 모두 열어야 조우하는 레전더리 해적 바르톨로뮤 로버츠를 격침해야만 낮은
+  // 확률(15%)로 얻는 "로열 포춘호의 파편"(data/buildMaterials.js robertsRelic)이 있어야
+  // 건조할 수 있다. 전투/모험/교역 축 각각에 지금 있는 어떤 초대형선보다도 확실히 앞서는
+  // 성능을 줘, "이 배를 짓기 위해 최종 보스를 잡는다"는 목표가 되도록 설계했다. 잔해에서
+  // 이어받은 배라 국적은 여전히 해적(PR)이다.
+  { id: 'bartholomew_reckoning', name: '바르톨로뮤의 심판호 (Bartholomew\'s Reckoning)', class: 'xlarge', role: 'combat', type: 'roberts_warship',
+    country: 'PR', era: '1722~ (전설의 유산)', speed: 8, turnRate: 20, hp: 3500, cargo: 500, cannons: 149, cannonSlotTiers: [4, 4, 4, 4, 3, 2], skills: ['multi_cannon', 'precision_fire', 'rapid_reload', 'ironclad_defense'], crew: 230, price: 26000,
+    acquire: 'build', buildCost: { gold: 26000, oakTimber: 25, ironcladPlating: 6, robertsRelic: 1 },
+    desc: '로열 포춘호의 잔해로 다시 지은 전열함 — 지금 바다에 뜬 어떤 초대형 전함보다도 내구도·화력이 앞선다. 레전더리 해적을 잡아야만 얻는 "로열 포춘호의 파편" 없이는 건조 자체가 불가능한, 전투 축의 진짜 최종 목표.' },
+  { id: 'bartholomew_horizon', name: '바르톨로뮤의 지평선호 (Bartholomew\'s Horizon)', class: 'xlarge', role: 'adventure', type: 'roberts_clipper',
+    country: 'PR', era: '1722~ (전설의 유산)', speed: 20, turnRate: 40, hp: 1900, cargo: 400, cannons: 17, cannonSlotTiers: [2, 2, 2, 1], skills: ['fair_wind_sailing', 'nimble_helm', 'new_route_pioneer', 'storm_sailing'], crew: 75, price: 21000,
+    acquire: 'build', buildCost: { gold: 21000, oakTimber: 20, ironcladPlating: 4, robertsRelic: 1 },
+    desc: '초대형 선체는 느리다는 통념을 깬 최초의 초대형 탐험선 — 로열 포춘호의 파편으로 보강한 늑골 덕에 어떤 클리퍼보다도 빠르면서 초대형급 내구도까지 갖췄다. 모험 축의 진짜 최종 목표.' },
+  { id: 'bartholomew_treasury', name: '바르톨로뮤의 보고호 (Bartholomew\'s Treasury)', class: 'xlarge', role: 'trade', type: 'roberts_galleon',
+    country: 'PR', era: '1722~ (전설의 유산)', speed: 9, turnRate: 22, hp: 2800, cargo: 820, cannons: 39, cannonSlotTiers: [3, 3, 2, 1], skills: ['bulk_buyer', 'long_haul_logistics', 'skilled_carpenter', 'port_friendly'], crew: 260, price: 25000,
+    acquire: 'build', buildCost: { gold: 25000, oakTimber: 24, ironcladPlating: 5, robertsRelic: 1 },
+    desc: '로열 포춘호의 화물창을 본떠 지은 초대형 보고선 — 전 함선 통틀어 최대 적재량에, 웬만한 습격은 자체 화력으로 물리칠 방어력까지 갖췄다. 교역 축의 진짜 최종 목표.' },
 
   // ── 조선(KR) ──
   { id: 'panokseon', name: '판옥선 (板屋船)', class: 'medium', role: 'combat', type: 'panokseon',

@@ -43,6 +43,7 @@ export function saveGame() {
     fleet: state.fleet,
     oakTimber: state.oakTimber,
     ironcladPlating: state.ironcladPlating,
+    robertsRelic: state.robertsRelic,
     pirateEscalation: state.pirateEscalation,
     pirateEscalationResetDate: state.pirateEscalationResetDate,
     seenRespawnIntro: state.seenRespawnIntro,
@@ -101,6 +102,7 @@ export function applySave(data) {
   state.fleet = Array.isArray(data.fleet) ? data.fleet : [];
   state.oakTimber = typeof data.oakTimber === 'number' ? data.oakTimber : 0;
   state.ironcladPlating = typeof data.ironcladPlating === 'number' ? data.ironcladPlating : 0;
+  state.robertsRelic = typeof data.robertsRelic === 'number' ? data.robertsRelic : 0;
   state.pirateEscalation = data.pirateEscalation && typeof data.pirateEscalation === 'object' ? data.pirateEscalation : {};
   state.pirateEscalationResetDate = typeof data.pirateEscalationResetDate === 'string' ? data.pirateEscalationResetDate : null;
   state.seenRespawnIntro = !!data.seenRespawnIntro;
