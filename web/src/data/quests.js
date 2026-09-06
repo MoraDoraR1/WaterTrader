@@ -3,7 +3,9 @@
 // bounty는 targetId(seaEntities.js의 SEA_NPC_SHIPS id)를 격침하면 자동으로 완료된다.
 // reward는 대략 "그 물품을 사는 비용 대비 1.6배" 선에서 잡아, 직접 시세차익을 노리는 것보다
 // 의뢰를 받는 쪽이 확실히 이득이 되도록 했다(경로를 몰라도 되는 편의의 대가).
-export const QUESTS = [
+import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, ASTRONOMY_ENTRIES, rewardFor } from './compendium.js';
+
+const STATIC_QUESTS = [
   { id: 'del_lisboa_sevilla', type: 'delivery', cityId: 'lisboa', destCityId: 'sevilla', goodId: 'pepper', qty: 20, reward: 930,
     title: '후추 20t → 세비야', desc: '세비야 상관에서 후추가 급하다 합니다. 20t을 구해 옮겨주십시오.' },
   { id: 'del_sevilla_lisboa', type: 'delivery', cityId: 'sevilla', destCityId: 'lisboa', goodId: 'silver', qty: 15, reward: 860,
@@ -166,6 +168,161 @@ export const QUESTS = [
     acceptLine: '"함대는 여기 마르세유에 남아 위엄을 지켜야 하네만, 누군가는 실제로 퀘벡까지 가서 깃발을 꽂아야지. 자네가 그 몫을 맡아주게."',
     arriveLine: '퀘벡 항구에 닻을 내리자 요새의 백합 문장 깃발이 눈에 들어옵니다. 태양왕의 함대는 마르세유에 머물러 있지만, 그 이름을 실은 배는 오늘도 대서양을 건넜습니다.' },
 ];
+
+// ---- 학문(고고학/지리학/천문학) 연계 의뢰(짧은 체인) ----
+// 도감(data/compendium.js) 항목 중 서사적으로 묶일 만한 것들을 3~4부작 체인으로 엮었다.
+// 항로 개척 3부작과 같은 requires 게이팅을 쓰되, voyage처럼 입항이 아니라 그 사이트를 실제로
+// 조사·관측(G키)해야 완료된다(type: 'investigate', systems/quests.js checkInvestigateComplete).
+// 나머지 도감 항목(아래 CHAINED_SITE_IDS에 없는 것)은 파일 하단 buildDiscoveryQuests()가
+// 개별 발견 의뢰로 자동 생성한다.
+const ACADEMIC_CHAIN_QUESTS = [
+  // -- 고고학 1) 지중해 고대 난파선 탐사대: 울루부룬 → 마디아 → 스케르키 뱅크
+  { id: 'chain_arch_med_1', type: 'investigate', cityId: 'valletta', siteId: 'wreck_uluburun', skillId: 'archaeology', minSkillLevel: 1, reward: 300,
+    title: '[고고학 연계 1/3] 청동기시대 난파선 조사', desc: '몰타의 호사가가 청동기시대 지중해 교역로의 흔적을 찾고 있습니다. 울루부룬 난파선을 조사해주십시오.',
+    acceptLine: '발레타의 한 수집가가 말합니다. "청동기시대 지중해 무역이 얼마나 촘촘했는지 증명하고 싶소. 울루부룬 난파선부터 조사해주시겠소?"' },
+  { id: 'chain_arch_med_2', type: 'investigate', cityId: 'valletta', siteId: 'wreck_mahdia', skillId: 'archaeology', requires: 'chain_arch_med_1', reward: 400,
+    title: '[고고학 연계 2/3] 헬레니즘 예술품 난파선 조사', desc: '이번엔 그리스 예술품이 로마로 흘러가던 경로, 마디아 난파선을 조사해주십시오.',
+    acceptLine: '"좋습니다, 이제 그 예술품들이 로마로 어떻게 흘러갔는지 봅시다 — 마디아로 가주시오."' },
+  { id: 'chain_arch_med_3', type: 'investigate', cityId: 'valletta', siteId: 'wreck_skerki', skillId: 'archaeology', requires: 'chain_arch_med_2', reward: 550,
+    title: '[고고학 연계 3/3] 시칠리아 해협의 난파선군 조사', desc: '마지막으로, 로마 항로가 얼마나 붐볐는지 스케르키 뱅크의 난파선군에서 확인해주십시오.',
+    acceptLine: '"이제 마지막이오 — 스케르키 뱅크. 그곳 하나에만 몇 척이 가라앉아 있는지 보면 놀랄 거요."' },
+
+  // -- 고고학 2) 대서양 보물선 추적: 포트로열 → 산호세 갤리언 → 와이다 갤리호
+  { id: 'chain_arch_atlantic_1', type: 'investigate', cityId: 'havana', siteId: 'ruin_portroyal', skillId: 'archaeology', minSkillLevel: 4, reward: 350,
+    title: '[고고학 연계 1/3] 침몰한 해적 도시 조사', desc: '아바나의 기록보관인이 카리브해 해적 황금기의 흔적을 모으고 있습니다. 포트로열 침몰지구를 조사해주십시오.',
+    acceptLine: '아바나 항구 관리인이 말합니다. "한때 이 바다를 주름잡던 해적들의 도시가 하룻밤에 가라앉았다지. 그 흔적을 좀 봐주게."' },
+  { id: 'chain_arch_atlantic_2', type: 'investigate', cityId: 'havana', siteId: 'wreck_sanjose', skillId: 'archaeology', requires: 'chain_arch_atlantic_1', reward: 500,
+    title: '[고고학 연계 2/3] "난파선의 성배" 조사', desc: '이번엔 카르타헤나 앞바다에 가라앉은 스페인 보물선, 산호세 갤리언을 조사해주십시오.',
+    acceptLine: '"이번엔 좀 더 큰 건이야 — 산호세 갤리언, 금은보화를 가득 실은 채 가라앉았다는 그 배 말일세."' },
+  { id: 'chain_arch_atlantic_3', type: 'investigate', cityId: 'havana', siteId: 'wreck_whydah', skillId: 'archaeology', requires: 'chain_arch_atlantic_2', reward: 650,
+    title: '[고고학 연계 3/3] 실존 확인된 해적선 조사', desc: '마지막으로 뉴잉글랜드 앞바다의 와이다 갤리호를 조사해주십시오 — 실물이 확인된 최초의 해적선이라 합니다.',
+    acceptLine: '"이게 마지막인데 제일 흥미로울 걸세. 벨라미 선장의 그 배, 와이다 갤리호 말이야."' },
+
+  // -- 고고학 3) 동아시아 무역선 발굴: 신안선 → 난하이 1호 → 호이안 난파선
+  { id: 'chain_arch_asia_1', type: 'investigate', cityId: 'busan', siteId: 'wreck_shinan', skillId: 'archaeology', minSkillLevel: 6, reward: 400,
+    title: '[고고학 연계 1/3] 신안선 발굴 조사', desc: '부산의 학자가 동아시아 해상 교역사를 연구하고 있습니다. 신안 앞바다의 난파선부터 조사해주십시오.',
+    acceptLine: '부산 항구 관리인이 말합니다. "고려로 향하던 원나라 배가 신안 앞바다에 가라앉았다더군. 그 흔적을 살펴봐주게."' },
+  { id: 'chain_arch_asia_2', type: 'investigate', cityId: 'busan', siteId: 'wreck_nanhai1', skillId: 'archaeology', requires: 'chain_arch_asia_1', reward: 500,
+    title: '[고고학 연계 2/3] 난하이 1호 발굴 조사', desc: '이번엔 남송의 도자기를 가득 실은 채 통째로 가라앉은 난하이 1호를 조사해주십시오.',
+    acceptLine: '"이번엔 남송 시대 배일세 — 난하이 1호, 선체째로 가라앉은 보기 드문 경우지."' },
+  { id: 'chain_arch_asia_3', type: 'investigate', cityId: 'busan', siteId: 'wreck_hoi_an', skillId: 'archaeology', requires: 'chain_arch_asia_2', reward: 700,
+    title: '[고고학 연계 3/3] 호이안 난파선 발굴 조사', desc: '마지막으로 베트남 참파 왕국의 청화백자를 실은 호이안 난파선을 조사해, 교역이 중국에만 의존하지 않았음을 확인해주십시오.',
+    acceptLine: '"마지막으로 베트남 쪽도 한번 보세 — 도자기 무역이 중국 하나뿐이었을 리 없거든."' },
+
+  // -- 지리학 1) 세계의 관문 해협들: 지브롤터 → 보스포루스 → 호르무즈
+  { id: 'chain_geo_straits_1', type: 'investigate', cityId: 'tanger', siteId: 'geo_gibraltar', skillId: 'geography', minSkillLevel: 1, reward: 300,
+    title: '[지리학 연계 1/3] 헤라클레스의 기둥 답사', desc: '탕헤르의 지리학자가 세계의 주요 해협을 정리하고 있습니다. 지브롤터 해협부터 답사해주십시오.',
+    acceptLine: '탕헤르 항구 관리인이 말합니다. "고대인들이 세상의 끝이라 믿었던 그 해협 말일세. 직접 가서 봐주게."' },
+  { id: 'chain_geo_straits_2', type: 'investigate', cityId: 'tanger', siteId: 'geo_bosphorus', skillId: 'geography', requires: 'chain_geo_straits_1', reward: 400,
+    title: '[지리학 연계 2/3] 보스포루스 해협 답사', desc: '이번엔 두 대륙을 가르는 보스포루스 해협을 답사해주십시오.',
+    acceptLine: '"이번엔 동쪽으로 — 보스포루스, 유럽과 아시아를 가르는 그 좁은 물길 말이네."' },
+  { id: 'chain_geo_straits_3', type: 'investigate', cityId: 'tanger', siteId: 'geo_hormuz', skillId: 'geography', requires: 'chain_geo_straits_2', reward: 550,
+    title: '[지리학 연계 3/3] 호르무즈 해협 답사', desc: '마지막으로 페르시아만의 관문, 호르무즈 해협을 답사해주십시오.',
+    acceptLine: '"마지막은 페르시아만 어귀일세 — 호르무즈, 그 좁은 목 하나가 만 전체의 숨통을 쥐고 있다더군."' },
+
+  // -- 지리학 2) 적도를 넘어서: 무풍대 → 계절풍대 → 코모린곶
+  { id: 'chain_geo_equator_1', type: 'investigate', cityId: 'mombasa', siteId: 'geo_doldrums', skillId: 'geography', minSkillLevel: 4, reward: 350,
+    title: '[지리학 연계 1/3] 적도 무풍대 답사', desc: '몸바사의 항해장이 적도 부근의 기후대를 기록하고 있습니다. 뱃사람들이 두려워하는 무풍대부터 답사해주십시오.',
+    acceptLine: '몸바사 항구 관리인이 말합니다. "적도 부근 그 바람 없는 구역 말일세. 직접 겪어봐야 왜 다들 두려워하는지 알 걸세."' },
+  { id: 'chain_geo_equator_2', type: 'investigate', cityId: 'mombasa', siteId: 'geo_monsoon', skillId: 'geography', requires: 'chain_geo_equator_1', reward: 450,
+    title: '[지리학 연계 2/3] 인도양 계절풍대 답사', desc: '이번엔 반년 주기로 방향이 바뀌는 인도양 계절풍대를 답사해주십시오.',
+    acceptLine: '"이번엔 계절풍이야 — 이 바람 하나로 수천 년째 상인들이 나침반 없이 대양을 건넌다더군."' },
+  { id: 'chain_geo_equator_3', type: 'investigate', cityId: 'mombasa', siteId: 'geo_comorin', skillId: 'geography', requires: 'chain_geo_equator_2', reward: 550,
+    title: '[지리학 연계 3/3] 코모린곶 답사', desc: '마지막으로 인도 최남단, 세 바다가 만나는 코모린곶을 답사해주십시오.',
+    acceptLine: '"마지막으로 인도 아대륙 끝자락을 보세 — 코모린곶, 세 바다가 한데 만나는 곳이지."' },
+
+  // -- 지리학 3) 남쪽 바다의 관문: 희망봉 → 모스크스트라우멘 → 사르가소해
+  { id: 'chain_geo_south_1', type: 'investigate', cityId: 'cape_town', siteId: 'geo_good_hope', skillId: 'geography', minSkillLevel: 10, reward: 600,
+    title: '[지리학 연계 1/3] 희망봉 답사', desc: '케이프타운의 노(老) 항해사가 세계 끝자락의 전설적인 바다들을 모으고 있습니다. 희망봉부터 답사해주십시오.',
+    acceptLine: '케이프타운 항구 관리인이 말합니다. "원래 이름이 폭풍의 곶이었다는 걸 아는가? 그 사나운 곶부터 다시 봐주게."' },
+  { id: 'chain_geo_south_2', type: 'investigate', cityId: 'cape_town', siteId: 'geo_maelstrom', skillId: 'geography', requires: 'chain_geo_south_1', reward: 750,
+    title: '[지리학 연계 2/3] 모스크스트라우멘 소용돌이 답사', desc: '이번엔 북쪽 끝, 배를 통째로 삼킨다는 전설의 소용돌이를 답사해주십시오.',
+    acceptLine: '"이번엔 정반대로 북쪽 끝일세 — 노르웨이의 그 소용돌이, 옛 지도엔 심연으로 그려져 있더군."' },
+  { id: 'chain_geo_south_3', type: 'investigate', cityId: 'cape_town', siteId: 'geo_sargasso', skillId: 'geography', requires: 'chain_geo_south_2', reward: 950,
+    title: '[지리학 연계 3/3] 사르가소해 답사', desc: '마지막으로 해안선 하나 없이 해류로만 둘러싸인 유일한 바다, 사르가소해를 답사해주십시오.',
+    acceptLine: '"마지막은 가장 기이한 곳일세 — 사르가소해, 유령선 전설이 끊이지 않는 그 바다 말이네."' },
+
+  // -- 천문학 1) 고대 그리스 별자리: 오리온 → 큰곰자리 → 전갈자리
+  { id: 'chain_astro_greek_1', type: 'investigate', cityId: 'venezia', siteId: 'star_orion', skillId: 'astronomy', minSkillLevel: 1, reward: 300,
+    title: '[천문학 연계 1/3] 오리온자리 관측', desc: '베네치아의 천문학자가 그리스 신화 속 별자리를 정리하고 있습니다. 오리온자리부터 관측해주십시오.',
+    acceptLine: '베네치아 항구 관리인이 말합니다. "겨울 밤하늘의 그 사냥꾼 말일세. 맑은 밤에 한번 관측해보게."' },
+  { id: 'chain_astro_greek_2', type: 'investigate', cityId: 'venezia', siteId: 'star_ursa_major', skillId: 'astronomy', requires: 'chain_astro_greek_1', reward: 400,
+    title: '[천문학 연계 2/3] 큰곰자리 관측', desc: '이번엔 뱃사람들의 오랜 길잡이, 큰곰자리(북두칠성)를 관측해주십시오.',
+    acceptLine: '"이번엔 북쪽 하늘일세 — 국자 모양 일곱 별, 나침반 없던 시절의 길잡이였지."' },
+  { id: 'chain_astro_greek_3', type: 'investigate', cityId: 'venezia', siteId: 'star_scorpius', skillId: 'astronomy', requires: 'chain_astro_greek_2', reward: 550,
+    title: '[천문학 연계 3/3] 전갈자리 관측', desc: '마지막으로 오리온을 쏘아 죽였다는 전갈자리를 관측해주십시오.',
+    acceptLine: '"마지막으로 그 사냥꾼을 죽인 전갈을 보세 — 여름 밤하늘의 붉은 별, 안타레스가 심장이라네."' },
+
+  // -- 천문학 2) 동방 사신도: 청룡 → 백호 → 주작 → 현무
+  { id: 'chain_astro_china_1', type: 'investigate', cityId: 'guangzhou', siteId: 'star_azure_dragon', skillId: 'astronomy', minSkillLevel: 10, reward: 500,
+    title: '[천문학 연계 1/4] 동방청룡 관측', desc: '광저우의 흠천감 관원이 사신(四神)의 별자리를 모두 기록하려 합니다. 봄철 동쪽 하늘의 청룡부터 관측해주십시오.',
+    acceptLine: '광저우 항구 관리인이 말합니다. "하늘을 넷으로 나눠 각각 신수를 배정했다지. 먼저 동쪽의 청룡부터 봐주게."' },
+  { id: 'chain_astro_china_2', type: 'investigate', cityId: 'guangzhou', siteId: 'star_white_tiger', skillId: 'astronomy', requires: 'chain_astro_china_1', reward: 600,
+    title: '[천문학 연계 2/4] 서방백호 관측', desc: '이번엔 가을철 서쪽 하늘의 백호를 관측해주십시오.',
+    acceptLine: '"이번엔 서쪽 — 백호일세. 청룡과 대칭을 이룬다더군."' },
+  { id: 'chain_astro_china_3', type: 'investigate', cityId: 'guangzhou', siteId: 'star_vermilion_bird', skillId: 'astronomy', requires: 'chain_astro_china_2', reward: 700,
+    title: '[천문학 연계 3/4] 남방주작 관측', desc: '이번엔 여름철 남쪽 하늘의 주작을 관측해주십시오.',
+    acceptLine: '"남쪽은 주작이지 — 불사조를 닮은 붉은 새, 계절풍이 바뀔 때를 알린다더군."' },
+  { id: 'chain_astro_china_4', type: 'investigate', cityId: 'guangzhou', siteId: 'star_black_tortoise', skillId: 'astronomy', requires: 'chain_astro_china_3', reward: 850,
+    title: '[천문학 연계 4/4] 북방현무 관측', desc: '마지막으로 겨울철 북쪽 하늘의 현무를 관측해 사신을 모두 완성해주십시오.',
+    acceptLine: '"마지막이 북쪽 현무일세 — 이걸로 사신을 다 모으는 걸세, 뱀이 거북을 휘감은 모습이라지."' },
+
+  // -- 천문학 3) 남반구 항해자의 별: 남십자자리 → 노인성 → 아르고자리
+  { id: 'chain_astro_south_1', type: 'investigate', cityId: 'cape_town', siteId: 'star_crux', skillId: 'astronomy', minSkillLevel: 8, reward: 550,
+    title: '[천문학 연계 1/3] 남십자자리 관측', desc: '케이프타운의 항해장이 남반구 별자리를 정리하고 있습니다. 남십자자리부터 관측해주십시오.',
+    acceptLine: '케이프타운 항구 관리인이 말합니다. "북극성이 안 보이는 이 바다에선 저 작은 십자가가 대신 방위를 알려준다네."' },
+  { id: 'chain_astro_south_2', type: 'investigate', cityId: 'cape_town', siteId: 'star_canopus', skillId: 'astronomy', requires: 'chain_astro_south_1', reward: 700,
+    title: '[천문학 연계 2/3] 노인성(카노푸스) 관측', desc: '이번엔 아랍 항해자들이 위도를 가늠하던 노인성을 관측해주십시오.',
+    acceptLine: '"이번엔 노인성이야 — 하늘에서 둘째로 밝은 별인데, 남쪽 수평선 가까이서만 보인다더군."' },
+  { id: 'chain_astro_south_3', type: 'investigate', cityId: 'cape_town', siteId: 'star_argo_navis', skillId: 'astronomy', requires: 'chain_astro_south_2', reward: 900,
+    title: '[천문학 연계 3/3] 아르고자리 관측', desc: '마지막으로 전설의 배 아르고호를 본뜬, 한때 밤하늘에서 가장 거대했던 별자리를 관측해주십시오.',
+    acceptLine: '"마지막으로 가장 큰 별자리를 보세 — 이아손의 배, 아르고자리일세. 너무 커서 훗날 여럿으로 쪼개졌다더군."' },
+];
+
+// 위 9개 체인에 이미 쓰인 사이트는 개별 발견 의뢰로 중복 생성하지 않는다.
+const CHAINED_SITE_IDS = new Set(ACADEMIC_CHAIN_QUESTS.map((q) => q.siteId));
+
+const DISCOVERY_ACCEPT_LINES = {
+  archaeology: (name) => `항구 관리인이 말합니다. "이 근방에 ${name}에 관한 소문이 있던데, 관심 있으면 한번 가보게."`,
+  geography: (name) => `항구 관리인이 말합니다. "${name} 말인데, 직접 가서 둘러보면 흥미로운 게 있을 거라더군."`,
+  astronomy: (name) => `항구 관리인이 말합니다. "맑은 밤에 시간이 나면 ${name}을(를) 한번 관측해보게."`,
+};
+
+// 체인에 속하지 않은 나머지 도감 항목을 개별 발견 의뢰로 자동 생성한다 — 사이트 하나당
+// 퀘스트 하나(사이트의 desc/좌표/등급을 그대로 재사용), 스킬 레벨이 minSkillLevel에 닿아야
+// 게시판에 뜬다. 천문학은 좌표가 없어 targetCityId 없이 순수 조건(야간+맑음)으로만 완료된다.
+function buildDiscoveryQuests() {
+  const quests = [];
+  const bySubject = [
+    ['archaeology', ARCHAEOLOGY_SITES],
+    ['geography', GEOGRAPHY_SITES],
+    ['astronomy', ASTRONOMY_ENTRIES],
+  ];
+  for (const [skillId, sites] of bySubject) {
+    for (const site of sites) {
+      if (CHAINED_SITE_IDS.has(site.id)) continue;
+      const { gold } = rewardFor(site.rarity);
+      const icon = skillId === 'archaeology' ? '🏺' : skillId === 'geography' ? '🗺️' : '🔭';
+      quests.push({
+        id: `disc_${site.id}`,
+        type: 'investigate',
+        cityId: site.cityId,
+        siteId: site.id,
+        skillId,
+        minSkillLevel: site.minSkillLevel,
+        reward: gold,
+        repeatable: false,
+        title: `[${SKILL_CATEGORIES_KO[skillId]} 발견] ${icon} ${site.name}`,
+        desc: site.desc,
+        acceptLine: DISCOVERY_ACCEPT_LINES[skillId](site.name),
+      });
+    }
+  }
+  return quests;
+}
+const SKILL_CATEGORIES_KO = { archaeology: '고고학', geography: '지리학', astronomy: '천문학' };
+
+export const QUESTS = [...STATIC_QUESTS, ...ACADEMIC_CHAIN_QUESTS, ...buildDiscoveryQuests()];
 
 export function getQuest(id) {
   return QUESTS.find((q) => q.id === id);

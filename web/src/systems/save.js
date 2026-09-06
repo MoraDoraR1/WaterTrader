@@ -57,6 +57,9 @@ export function saveGame() {
     explorationSite: state.explorationSite,
     nextExplorationSiteAt: state.nextExplorationSiteAt,
     explorationCount: state.explorationCount,
+    playerSkills: state.playerSkills,
+    combatSkillSlots: state.combatSkillSlots,
+    compendium: state.compendium,
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -117,6 +120,11 @@ export function applySave(data) {
   state.explorationSite = data.explorationSite && typeof data.explorationSite === 'object' ? data.explorationSite : null;
   state.nextExplorationSiteAt = typeof data.nextExplorationSiteAt === 'number' ? data.nextExplorationSiteAt : null;
   state.explorationCount = typeof data.explorationCount === 'number' ? data.explorationCount : 0;
+  state.playerSkills = data.playerSkills && typeof data.playerSkills === 'object' ? data.playerSkills : {};
+  state.combatSkillSlots = Array.isArray(data.combatSkillSlots) ? data.combatSkillSlots : [null, null];
+  state.compendium = data.compendium && typeof data.compendium === 'object'
+    ? { archaeology: data.compendium.archaeology || {}, geography: data.compendium.geography || {}, astronomy: data.compendium.astronomy || {} }
+    : { archaeology: {}, geography: {}, astronomy: {} };
 }
 
 export function deleteSave() {

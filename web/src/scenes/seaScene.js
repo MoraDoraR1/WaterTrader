@@ -14,6 +14,8 @@ import { getShip, COUNTRY_COLORS, COUNTRY_NAMES } from '../data/ships.js';
 import { getEffectiveShipDef, armorDamageMul } from '../data/shipParts.js';
 import { getCombatants, getCombatPower, getNpcCombatPower } from '../systems/combatPower.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
+import { PLAYER_SKILLS, lerpByLevel } from '../data/playerSkills.js';
+import { gainSkillExp, getSkillLevel } from '../systems/skills.js';
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
 import { seaRegionAt, getSeaLockBucket } from '../data/seaRegions.js';
@@ -21,7 +23,8 @@ import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
-import { checkBountyKill, addReputation, checkQuestRespawns } from '../systems/quests.js';
+import { checkBountyKill, addReputation, checkQuestRespawns, checkInvestigateComplete } from '../systems/quests.js';
+import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, ASTRONOMY_ENTRIES, rewardFor } from '../data/compendium.js';
 import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
 import { checkExplorationSite } from '../systems/exploration.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
@@ -32,6 +35,8 @@ import { formatCityEventBadge, getCargoCapacity, getCargoUsed } from '../systems
 import { getGood } from '../data/goods.js';
 
 const DOCK_RANGE = 55;
+const SITE_INTERACT_RANGE = 32; // 고고학/지리학 사이트에 조사 판정이 뜨는 거리
+const REINVESTIGATE_COOLDOWN = 45; // 같은 사이트(또는 관측) 재사용 사이 최소 대기시간(초)
 const FIRE_COOLDOWN = 1.5;
 const RESPAWN_CITY = 'lisboa'; // _findNearestCityMarker()가 실패하는 극단적 예외 상황에서만 쓰는 최후 폴백
 const SHIPWRECK_GOLD_LOSS_PCT = 0.3; // 난파 시 휴대금(bankGold 제외) 손실 비율 — 은행에 맡길 이유를 만든다.
@@ -139,6 +144,15 @@ export class SeaScene {
     this._boardable = null; // 충돌 직후 F로 승선(백병전)할 수 있는 짧은 창구 — { npc, timer }
     this.selectedTarget = null; // 클릭으로 지정한 NPC — 상호작용 범위 원 + 전투/대화/종료 메뉴
     this.shakeTrauma = 0;
+    // 전투 액티브 버프(선장 개인 스킬, data/playerSkills.js) — skillId -> { timer(초 남음), level }.
+    // 쿨다운도 같은 방식(delta 감산)으로 관리한다. 둘 다 세션 한정 상태라 저장하지 않는다.
+    this.activeBuffs = {};
+    this.skillCooldowns = {};
+    // 학문(고고학/지리학/천문학) 조사·관측 — 사이트별/관측 공용 재사용 쿨다운(초, 세션 한정).
+    this._investigateCooldowns = {};
+    this._astroCooldown = 0;
+    this._nearbySite = null; // 매 프레임 _updateInvestigatePrompt가 갱신, G키 처리 시 참조
+    this._astroReady = false;
     this.wakeTrail = new WakeTrail();
     this._wakeTimer = 0;
     this._routeWarnCooldown = 0; // 잠긴 항로 접근 경고 토스트 도배 방지
@@ -310,6 +324,146 @@ export class SeaScene {
     this._startMelee(npc);
   }
 
+  // 미니맵(배 주변 국지 반경)에 표시할 학문 사이트 목록 — hud.updateMinimap이 화면 밖은
+  // 알아서 잘라내므로 전체 목록을 그냥 넘긴다.
+  _compendiumMinimapSites() {
+    return [
+      ...ARCHAEOLOGY_SITES.map((s) => ({ x: s.coords[0], z: s.coords[1], category: 'archaeology', found: !!state.compendium.archaeology[s.id] })),
+      ...GEOGRAPHY_SITES.map((s) => ({ x: s.coords[0], z: s.coords[1], category: 'geography', found: !!state.compendium.geography[s.id] })),
+    ];
+  }
+
+  // 가장 가까운 고고학/지리학 사이트를 찾는다(조사 판정 거리 안, 발견 여부 무관 — 재조사도 허용).
+  _findNearbySite() {
+    let best = null, bestD = SITE_INTERACT_RANGE;
+    for (const site of ARCHAEOLOGY_SITES) {
+      const d = Math.hypot(site.coords[0] - this.ship.pos.x, site.coords[1] - this.ship.pos.y);
+      if (d < bestD) { bestD = d; best = { category: 'archaeology', site }; }
+    }
+    for (const site of GEOGRAPHY_SITES) {
+      const d = Math.hypot(site.coords[0] - this.ship.pos.x, site.coords[1] - this.ship.pos.y);
+      if (d < bestD) { bestD = d; best = { category: 'geography', site }; }
+    }
+    return best;
+  }
+
+  // 매 프레임(비-백병전 상태에서만) 조사/관측 가능 여부와 안내 문구를 갱신한다 — 승선(F)
+  // 프롬프트가 떠 있는 동안은 그쪽이 우선이라 이 함수를 건너뛴다(호출부에서 이미 분기).
+  _updateInvestigatePrompt() {
+    this._nearbySite = this._findNearbySite();
+    // 아주 심한 폭풍이 아니어도 안개·궂은 날씨면 별이 안 보인다는 느낌을 주기 위해
+    // stormIntensity만 낮게(0.3 미만) 잡는다 — 완전히 잔잔할 필요까지는 없다.
+    this._astroReady = this.weather.isNight && this.weather.stormIntensity < 0.3;
+
+    if (this._nearbySite) {
+      const found = state.compendium[this._nearbySite.category][this._nearbySite.site.id];
+      const icon = this._nearbySite.category === 'archaeology' ? '🏺' : '🗺️';
+      const label = found ? this._nearbySite.site.name : '미확인 지점';
+      hud.showInteractPrompt(true, `G: ${icon} ${label} 조사`);
+    } else if (this._astroReady) {
+      hud.showInteractPrompt(true, '🔭 G: 별자리 관측');
+    } else {
+      hud.showInteractPrompt(false);
+    }
+  }
+
+  // G키 처리 — 근처 사이트가 있으면 조사, 없고 관측 조건이면 별자리 관측, 둘 다 아니면 안내만.
+  handleInvestigateKey() {
+    if (this.meleeState) return;
+    if (this._nearbySite) { this._investigateSite(this._nearbySite); return; }
+    if (this._astroReady) { this._observeSky(); return; }
+    hud.toast('조사하거나 관측할 대상이 근처에 없습니다.');
+  }
+
+  _investigateSite({ category, site }) {
+    if ((this._investigateCooldowns[site.id] || 0) > 0) {
+      hud.toast('방금 조사했습니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
+    this._investigateCooldowns[site.id] = REINVESTIGATE_COOLDOWN;
+    const already = !!state.compendium[category][site.id];
+    if (already) {
+      gainSkillExp(category, 1);
+      hud.toast(`${site.name}을(를) 다시 조사했습니다. (${PLAYER_SKILLS[category].name} 숙련도 +1)`);
+      return;
+    }
+    state.compendium = { ...state.compendium, [category]: { ...state.compendium[category], [site.id]: true } };
+    const { exp, gold } = rewardFor(site.rarity);
+    gainSkillExp(category, exp);
+    const matches = checkInvestigateComplete(site.id);
+    state.gold += gold;
+    const icon = category === 'archaeology' ? '🏺' : '🗺️';
+    const chainNote = matches.length ? ` + 연계 의뢰 완료(+${matches.reduce((a, q) => a + q.reward, 0).toLocaleString('ko-KR')})` : '';
+    hud.toast(`${icon} 새로운 발견: '${site.name}'! 도감에 등록되었습니다. (+${gold.toLocaleString('ko-KR')} 두캇${chainNote})`);
+    notify({ compendiumChanged: true });
+  }
+
+  _observeSky() {
+    if (this._astroCooldown > 0) {
+      hud.toast('방금 관측했습니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
+    this._astroCooldown = REINVESTIGATE_COOLDOWN;
+    const found = state.compendium.astronomy;
+    const next = ASTRONOMY_ENTRIES.find((s) => !found[s.id]);
+    if (!next) {
+      gainSkillExp('astronomy', 1);
+      hud.toast('🔭 밤하늘을 다시 관측했습니다. (천문학 숙련도 +1)');
+      return;
+    }
+    state.compendium = { ...state.compendium, astronomy: { ...found, [next.id]: true } };
+    const { exp, gold } = rewardFor(next.rarity);
+    gainSkillExp('astronomy', exp);
+    const matches = checkInvestigateComplete(next.id);
+    state.gold += gold;
+    const chainNote = matches.length ? ` + 연계 의뢰 완료(+${matches.reduce((a, q) => a + q.reward, 0).toLocaleString('ko-KR')})` : '';
+    hud.toast(`🔭 새로운 별자리 관측: '${next.name}'! 도감에 등록되었습니다. (+${gold.toLocaleString('ko-KR')} 두캇${chainNote})`);
+    notify({ compendiumChanged: true });
+  }
+
+  // 전투 액티브 버프 시전(숫자키 1/2 → 장착 슬롯 0/1) — 장착된 스킬만, 쿨다운이 끝났을 때만
+  // 발동한다. 백병전 중에는 포격과 마찬가지로 쓸 수 없다(별도의 판정 루프라 다른 신호를 준다).
+  castCombatSkill(slotIdx) {
+    if (this.meleeState) { hud.toast('백병전 중에는 스킬을 쓸 수 없습니다.'); return; }
+    const skillId = (state.combatSkillSlots || [])[slotIdx];
+    if (!skillId) { hud.toast('장착된 스킬이 없습니다. (K: 스킬 패널)'); return; }
+    const skill = PLAYER_SKILLS[skillId];
+    if (!skill) return;
+    if ((this.skillCooldowns[skillId] || 0) > 0) {
+      hud.toast(`재사용 대기 중입니다. (${Math.ceil(this.skillCooldowns[skillId])}초)`);
+      return;
+    }
+    const level = getSkillLevel(skillId);
+    this.activeBuffs[skillId] = { timer: skill.duration, level };
+    this.skillCooldowns[skillId] = skill.cooldown;
+    gainSkillExp(skillId, 1);
+    hud.toast(`${skill.icon} '${skill.name}' 발동! (Lv.${level}, ${skill.duration}초)`);
+  }
+
+  // 활성 버프 중 key와 일치하는 효과를 곱/가산으로 모아 적용한다 — mulSkillEffect/sumSkillEffect
+  // (배 자체의 고정 스킬)와 같은 계산식에 나란히 곱하거나 더해 쓴다.
+  _buffMul(key, base) {
+    let total = base;
+    for (const [id, b] of Object.entries(this.activeBuffs)) {
+      if (b.timer <= 0) continue;
+      for (const eff of PLAYER_SKILLS[id]?.effects || []) {
+        if (eff.key === key && eff.mode === 'mul') total *= lerpByLevel(eff.v1, eff.v15, b.level);
+      }
+    }
+    return total;
+  }
+
+  _buffAdd(key, base) {
+    let total = base;
+    for (const [id, b] of Object.entries(this.activeBuffs)) {
+      if (b.timer <= 0) continue;
+      for (const eff of PLAYER_SKILLS[id]?.effects || []) {
+        if (eff.key === key && eff.mode === 'add') total += lerpByLevel(eff.v1, eff.v15, b.level);
+      }
+    }
+    return total;
+  }
+
   // 실제 해안선(coastline.js)을 검사해 "확실히 뭍이 아닌" 방향으로 정박지를 찾는다 — 3D 시절과
   // 동일한 알고리즘(메시 생성 부분만 제거).
   _computeCityMarkers() {
@@ -409,7 +563,7 @@ export class SeaScene {
   // 자신이 받는 피해에 곱하는 총 배율 — 장갑판 부품(armor 스탯)과 전투 스킬(철갑 방어 등)의
   // incomingDamageMul은 서로 다른 감산원이라 곱연산으로 함께 적용한다.
   _incomingDamageMul() {
-    return mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1) * armorDamageMul(this.ship.shipDef.armor);
+    return this._buffMul('incomingDamageMul', mulSkillEffect(this.ship.shipDef, 'incomingDamageMul', 1) * armorDamageMul(this.ship.shipDef.armor));
   }
 
   _isInHarborClearance(x, z) {
@@ -519,7 +673,7 @@ export class SeaScene {
     // 승선 전에 함포로 충분히 두들겨 놓는 게 실제로 이득이 되도록 한다.
     const npcHpRatio = npc.maxHp > 0 ? npc.hp / npc.maxHp : 1;
     const playerPower = playerCrew * (0.75 + Math.random() * 0.5) * getMoralePowerMul() * clickBonus
-      * mulSkillEffect(this.ship.shipDef, 'meleePowerMul', 1);
+      * this._buffMul('meleePowerMul', mulSkillEffect(this.ship.shipDef, 'meleePowerMul', 1));
     const npcPower = npcCrew * (0.75 + Math.random() * 0.5) * (0.5 + 0.5 * npcHpRatio);
     this.collisionTimers.set(npc.owner, COLLISION_COOLDOWN);
 
@@ -628,12 +782,12 @@ export class SeaScene {
     const target = this._nearestHostile();
     // 정밀 포격 스킬은 이 사거리 판정 자체를 늘려준다 — 더 멀리서부터 교전을 걸 수 있다.
     // 안개(weather.fogVisMul)는 반대로 사거리를 줄인다 — 목표를 눈으로 봐야 겨냥할 수 있다.
-    const range = 60 * mulSkillEffect(this.ship.shipDef, 'rangeMul', 1) * this.weather.fogVisMul;
+    const range = 60 * this._buffMul('rangeMul', mulSkillEffect(this.ship.shipDef, 'rangeMul', 1)) * this.weather.fogVisMul;
     if (!target || target.pos.distanceTo(this.ship.pos) > range) {
       hud.toast('사거리 내에 목표가 없습니다.');
       return;
     }
-    this.fireTimer = FIRE_COOLDOWN * mulSkillEffect(this.ship.shipDef, 'fireCooldownMul', 1);
+    this.fireTimer = FIRE_COOLDOWN * this._buffMul('fireCooldownMul', mulSkillEffect(this.ship.shipDef, 'fireCooldownMul', 1));
     state.cannonballs -= 1; // 일제 사격(현측 포열 전체) 1회 = 포탄 1개 소모(게임적 추상화)
     audio.playCannon();
     const toTarget = { x: target.pos.x - this.ship.pos.x, y: target.pos.y - this.ship.pos.y };
@@ -797,9 +951,25 @@ export class SeaScene {
     // 응급 수리반 스킬 — 전투 중일 때만, 완전 침몰(0)까지 떨어진 상태가 아니면 초당 소량
     // 자동 회복한다(최대 내구도를 넘지는 않는다).
     if (state.inCombat && state.shipHp > 0) {
-      const regen = sumSkillEffect(this.ship.shipDef, 'combatHpRegenPerSec', 0);
+      const regen = this._buffAdd('combatHpRegenPerSec', sumSkillEffect(this.ship.shipDef, 'combatHpRegenPerSec', 0));
       if (regen > 0) state.shipHp = Math.min(this.ship.shipDef.hp, state.shipHp + regen * delta);
     }
+
+    // 전투 액티브 버프의 쿨다운/지속시간 — fireTimer 등 다른 타이머와 같은 방식(delta 감산)으로 흐른다.
+    for (const id of Object.keys(this.skillCooldowns)) {
+      const next = this.skillCooldowns[id] - delta;
+      if (next <= 0) delete this.skillCooldowns[id]; else this.skillCooldowns[id] = next;
+    }
+    for (const id of Object.keys(this.activeBuffs)) {
+      const b = this.activeBuffs[id];
+      b.timer -= delta;
+      if (b.timer <= 0) delete this.activeBuffs[id];
+    }
+    for (const id of Object.keys(this._investigateCooldowns)) {
+      const next = this._investigateCooldowns[id] - delta;
+      if (next <= 0) delete this._investigateCooldowns[id]; else this._investigateCooldowns[id] = next;
+    }
+    if (this._astroCooldown > 0) this._astroCooldown = Math.max(0, this._astroCooldown - delta);
 
     if (this.meleeState) {
       if (consumeJustPressed('Space')) this._meleeMash();
@@ -815,6 +985,7 @@ export class SeaScene {
           hud.showInteractPrompt(true, `F: ${this._boardable.npc.def.name}에 승선(백병전 돌입)`);
         }
       }
+      if (!this._boardable) this._updateInvestigatePrompt();
       const wPressed = consumeJustPressed('KeyW');
       const sPressed = consumeJustPressed('KeyS');
       const manualTurn = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
@@ -843,7 +1014,9 @@ export class SeaScene {
       // 전투 중에만 발동하는 스킬(신속 기동/돌격 항해술)과, 폭풍 중에만 발동하는 스킬
       // (침수 대비/폭풍 항해술)은 상태가 매 순간 바뀌므로 매 프레임 다시 계산해준다.
       this.ship.combatSpeedMul = state.inCombat ? mulSkillEffect(this.ship.shipDef, 'combatSpeedMul', 1) : 1;
-      this.ship.combatTurnMul = state.inCombat ? mulSkillEffect(this.ship.shipDef, 'combatTurnMul', 1) : 1;
+      this.ship.combatTurnMul = state.inCombat
+        ? this._buffMul('combatTurnMul', mulSkillEffect(this.ship.shipDef, 'combatTurnMul', 1))
+        : this._buffMul('combatTurnMul', 1);
       this.ship.windSensitivity = this.weather.stormActive
         ? this.ship.baseWindSensitivity * mulSkillEffect(this.ship.shipDef, 'stormWindResistMul', 1)
         : this.ship.baseWindSensitivity;
@@ -1063,9 +1236,11 @@ export class SeaScene {
       this.minimapCities,
       this.npcShips.filter((n) => !n.dead && n.isActive()).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.isHostile() })),
       this.wind.towardDirection,
-      state.explorationSite
+      state.explorationSite,
+      this._compendiumMinimapSites()
     );
-    // 승선(백병전 돌입) 안내가 떠 있는 동안은 정박 안내가 매 프레임 덮어쓰지 않도록 양보한다.
+    // 승선(백병전 돌입) 안내가 최우선, 그다음 정박 안내, 그다음 조사/관측 안내(_updateInvestigatePrompt가
+    // 이미 이번 프레임에 세팅해둔 것) — 아무것도 해당 없을 때만 여기서 최종적으로 지운다.
     if (!this._boardable) {
       const dockRange = DOCK_RANGE + sumSkillEffect(this.ship.shipDef, 'dockRangeAdd', 0);
       if (nearest.marker && nearest.dist < dockRange) {
@@ -1073,8 +1248,8 @@ export class SeaScene {
         hud.showInteractPrompt(true, `[좌클릭] ${city.name}에 정박하기`);
         this.hoveredCity = city;
       } else {
-        hud.showInteractPrompt(false);
         this.hoveredCity = null;
+        if (!this._nearbySite && !this._astroReady) hud.showInteractPrompt(false);
       }
     }
 
@@ -1108,6 +1283,7 @@ export class SeaScene {
     if (this.waypoint) this._drawWaypoint(ctx, w, h);
     if (this.selectedTarget && !this.selectedTarget.dead) this._drawInteractionRange(ctx, w, h, this.selectedTarget);
     if (state.explorationSite) this._drawExplorationSite(ctx, w, h);
+    this._drawCompendiumSites(ctx, w, h);
 
     // 화면 앞뒤 순서(페인터 알고리즘) — (x+z, 즉 스크린 y에 대응하는 값)가 클수록 앞쪽이라
     // 나중에 그려야 뒤 물체를 가리지 않는다.
@@ -1254,6 +1430,25 @@ export class SeaScene {
     ctx.textAlign = 'center';
     ctx.fillText('🗺️', p.x, p.y + 6);
     ctx.restore();
+  }
+
+  // 고고학/지리학 사이트 — 미탐사 해역과 달리 고정 좌표라 펄스 없이 조용한 아이콘만 띄운다.
+  // 발견 여부와 무관하게 항상 보이되(육안으로 그 자리에 뭔가 있다는 것 자체는 알 수 있다),
+  // 이름은 도감에 등록된 뒤에야 상호작용 프롬프트(G키)에서 드러난다.
+  _drawCompendiumSites(ctx, w, h) {
+    const draw = (site, category, icon) => {
+      const p = this.iso.toScreen(this.camera, site.coords[0], site.coords[1], w, h);
+      if (p.x < -30 || p.x > w + 30 || p.y < -30 || p.y > h + 30) return;
+      const found = state.compendium[category][site.id];
+      ctx.save();
+      ctx.globalAlpha = found ? 0.95 : 0.65;
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(icon, p.x, p.y);
+      ctx.restore();
+    };
+    for (const s of ARCHAEOLOGY_SITES) draw(s, 'archaeology', '🏺');
+    for (const s of GEOGRAPHY_SITES) draw(s, 'geography', '🗺️');
   }
 
   _drawCityMarker(ctx, w, h, marker) {

@@ -29,6 +29,11 @@ import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUn
 import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
 import { checkExplorationSite } from './systems/exploration.js';
 import { initTooltips } from './ui/tooltip.js';
+import { openSkillPanel } from './ui/skillPanel.js';
+import { openCompendiumPanel, wireCompendiumTabs } from './ui/compendiumPanel.js';
+import { PLAYER_SKILLS } from './data/playerSkills.js';
+import { getCombatSkillSlots } from './systems/skills.js';
+import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES } from './data/compendium.js';
 import { RANKS } from './data/ranks.js';
 import {
   checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
@@ -121,13 +126,15 @@ function goToSea(fromCityId) {
   audio.startOcean();
   audio.stopHarbor();
   hud.showSeaHud(true);
+  hud.showBuffSlots(true);
   const role = SHIP_ROLES[seaScene.ship.shipDef.role] || SHIP_ROLES.trade;
   hud.setShipRoleBadge(role.label, role.color);
-  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', '충돌 후 F 승선', 'R 자재로 응급수리', 'M 전체지도', 'T 선박정보']);
+  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', '충돌 후 F 승선', 'R 자재로 응급수리', '1/2 전투버프', 'G 조사/관측', 'K 스킬', 'C 도감', 'M 전체지도', 'T 선박정보']);
 }
 
 function goToCity(cityId) {
   hud.showSeaHud(false);
+  hud.showBuffSlots(false);
   hud.showTargetHp(false);
   hud.showCombatBanner(false);
   hud.showInteractPrompt(false);
@@ -197,7 +204,11 @@ function renderWorldMapPage() {
   const ship = seaScene ? { x: seaScene.ship.pos.x, z: seaScene.ship.pos.y, heading: seaScene.ship.heading } : null;
   // 대호황/대폭락은 실시간으로 바뀌므로 지도를 열 때마다(페이지 넘길 때도) 매번 새로 조회한다.
   const worldMapCities = worldMapCityBase.map((c) => ({ ...c, event: getCityEvent(c.id) }));
-  hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: regionBoundsToWorld(region.bounds), cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship, locked, lockInfo });
+  const sites = [
+    ...ARCHAEOLOGY_SITES.map((s) => ({ x: s.coords[0], z: s.coords[1], icon: '🏺', name: s.name, found: !!state.compendium.archaeology[s.id] })),
+    ...GEOGRAPHY_SITES.map((s) => ({ x: s.coords[0], z: s.coords[1], icon: '🗺️', name: s.name, found: !!state.compendium.geography[s.id] })),
+  ];
+  hud.renderWorldMapReal({ landPolygons: LAND_POLYGONS, bounds: regionBoundsToWorld(region.bounds), cities: worldMapCities, regionBoxes: SEA_REGION_BOXES, ship, locked, lockInfo, sites });
 }
 
 // 캔버스 width/height 속성을 뷰포트에 맞춰 직접 키운다(= 내부 해상도와 표시 크기가 항상
@@ -237,6 +248,23 @@ document.getElementById('world-map-prev').addEventListener('click', () => cycleW
 document.getElementById('world-map-next').addEventListener('click', () => cycleWorldMap(1));
 
 wireShipyardTabs();
+wireCompendiumTabs();
+
+// 바다 HUD의 전투 버프 슬롯 표시 — 장착된 스킬의 쿨다운/지속시간을 매 프레임 반영한다.
+function updateBuffSlotsHud(scene) {
+  const slots = getCombatSkillSlots();
+  hud.renderBuffSlots(slots.map((id) => {
+    if (!id) return { state: 'empty' };
+    const skill = PLAYER_SKILLS[id];
+    const buff = scene.activeBuffs[id];
+    if (buff && buff.timer > 0) {
+      return { icon: skill.icon, name: skill.name, state: 'active', statusText: `발동 중 (${Math.ceil(buff.timer)}초)` };
+    }
+    const cd = scene.skillCooldowns[id] || 0;
+    if (cd > 0) return { icon: skill.icon, name: skill.name, state: 'cooldown', statusText: `대기 ${Math.ceil(cd)}초` };
+    return { icon: skill.icon, name: skill.name, state: 'ready', statusText: '준비됨' };
+  }));
+}
 subscribe((patch) => {
   if (patch.shipChanged) seaScene?.rebuildShip();
   if (patch.fleetChanged) seaScene?.rebuildEscorts();
@@ -390,7 +418,8 @@ function animate(now) {
 
   if (state.screen !== 'title') {
     checkQuestChainAnnouncements();
-    const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen();
+    const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen()
+      || hud.isSkillPanelOpen() || hud.isCompendiumPanelOpen();
     if (consumeJustPressed('KeyM') && !anyBigPanelOpen) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
     }
@@ -401,9 +430,18 @@ function animate(now) {
     if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
       hud.isShipInfoOpen() ? closeShipInfo() : openShipInfo();
     }
+    if (consumeJustPressed('KeyK') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isCompendiumPanelOpen()) {
+      hud.isSkillPanelOpen() ? hud.hideSkillPanel() : openSkillPanel();
+    }
+    if (consumeJustPressed('KeyC') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isSkillPanelOpen()) {
+      hud.isCompendiumPanelOpen() ? hud.hideCompendiumPanel() : openCompendiumPanel();
+    }
     if (consumeJustPressed('KeyF')) {
       if (state.screen === 'city') citySceneObj?.handleInteract();
       else if (state.screen === 'sea') seaScene?.handleBoardKey();
+    }
+    if (consumeJustPressed('KeyG') && state.screen === 'sea' && seaScene) {
+      seaScene.handleInvestigateKey();
     }
     // 바다 위 응급 수리 — 보유한 자재를(부족분을 채우는 데 필요한 만큼만) 소모해 내구도를
     // 채운다. 항구 조선소의 즉시 전액 수리보다 항상 비효율적이라 완전 수리는 사실상 안 되고,
@@ -412,6 +450,11 @@ function animate(now) {
       const res = repairAtSea();
       if (res.ok) hud.toast(`자재 ${res.materialsUsed}개로 선체를 ${res.healed} 복구했습니다. (내구도 ${Math.round(state.shipHp)}/${seaScene.ship.shipDef.hp})`);
       else hud.toast(res.reason);
+    }
+    // 전투 액티브 버프 시전 — 1/2번 키가 각각 장착 슬롯 0/1에 대응한다(K: 스킬 패널에서 장착 변경).
+    if (state.screen === 'sea' && seaScene) {
+      if (consumeJustPressed('Digit1')) seaScene.castCombatSkill(0);
+      if (consumeJustPressed('Digit2')) seaScene.castCombatSkill(1);
     }
     if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
       const priceMap = state.screen === 'city' && citySceneObj
@@ -428,15 +471,19 @@ function animate(now) {
       hud.hideShipyard();
       hud.hideMarket();
       hud.hideQuestBoard();
+      hud.hideSkillPanel();
+      hud.hideCompendiumPanel();
     }
   }
 
-  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
+  if (!hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()
+    && !hud.isSkillPanelOpen() && !hud.isCompendiumPanelOpen()) {
     const ctx = surface.ctx;
     ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
     if (state.screen === 'sea' && seaScene) {
       seaScene.update(delta, elapsed);
       seaScene.render(ctx);
+      updateBuffSlotsHud(seaScene);
     } else if (state.screen === 'city' && citySceneObj) {
       citySceneObj.update(delta);
       citySceneObj.render(ctx);
@@ -460,4 +507,5 @@ window.__debug = {
   getCargoCapacity, getCargoUsed,
   buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, GOODS, CITY_MARKET, goToCity, computeScore, checkExplorationSite,
   hud, getQuestsForCity, QUESTS, openMarket, openSupplies, openShipyard,
+  ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, openSkillPanel, openCompendiumPanel,
 };

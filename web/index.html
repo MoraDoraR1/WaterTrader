@@ -198,8 +198,10 @@
     background: rgba(8,18,26,0.7); border: 1px solid rgba(200,180,120,0.4); padding: 0.5rem 1rem; border-radius: 8px;
     font-size: 0.92rem; }
   #action-hints { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 15;
-    display: flex; gap: 0.8rem; font-size: 0.72rem; color: #9fb8c9; }
-  #action-hints span { background: rgba(8,18,26,0.55); padding: 3px 8px; border-radius: 5px; }
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 0.8rem; font-size: 0.72rem;
+    color: #9fb8c9; max-width: 90vw; }
+  #action-hints span { background: rgba(8,18,26,0.55); padding: 3px 8px; border-radius: 5px;
+    white-space: nowrap; flex: 0 0 auto; }
 
   /* ---- Dialogue ---- */
   #dialogue-box { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); width: 480px; max-width: 88vw;
@@ -322,6 +324,41 @@
   #shipyard-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
   .sy-row-side-actions { display: flex; flex-direction: row; gap: 5px; }
 
+  /* ---- 선장 스킬 패널 — 조선소/의뢰 게시판과 같은 카드 레이아웃, .sy-list/.sy-row 재사용 ---- */
+  #skill-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
+  #skill-card { width: 560px; max-width: 92vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
+    border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+  #skill-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; margin-bottom: 0.7rem; }
+  #skill-body { max-height: 58vh; overflow-y: auto; }
+  .skill-section-title { font-size: 0.82rem; color: #9fb8c9; margin: 1rem 0 0.6rem; letter-spacing: 0.03rem; }
+  .skill-section-title:first-child { margin-top: 0; }
+  #skill-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
+
+  /* ---- 도감(고고학/지리학/천문학) 패널 — 조선소와 같은 탭 구조 재사용 ---- */
+  #compendium-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
+  #compendium-card { width: 560px; max-width: 92vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
+    border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+  #compendium-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; margin-bottom: 0.7rem; }
+  #compendium-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+  #compendium-title { font-size: 0.82rem; color: #9fb8c9; margin-bottom: 0.6rem; letter-spacing: 0.03rem; }
+  #compendium-body { max-height: 50vh; overflow-y: auto; }
+  #compendium-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
+  .compendium-found { color: #9ee08a; }
+  .compendium-unfound { color: #6b7c86; }
+
+  /* ---- 바다 HUD: 장착된 전투 액티브 버프 슬롯(쿨다운/지속시간 상시 표시) ---- */
+  #buff-slots { position: fixed; top: 100px; left: 14px; z-index: 15; pointer-events: none;
+    display: flex; flex-direction: column; gap: 6px; width: 170px; }
+  .buff-slot { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
+    padding: 0.35rem 0.6rem; font-size: 0.72rem; color: #cfe0ea; }
+  .buff-slot-name { display: flex; justify-content: space-between; gap: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .buff-slot.buff-ready .buff-slot-name { color: #9ee08a; }
+  .buff-slot.buff-active { border-color: rgba(111,200,224,0.6); }
+  .buff-slot.buff-active .buff-slot-name { color: #6fc8e0; }
+  .buff-slot.buff-empty { opacity: 0.45; }
+
   /* ---- 아이템 툴팁(건조 재료 등) — 이름에 마우스를 올리면 설명/효과/획득처가 뜬다 ----
      예전엔 .tip-box를 .item-tip의 자식으로 두고 순수 CSS :hover로만 띄웠는데, 그러면 시장/
      조선소처럼 overflow-y:auto가 걸린 스크롤 목록(#market-body 등, 60개 넘는 행이 스크롤됨)
@@ -419,6 +456,8 @@
     <div id="ship-hp-top"><span>선체 내구도</span><span id="ship-role-badge" class="role-badge"></span></div>
     <div class="bar-track"><div class="bar-fill" id="ship-hp-fill" style="width:100%"></div></div>
   </div>
+
+  <div id="buff-slots" class="hidden"></div>
 
   <div id="combat-banner" class="hidden">⚔ 전투 상황</div>
   <div id="combat-flash"></div>
@@ -528,6 +567,28 @@
       <div id="shipyard-title"></div>
       <div id="shipyard-body"></div>
       <div class="close-hint">ESC 로 닫기</div>
+    </div>
+  </div>
+
+  <div id="skill-panel" class="hidden">
+    <div id="skill-card">
+      <div id="skill-header-title">🎓 선장의 스킬</div>
+      <div id="skill-body"></div>
+      <div class="close-hint">1/2: 장착된 전투 버프 시전 · K 또는 ESC 로 닫기</div>
+    </div>
+  </div>
+
+  <div id="compendium-panel" class="hidden">
+    <div id="compendium-card">
+      <div id="compendium-header-title">📖 항해 도감</div>
+      <div id="compendium-tabs">
+        <button class="sy-tab" data-tab="archaeology">고고학</button>
+        <button class="sy-tab" data-tab="geography">지리학</button>
+        <button class="sy-tab" data-tab="astronomy">천문학</button>
+      </div>
+      <div id="compendium-title"></div>
+      <div id="compendium-body"></div>
+      <div class="close-hint">C 또는 ESC 로 닫기</div>
     </div>
   </div>
 

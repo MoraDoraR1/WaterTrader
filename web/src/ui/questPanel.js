@@ -24,6 +24,7 @@ function questSub(q) {
 function activeSub(q, cityId) {
   if (q.type === 'delivery') return `${questSub(q)} (진행 중)`;
   if (q.type === 'voyage') return `${q.desc} · 목적지: ${getCity(q.targetCityId).name} (진행 중 — 도착하면 자동 완료)`;
+  if (q.type === 'investigate') return `${q.desc} (진행 중 — 현장에서 G키로 조사·관측하면 자동 완료)`;
   return `${q.desc} (진행 중 — 격침하면 자동 완료)`;
 }
 

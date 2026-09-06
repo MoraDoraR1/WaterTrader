@@ -9,6 +9,7 @@ import { mulSkillEffect } from '../data/shipSkills.js';
 import { getRankInfo } from './rank.js';
 import { WORLD_REGIONS } from '../data/worldRegions.js';
 import { hud } from '../ui/hud.js';
+import { getSkillLevel } from './skills.js';
 
 // 완료한 배달 의뢰가 다시 게시되기까지(항해일자 기준) — 항로 개척 3부작(id가 'chain_'로
 // 시작)은 스토리 게이트라 순환 대상에서 제외한다.
@@ -38,6 +39,8 @@ export function isQuestChainReady(q) {
   if (q.requires && getQuestStatus(q.requires) !== 'completed') return false;
   if (q.minRankIndex != null && getRankInfo().index < q.minRankIndex) return false;
   if (q.routePrereq && !state.unlockedRoutes[q.routePrereq]) return false;
+  // 학문(고고학/지리학/천문학) 조사·관측 의뢰 — skillId 스킬이 minSkillLevel 이상이어야 게시판에 뜬다.
+  if (q.minSkillLevel != null && getSkillLevel(q.skillId) < q.minSkillLevel) return false;
   return true;
 }
 
@@ -155,6 +158,22 @@ export function checkVoyageArrival(cityId) {
   addReputation(getCity(cityId)?.country, 8);
   notify({ questChanged: true, routesUnlocked: q.unlocksRoute ? [q.unlocksRoute] : undefined });
   return q;
+}
+
+// 학문(고고학/지리학/천문학) 조사·관측 의뢰(type: 'investigate') 완료 처리 — 격침 의뢰의
+// checkBountyKill과 같은 구조다. seaScene이 도감에 새 항목을 등록하는 바로 그 순간 호출해,
+// 그 siteId를 노리는 수락 상태 의뢰가 있으면 함께 완료 처리하고 추가 보상을 얹는다.
+export function checkInvestigateComplete(siteId) {
+  const matches = QUESTS.filter((x) => x.type === 'investigate' && x.siteId === siteId
+    && getQuestStatus(x.id) === 'accepted' && isQuestChainReady(x));
+  if (matches.length === 0) return [];
+  const nextQuests = { ...state.quests };
+  let totalReward = 0;
+  for (const q of matches) { nextQuests[q.id] = 'completed'; totalReward += q.reward; }
+  state.quests = nextQuests;
+  state.gold += totalReward;
+  notify({ questChanged: true });
+  return matches;
 }
 
 export function getRouteChainName(routeId) {

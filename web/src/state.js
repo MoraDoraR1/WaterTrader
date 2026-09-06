@@ -74,6 +74,13 @@ export const state = {
   explorationSite: null,
   nextExplorationSiteAt: null,
   explorationCount: 0, // 지금까지 발견한 미탐사 해역 수
+  // ---- 선장 개인 스킬/숙련도 (data/playerSkills.js) ----
+  // skillId -> { level(1~15), exp(다음 레벨까지 누적된 사용 횟수) }. 기록 없는 스킬은 레벨1·exp0으로 취급.
+  playerSkills: {},
+  // 전투 액티브 버프 장착 슬롯(최대 2개) — null이면 빈 슬롯. 값은 PLAYER_SKILLS의 id.
+  combatSkillSlots: [null, null],
+  // 학문별 도감 등록 현황 — { archaeology: { [siteId]: true }, geography: {...}, astronomy: {...} }
+  compendium: { archaeology: {}, geography: {}, astronomy: {} },
 };
 
 export function initShipHp() {

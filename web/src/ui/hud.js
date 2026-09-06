@@ -31,7 +31,7 @@ function wmToPx(x, z, bounds, t) {
 
 // 조선소/의뢰 게시판처럼 "행마다 이름·설명·가격표·버튼 하나"인 목록 패널의 공용 렌더러.
 // rows: [{ name, sub, badge?, badgeColor?, priceLabel?, actionLabel, disabled?, highlight?, onAction? }]
-function renderRowList(bodyEl, rows) {
+export function renderRowList(bodyEl, rows) {
   bodyEl.innerHTML = '';
   const list = document.createElement('div');
   list.className = 'sy-list';
@@ -282,6 +282,36 @@ export const hud = {
     renderRowList($('shipyard-body'), rows);
   },
 
+  showSkillPanel(v) { $('skill-panel').classList.toggle('hidden', !v); },
+  hideSkillPanel() { $('skill-panel').classList.add('hidden'); },
+  isSkillPanelOpen() { return !$('skill-panel').classList.contains('hidden'); },
+  // rows: renderRowList와 같은 스키마 — 스킬 하나당 한 행(레벨/진행도 + 전투 버프는 장착 버튼).
+  renderSkillPanel(rows) {
+    renderRowList($('skill-body'), rows);
+  },
+
+  showCompendiumPanel(v) { $('compendium-panel').classList.toggle('hidden', !v); },
+  hideCompendiumPanel() { $('compendium-panel').classList.add('hidden'); },
+  isCompendiumPanelOpen() { return !$('compendium-panel').classList.contains('hidden'); },
+  setCompendiumActiveTab(tab) {
+    document.querySelectorAll('#compendium-tabs .sy-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  },
+  renderCompendiumPanel({ title, rows }) {
+    $('compendium-title').textContent = title;
+    renderRowList($('compendium-body'), rows);
+  },
+
+  // 바다 HUD: 장착된 전투 액티브 버프 2슬롯을 상시 표시 — 쿨다운/지속시간 안내.
+  // slots: [{ icon, name, statusText, state: 'empty'|'ready'|'cooldown'|'active' }, ...]
+  showBuffSlots(v) { $('buff-slots').classList.toggle('hidden', !v); },
+  renderBuffSlots(slots) {
+    $('buff-slots').innerHTML = slots.map((s, i) => `
+      <div class="buff-slot buff-${s.state}">
+        <div class="buff-slot-name"><span>${s.icon || '—'} ${s.name || `슬롯 ${i + 1} 비어있음`}</span><span>${i + 1}</span></div>
+        ${s.statusText ? `<div style="margin-top:2px;color:#9fb8c9;">${s.statusText}</div>` : ''}
+      </div>`).join('');
+  },
+
   showQuestBoard(v) { $('quest-panel').classList.toggle('hidden', !v); },
   hideQuestBoard() { $('quest-panel').classList.add('hidden'); },
   isQuestBoardOpen() { return !$('quest-panel').classList.contains('hidden'); },
@@ -355,7 +385,7 @@ export const hud = {
     mmLandPolygons = landPolygons;
   },
 
-  updateMinimap(bounds, ship, cities, npcShips, windTowardDir, explorationSite) {
+  updateMinimap(bounds, ship, cities, npcShips, windTowardDir, explorationSite, compendiumSites) {
     if (!mmLandPolygons) return;
     mmBounds = bounds;
     const canvas = $('minimap-canvas');
@@ -401,6 +431,17 @@ export const hud = {
         ctx.beginPath();
         ctx.moveTo(ex, ey - 4); ctx.lineTo(ex + 4, ey); ctx.lineTo(ex, ey + 4); ctx.lineTo(ex - 4, ey);
         ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.6; ctx.stroke();
+      }
+    }
+
+    // 학문(고고학/지리학) 발견 지점 — 미니맵 반경 안에 들어왔을 때만 자연스럽게 눈에 띈다.
+    if (compendiumSites) {
+      for (const s of compendiumSites) {
+        const [sx, sy] = mmToPx(s.x, s.z, w, h);
+        if (sx < -6 || sx > w + 6 || sy < -6 || sy > h + 6) continue;
+        ctx.fillStyle = s.found ? '#9ee08a' : (s.category === 'archaeology' ? '#c9a876' : '#6fc8e0');
+        ctx.beginPath(); ctx.arc(sx, sy, 2.6, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.6; ctx.stroke();
       }
     }
@@ -497,7 +538,7 @@ export const hud = {
     $('world-map-page').textContent = `${idx + 1} / ${total}`;
   },
 
-  renderWorldMapReal({ landPolygons, bounds, cities, regionBoxes, ship, locked, lockInfo }) {
+  renderWorldMapReal({ landPolygons, bounds, cities, regionBoxes, ship, locked, lockInfo, sites }) {
     const canvas = $('world-map-canvas');
     const w = canvas.width, h = canvas.height;
     const ctx = canvas.getContext('2d');
@@ -576,6 +617,23 @@ export const hud = {
       ctx.fillText(c.name, tx + 1, ty + 1);
       ctx.fillStyle = c.capital ? '#ffe6a0' : '#f6ecd4';
       ctx.fillText(c.name, tx, ty);
+    }
+
+    // 학문(고고학/지리학) 발견 지점 — 도시보다 작고 옅은 마커. 미발견은 물음표만,
+    // 발견한 것은 실제 이름을 보여준다(수집 동기를 주기 위해 미발견 상태는 가려둔다).
+    if (sites) {
+      ctx.textAlign = 'left';
+      for (const s of sites) {
+        const [px, py] = wmToPx(s.x, s.z, bounds, t);
+        if (px < -16 || px > w + 16 || py < -16 || py > h + 16) continue;
+        ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = s.found ? 'rgba(158,224,138,0.85)' : 'rgba(160,170,180,0.55)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = s.found ? '#cdeecb' : 'rgba(200,205,210,0.65)';
+        ctx.fillText(`${s.icon} ${s.found ? s.name : '???'}`, px + 7, py + 4);
+      }
     }
 
     // 플레이어 위치(참고용 — 지도 열람 자체는 이동 정보와 무관)
