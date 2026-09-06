@@ -265,14 +265,7 @@ export const CITY_MARKET = {
   },
   // ---- 전세계 항로 확장 — 각지 원산지는 값이 가장 싸다("멀리 가서 싸게 사 온다"가
   // 큰 지도에서 갖는 의미). 유럽 항구까지 실어 오면 그만큼 비싸게 팔 수 있다.
-  azores: {
-    wine: { buy: 14, sell: 11 },
-    sugar: { buy: 36, sell: 29 },
-  },
-  canarias: {
-    sugar: { buy: 25, sell: 20 },
-    wine: { buy: 15, sell: 12 },
-  },
+  // (azores/canarias는 소금 추가로 CITY_MARKET 하단 "신규 항구 30곳" 섹션에 통합됨)
   alger: {
     silver: { buy: 35, sell: 27 },
     wine: { buy: 14, sell: 11 },
@@ -294,10 +287,7 @@ export const CITY_MARKET = {
     coffee: { buy: 32, sell: 25 },
     diamond: { buy: 230, sell: 184 },
   },
-  elmina: {
-    gold: { buy: 62, sell: 46 },
-    pepper: { buy: 20, sell: 15 },
-  },
+  // (elmina는 상아 추가로 하단 "신규 항구 30곳" 섹션에 통합됨)
   havana: {
     silver: { buy: 26, sell: 19 },
     sugar: { buy: 21, sell: 15 },
@@ -312,10 +302,7 @@ export const CITY_MARKET = {
     wine: { buy: 27, sell: 24 },
     brazilwood: { buy: 16, sell: 12 },
   },
-  new_amsterdam: {
-    fur: { buy: 19, sell: 14 },
-    wool: { buy: 30, sell: 26 },
-  },
+  // (new_amsterdam은 밀 추가로 하단 "신규 항구 30곳" 섹션에 통합됨)
   goa: {
     pepper: { buy: 17, sell: 13 },
     cinnamon: { buy: 30, sell: 23 },
@@ -389,19 +376,13 @@ export const CITY_MARKET = {
     wax: { buy: 7, sell: 5 },
     pitch_tar: { buy: 7, sell: 5 },
   },
-  tanger: {
-    silver: { buy: 31, sell: 24 },
-    olive_oil: { buy: 12, sell: 9 },
-  },
+  // (tanger는 설탕 추가로 하단 "신규 항구 30곳" 섹션에 통합됨)
   mombasa: {
     gold: { buy: 57, sell: 43 },
     porcelain: { buy: 70, sell: 53 }, // 스와힐리 해안 유적에서 다량 출토되는 인도양 항로 중국 도자기
     ivory: { buy: 62, sell: 47 },
   },
-  luanda: {
-    gold: { buy: 54, sell: 42 },
-    ivory: { buy: 72, sell: 56 },
-  },
+  // (luanda는 건조육 추가로 하단 "신규 항구 30곳" 섹션에 통합됨)
   cartagena: {
     gold: { buy: 40, sell: 31 },
     silver: { buy: 21, sell: 17 },
@@ -443,10 +424,7 @@ export const CITY_MARKET = {
     cotton_cloth: { buy: 13, sell: 10 },
     diamond: { buy: 170, sell: 132 },
   },
-  colombo: {
-    cinnamon: { buy: 19, sell: 14 },
-    ginger: { buy: 11, sell: 8 },
-  },
+  // (colombo는 진주 추가로 하단 "신규 항구 30곳" 섹션에 통합됨)
   macau: {
     silk: { buy: 55, sell: 42 },
     porcelain: { buy: 36, sell: 28 },
@@ -481,21 +459,21 @@ export const CITY_MARKET = {
   // 한국·일본·중국(barter:true)도 CITY_MARKET 구조는 동일하게 쓴다 — 다만 매매가 아니라
   // "이 항구가 취급하는 물품 목록·가치 참고용"으로만 쓰이고(실제 교환은 basePrice 기준),
   // 이 buy가가 원산지 판별(findOrigin)에도 그대로 들어가 다른 항구의 거리 프리미엄에 반영된다.
-  busan: { ginseng: { buy: 22, sell: 17 }, porcelain: { buy: 46, sell: 35 } },
-  incheon: { ginseng: { buy: 26, sell: 20 }, silk: { buy: 89, sell: 68 } },
-  osaka: { silver: { buy: 27, sell: 20 }, tea: { buy: 33, sell: 25 } },
-  hakata: { porcelain: { buy: 42, sell: 32 }, tea: { buy: 30, sell: 23 } },
+  busan: { ginseng: { buy: 22, sell: 17 }, porcelain: { buy: 46, sell: 35 }, silk: { buy: 95, sell: 72 } },
+  incheon: { ginseng: { buy: 26, sell: 20 }, silk: { buy: 89, sell: 68 }, porcelain: { buy: 58, sell: 44 } }, // 고려청자 — 중국과는 또 다른 독자적인 도자기 전통
+  osaka: { silver: { buy: 27, sell: 20 }, tea: { buy: 33, sell: 25 }, cotton: { buy: 28, sell: 22 } }, // 에도시대 오사카는 "천하의 부엌"이라 불리며 목화 유통의 중심지이기도 했다
+  hakata: { porcelain: { buy: 42, sell: 32 }, tea: { buy: 30, sell: 23 }, silk: { buy: 100, sell: 76 } }, // 하카타오리(博多織) 비단 직조 전통
   guangzhou: { silk: { buy: 49, sell: 37 }, tea: { buy: 20, sell: 15 }, porcelain: { buy: 32, sell: 24 },
     lacquerware: { buy: 38, sell: 29 }, opium: { buy: 95, sell: 74 }, sandalwood: { buy: 64, sell: 50 },
     ginseng: { buy: 78, sell: 61 } }, // 조선 인삼은 중국 황실·사대부 사이에서 만병통치약으로 취급돼 원산지의 세 배 가까이 거래됐다
-  quanzhou: { silk: { buy: 52, sell: 39 }, porcelain: { buy: 34, sell: 25 } },
+  quanzhou: { silk: { buy: 52, sell: 39 }, porcelain: { buy: 34, sell: 25 }, tea: { buy: 18, sell: 14 } }, // 푸젠(우이산)은 광저우보다도 더 원조격인 중국차 산지
   hoi_an: { silk: { buy: 59, sell: 44 }, porcelain: { buy: 53, sell: 40 },
     lacquerware: { buy: 32, sell: 24 }, rice: { buy: 5, sell: 4 }, sandalwood: { buy: 52, sell: 40 } },
   ayutthaya: { tin: { buy: 22, sell: 17 }, sugar: { buy: 22, sell: 17 }, opium: { buy: 70, sell: 54 }, rice: { buy: 5, sell: 4 } },
   bago: { gold: { buy: 59, sell: 45 }, tin: { buy: 18, sell: 14 }, opium: { buy: 60, sell: 46 } },
-  aceh: { pepper: { buy: 12, sell: 9 } },
-  brunei: { gold: { buy: 53, sell: 41 }, coconut: { buy: 6, sell: 5 } },
-  cebu: { gold: { buy: 50, sell: 39 }, coconut: { buy: 5, sell: 4 } },
+  aceh: { pepper: { buy: 12, sell: 9 }, tin: { buy: 20, sell: 16 }, gold: { buy: 45, sell: 35 } }, // 수마트라는 고대부터 "황금의 섬(수바르나드비파)"이라 불렸고 방카·블리퉁 주석광도 인근이다
+  brunei: { gold: { buy: 53, sell: 41 }, coconut: { buy: 6, sell: 5 }, pepper: { buy: 16, sell: 12 } },
+  cebu: { gold: { buy: 50, sell: 39 }, coconut: { buy: 5, sell: 4 }, sugar: { buy: 29, sell: 23 } },
   antwerp: { wool: { buy: 14, sell: 11 }, silk: { buy: 98, sell: 74 },
     coal: { buy: 11, sell: 9 }, linen: { buy: 9, sell: 7 }, beer: { buy: 4, sell: 3 }, wax: { buy: 11, sell: 9 },
     cheese: { buy: 6, sell: 5 }, flax: { buy: 8, sell: 6 } },
@@ -505,11 +483,11 @@ export const CITY_MARKET = {
   cadiz: { silver: { buy: 24, sell: 18 }, wine: { buy: 11, sell: 9 }, salt: { buy: 3, sell: 2 }, indigo: { buy: 42, sell: 33 } },
   valletta: { olive_oil: { buy: 10, sell: 7 }, glass: { buy: 62, sell: 48 }, salt: { buy: 4, sell: 3 }, coral: { buy: 48, sell: 36 } },
   dubrovnik: { wine: { buy: 16, sell: 13 }, silk: { buy: 92, sell: 70 }, coral: { buy: 66, sell: 52 } },
-  zanzibar: { clove: { buy: 30, sell: 23 }, ivory: { buy: 68, sell: 52 } },
+  zanzibar: { clove: { buy: 30, sell: 23 }, ivory: { buy: 68, sell: 52 }, coconut: { buy: 10, sell: 8 } },
   alexandria: { pepper: { buy: 26, sell: 20 }, glass: { buy: 58, sell: 45 },
     carpet: { buy: 55, sell: 42 }, coffee: { buy: 26, sell: 20 }, cotton_cloth: { buy: 22, sell: 17 } },
   cape_town: { wine: { buy: 17, sell: 13 }, wool: { buy: 22, sell: 18 }, ivory: { buy: 90, sell: 70 }, dried_meat: { buy: 6, sell: 5 } },
-  sao_tome: { sugar: { buy: 17, sell: 13 } },
+  sao_tome: { sugar: { buy: 17, sell: 13 }, cacao: { buy: 20, sell: 16 }, coffee: { buy: 34, sell: 27 } }, // 훗날 세계 최대 카카오 산지로 떠오른 상투메(설탕 플랜테이션에 이어 카카오·커피도 함께 재배)
   new_orleans: { fur: { buy: 17, sell: 13 }, sugar: { buy: 22, sell: 17 },
     tobacco: { buy: 12, sell: 9 }, rice: { buy: 8, sell: 6 }, cotton: { buy: 15, sell: 12 } },
   charleston: { sugar: { buy: 24, sell: 18 }, fur: { buy: 19, sell: 14 },
@@ -518,9 +496,18 @@ export const CITY_MARKET = {
   buenos_aires: { silver: { buy: 22, sell: 17 }, fur: { buy: 20, sell: 16 },
     leather: { buy: 9, sell: 7 }, tallow: { buy: 4, sell: 3 }, dried_meat: { buy: 7, sell: 5 } },
   port_royal: { silver: { buy: 25, sell: 19 }, sugar: { buy: 20, sell: 15 }, rum: { buy: 7, sell: 5 }, rope: { buy: 14, sell: 11 } },
-  bordeaux: { wine: { buy: 9, sell: 7 } },
+  bordeaux: { wine: { buy: 9, sell: 7 }, sugar: { buy: 32, sell: 25 }, coffee: { buy: 44, sell: 35 } }, // 18세기 보르도의 부는 상당 부분 프랑스령 카리브해(생도맹그) 설탕·커피 재수출 무역에서 나왔다
+  azores: { wine: { buy: 14, sell: 11 }, sugar: { buy: 36, sell: 29 }, salt: { buy: 7, sell: 5 } },
+  canarias: { sugar: { buy: 25, sell: 20 }, wine: { buy: 15, sell: 12 }, salt: { buy: 8, sell: 6 } },
+  elmina: { gold: { buy: 62, sell: 46 }, pepper: { buy: 20, sell: 15 }, ivory: { buy: 66, sell: 51 } }, // 황금해안 이웃(오늘날 코트디부아르="상아 해안")의 상아 무역
+  new_amsterdam: { fur: { buy: 19, sell: 14 }, wool: { buy: 30, sell: 26 }, grain: { buy: 10, sell: 8 } }, // 훗날 "빵 식민지"라 불릴 만큼 허드슨강 유역 밀농사가 성했다
+  tanger: { silver: { buy: 31, sell: 24 }, olive_oil: { buy: 12, sell: 9 }, sugar: { buy: 30, sell: 24 } }, // 사드 왕조 시절 모로코는 카리브해·브라질에 앞서 유럽에 설탕을 수출하던 산지였다
+  luanda: { gold: { buy: 54, sell: 42 }, ivory: { buy: 72, sell: 56 }, dried_meat: { buy: 9, sell: 7 } },
+  colombo: { cinnamon: { buy: 19, sell: 14 }, ginger: { buy: 11, sell: 8 }, pearl: { buy: 85, sell: 66 } }, // 마나르만 진주 어장 — 페르시아만과 함께 인도양 양대 진주 산지
+  mozambique_island: { gold: { buy: 56, sell: 43 }, dried_meat: { buy: 11, sell: 8 }, ivory: { buy: 58, sell: 45 } }, // 포르투갈령 동아프리카 최대의 상아 집산항
+  // (bordeaux는 설탕·커피 추가로 위쪽에 통합됨)
   leith: { wool: { buy: 15, sell: 12 }, fur: { buy: 23, sell: 18 }, flax: { buy: 6, sell: 5 }, salted_fish: { buy: 6, sell: 5 } },
-  mozambique_island: { gold: { buy: 56, sell: 43 }, dried_meat: { buy: 11, sell: 8 } },
+  // (mozambique_island는 상아 추가로 위쪽에 통합됨)
   muscat: { pepper: { buy: 24, sell: 19 }, silk: { buy: 71, sell: 54 },
     pearl: { buy: 108, sell: 84 }, cardamom: { buy: 70, sell: 54 }, cotton_cloth: { buy: 17, sell: 13 } },
 };
