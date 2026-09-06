@@ -179,6 +179,8 @@ export const CITY_MARKET = {
     nutmeg: { buy: 247, sell: 218 },
     wine: { buy: 23, sell: 20 },
     vanilla: { buy: 115, sell: 92 },
+    gold: { buy: 96, sell: 81 }, // 세비야 통상원(Casa de Contratación)이 신대륙 금의 유일한 공인 하역·과세 항구였다
+    cacao: { buy: 34, sell: 27 }, // 정복자들이 아스테카의 카카오 음용 풍습을 처음 유럽에 들여온 곳이 스페인 왕실이었다
   },
   // 런던(EN): 모직물·주석이 자국 산물이라 싸다. 아시아산 명품·포도주·설탕은 수입 의존.
   london: {
@@ -196,6 +198,7 @@ export const CITY_MARKET = {
     cheese: { buy: 10, sell: 8 },
     cotton: { buy: 19, sell: 15 },
     beer: { buy: 5, sell: 4 },
+    tea: { buy: 88, sell: 73 }, // 18세기 영국의 홍차 열풍과 무거운 관세로, 클리퍼가 실어온 차는 원산지보다 몇 배씩 비싸게 팔렸다
   },
   // 암스테르담(NL): VOC 아시아 항로 덕에 비단·도자기가 유럽에서 가장 싸다.
   // 대신 원자재(모직물·모피·호박)는 직접 생산이 없어 비싸게 사들인다.
@@ -228,6 +231,7 @@ export const CITY_MARKET = {
     beer: { buy: 3, sell: 2 },
     cheese: { buy: 8, sell: 6 },
     wax: { buy: 6, sell: 5 },
+    olive_oil: { buy: 33, sell: 26 }, // 올리브 나무가 자라지 않는 북유럽은 등불·비누용 기름 전량을 지중해 수입에 의존했다
   },
   // 마르세유(FR): 프로방스 올리브유가 특산품. 지중해 관문답게 향신료·명품 수요가 높다.
   marseille: {
@@ -237,6 +241,7 @@ export const CITY_MARKET = {
     porcelain: { buy: 110, sell: 97 },
     saffron: { buy: 175, sell: 145 },
     coffee: { buy: 48, sell: 38 },
+    glass: { buy: 92, sell: 74 }, // 루이 14세의 베르사유 거울의 방처럼, 무라노 유리는 프랑스 궁정에서 밀수까지 감행할 만큼 비싸게 팔렸다
   },
   // 제노바(IT): 이탈리아 견직업 전통으로 비단이 싸다(암스테르담과는 다른 산지 — 시세도 다르게 움직인다).
   // 향신료·포도주·주석은 자체 생산이 없어 비싼 편.
@@ -482,7 +487,8 @@ export const CITY_MARKET = {
   osaka: { silver: { buy: 27, sell: 20 }, tea: { buy: 33, sell: 25 } },
   hakata: { porcelain: { buy: 42, sell: 32 }, tea: { buy: 30, sell: 23 } },
   guangzhou: { silk: { buy: 49, sell: 37 }, tea: { buy: 20, sell: 15 }, porcelain: { buy: 32, sell: 24 },
-    lacquerware: { buy: 38, sell: 29 }, opium: { buy: 95, sell: 74 }, sandalwood: { buy: 64, sell: 50 } },
+    lacquerware: { buy: 38, sell: 29 }, opium: { buy: 95, sell: 74 }, sandalwood: { buy: 64, sell: 50 },
+    ginseng: { buy: 78, sell: 61 } }, // 조선 인삼은 중국 황실·사대부 사이에서 만병통치약으로 취급돼 원산지의 세 배 가까이 거래됐다
   quanzhou: { silk: { buy: 52, sell: 39 }, porcelain: { buy: 34, sell: 25 } },
   hoi_an: { silk: { buy: 59, sell: 44 }, porcelain: { buy: 53, sell: 40 },
     lacquerware: { buy: 32, sell: 24 }, rice: { buy: 5, sell: 4 }, sandalwood: { buy: 52, sell: 40 } },
