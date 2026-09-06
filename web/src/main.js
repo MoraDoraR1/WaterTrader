@@ -28,6 +28,7 @@ import { SUPPLY_DEFS } from './systems/supplies.js';
 import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUnlock.js';
 import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
 import { checkExplorationSite } from './systems/exploration.js';
+import { initTooltips } from './ui/tooltip.js';
 import { RANKS } from './data/ranks.js';
 import {
   checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
@@ -446,6 +447,7 @@ function animate(now) {
   clearFrame();
 }
 
+initTooltips();
 hud.showLoading(false);
 requestAnimationFrame(animate);
 

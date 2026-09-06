@@ -274,13 +274,13 @@
   .si-part-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.76rem; padding: 2px 0; }
   .si-part-row .si-part-icon { width: 16px; text-align: center; flex-shrink: 0; }
   .si-part-row .si-part-label { width: 64px; color: #9fb8c9; flex-shrink: 0; }
-  .si-part-row .si-part-name { color: #f0e6d2; }
+  .si-part-row .si-part-name { color: #f0e6d2; min-width: 0; overflow-wrap: break-word; }
   .si-part-row.si-part-empty .si-part-name { color: #6b7c86; }
   #ship-info-skills { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(200,180,120,0.25); }
   #ship-info-skills .si-parts-title { font-size: 0.68rem; color: #8fa6b4; letter-spacing: 0.1rem; margin-bottom: 0.5rem; }
   .si-skill-row { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.76rem; padding: 3px 0; }
   .si-skill-row .si-skill-name { color: #f3d98a; flex-shrink: 0; }
-  .si-skill-row .si-skill-desc { color: #9fb8c9; }
+  .si-skill-row .si-skill-desc { color: #9fb8c9; min-width: 0; overflow-wrap: break-word; }
   #ship-info-panel .close-hint { text-align: center; margin-top: 0.7rem; font-size: 0.72rem; color: #8fa6b4; }
 
   /* ---- 조선소 ---- */
@@ -292,8 +292,9 @@
   #shipyard-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; }
   #shipyard-gold { font-size: 0.85rem; color: #cfe0ea; }
   #shipyard-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
-  .sy-tab { flex: 1; background: rgba(230,193,90,0.08); border: 1px solid rgba(230,193,90,0.35); color: #cfe0ea;
-    padding: 0.5rem; border-radius: 7px; cursor: pointer; font-size: 0.85rem; letter-spacing: 0.05rem; }
+  .sy-tab { flex: 1; min-width: 0; background: rgba(230,193,90,0.08); border: 1px solid rgba(230,193,90,0.35); color: #cfe0ea;
+    padding: 0.5rem; border-radius: 7px; cursor: pointer; font-size: 0.85rem; letter-spacing: 0.05rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sy-tab:hover { background: rgba(230,193,90,0.18); }
   .sy-tab.active { background: rgba(230,193,90,0.32); border-color: #f3d98a; color: #f3d98a; }
   #shipyard-body { max-height: 46vh; overflow-y: auto; }
@@ -321,18 +322,28 @@
   #shipyard-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
   .sy-row-side-actions { display: flex; flex-direction: row; gap: 5px; }
 
-  /* ---- 아이템 툴팁(건조 재료 등) — 이름에 마우스를 올리면 설명/효과/획득처가 뜬다 ---- */
+  /* ---- 아이템 툴팁(건조 재료 등) — 이름에 마우스를 올리면 설명/효과/획득처가 뜬다 ----
+     예전엔 .tip-box를 .item-tip의 자식으로 두고 순수 CSS :hover로만 띄웠는데, 그러면 시장/
+     조선소처럼 overflow-y:auto가 걸린 스크롤 목록(#market-body 등, 60개 넘는 행이 스크롤됨)
+     안에서는 overflow-x도 함께 auto로 강제돼(CSS 스펙상 두 축이 묶임) 스크롤된 아래쪽 행의
+     툴팁이 그냥 잘려서 안 보이는 문제가 있었다. 이제 .tip-box 자체는 항상 안 보이는 "원본
+     데이터"로만 두고(레이아웃에 전혀 관여하지 않음), 실제로 보이는 건 body 최상위에 딱 하나
+     있는 #global-tooltip뿐이다 — ui/tooltip.js가 마우스오버 시 .tip-box의 내용을 그대로
+     복사해 #global-tooltip에 넣고 position:fixed로 위치를 계산해 띄우므로, 어떤 스크롤
+     컨테이너 안에 있어도 잘리지 않는다. */
   .item-tip { position: relative; display: inline-block; border-bottom: 1px dotted rgba(230,193,90,0.65);
     cursor: help; color: #e6c15a; }
-  .item-tip .tip-box { position: absolute; top: 125%; left: 0; width: 240px; max-width: 62vw;
+  .item-tip .tip-box { display: none; }
+  #global-tooltip { position: fixed; width: 240px; max-width: 62vw;
     background: rgba(8,14,20,0.98); border: 1px solid rgba(230,193,90,0.5); border-radius: 8px;
     padding: 0.55rem 0.7rem; font-size: 0.7rem; line-height: 1.5; color: #e6ede8; text-align: left;
-    white-space: normal; opacity: 0; transform: translateY(-3px); pointer-events: none; z-index: 70;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.55); transition: opacity 0.12s ease, transform 0.12s ease; }
-  .item-tip .tip-box b { display: block; color: #f3d98a; margin-bottom: 3px; font-size: 0.74rem; }
-  .item-tip .tip-box .tip-effect { display: block; margin-top: 3px; color: #9ee08a; }
-  .item-tip .tip-box .tip-source { display: block; margin-top: 3px; color: #9fb8c9; }
-  .item-tip:hover .tip-box, .item-tip:focus .tip-box { opacity: 1; transform: translateY(0); }
+    white-space: normal; pointer-events: none; z-index: 1000;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.55); opacity: 0; transform: translateY(-3px);
+    transition: opacity 0.12s ease, transform 0.12s ease; }
+  #global-tooltip.tip-visible { opacity: 1; transform: translateY(0); }
+  #global-tooltip b { display: block; color: #f3d98a; margin-bottom: 3px; font-size: 0.74rem; }
+  #global-tooltip .tip-effect { display: block; margin-top: 3px; color: #9ee08a; }
+  #global-tooltip .tip-source { display: block; margin-top: 3px; color: #9fb8c9; }
 
   /* ---- 의뢰 게시판 ---- */
   #quest-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
@@ -542,6 +553,7 @@
   </div>
 
   <div id="toast"></div>
+  <div id="global-tooltip"></div>
 
   <script type="module" src="./src/main.js"></script>
 </body>

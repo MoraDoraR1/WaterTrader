@@ -102,6 +102,8 @@ export class SeaScene {
     this.wind = new Wind();
     this._stormSailWarned = false; // 폭풍 속 순풍/역풍 항해 경고 토스트를 폭풍당 한 번만 띄우기 위한 플래그
     this._lightningTimer = LIGHTNING_CHECK_INTERVAL;
+    this._lightningFlash = 0; // 벼락 발동 순간의 백색 스크린 플래시 잔여 강도(1→0으로 감쇠)
+    this._lightningBolt = null; // 화면에 그릴 번개 줄기(짧은 수명의 지그재그 선)
 
     this.moundColliders = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], r: 30 }));
     this.cityMarkers = this._computeCityMarkers();
@@ -735,7 +737,40 @@ export class SeaScene {
     audio.playHit();
     hud.flashShipHit();
     this._spawnImpactEffect(this.ship.pos.x, this.ship.pos.y);
+    this._triggerLightningVisual();
     hud.toast(`⚡ 벼락이 배에 떨어졌습니다! 선체가 ${dmg} 손상되었습니다.`);
+  }
+
+  // 벼락 사고를 그동안 토스트 문구로만 알렸는데, 정작 화면에는 아무 시각 효과가 없어
+  // 존재감이 없었다 — 백색 전체화면 플래시 + 하늘에서 배로 떨어지는 지그재그 번개 줄기를
+  // 짧게(0.35초) 그려 실제로 "벼락이 쳤다"는 걸 눈으로 확인할 수 있게 한다.
+  _triggerLightningVisual() {
+    this._lightningFlash = 1;
+    const shipScreen = this.iso.toScreen(this.camera, this.ship.pos.x, this.ship.pos.y, this.logicalW, this.logicalH);
+    const segs = 6;
+    const pts = [];
+    for (let i = 0; i <= segs; i++) {
+      const t = i / segs;
+      pts.push({
+        x: shipScreen.x + (Math.random() * 50 - 25) * (1 - t * 0.7),
+        y: -40 + (shipScreen.y - 46 + 40) * t,
+      });
+    }
+    this._lightningBolt = { pts, ttl: 0.35 };
+  }
+
+  _drawLightningBolt(ctx) {
+    const { pts } = this._lightningBolt;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(200,225,255,0.55)';
+    ctx.lineWidth = 5.5;
+    ctx.beginPath();
+    pts.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
   }
 
   // 폭풍(위험+보상)·안개(트레이드오프)의 반대편 — 진짜로 잔잔한 날(weather.isFairWeather)에는
@@ -987,6 +1022,11 @@ export class SeaScene {
     state.shipHeading = this.ship.heading;
 
     this.shakeTrauma = Math.max(0, this.shakeTrauma - delta * 1.6);
+    if (this._lightningFlash > 0) this._lightningFlash = Math.max(0, this._lightningFlash - delta * 2.2);
+    if (this._lightningBolt) {
+      this._lightningBolt.ttl -= delta;
+      if (this._lightningBolt.ttl <= 0) this._lightningBolt = null;
+    }
     this.camera.follow(this.ship.pos.x, this.ship.pos.y, delta, 5);
 
     hud.setThrottle(this.ship.notch, -3, 5);
@@ -1091,6 +1131,11 @@ export class SeaScene {
     this._drawImpactSparks(ctx, w, h);
     this._drawWeatherOverlay(ctx, w, h);
     if (this.rain.visible) this._drawRain(ctx, w, h);
+    if (this._lightningBolt) this._drawLightningBolt(ctx);
+    if (this._lightningFlash > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${(this._lightningFlash * 0.55).toFixed(3)})`;
+      ctx.fillRect(0, 0, w, h);
+    }
 
     ctx.restore();
   }

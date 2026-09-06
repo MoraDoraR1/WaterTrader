@@ -123,6 +123,11 @@ export class CityScene {
     this.camera.snapTo(this.character.pos.x, this.character.pos.y);
   }
 
+  // 건물마다 기능(type)을 배정한다 — 예전엔 도시 안의 모든 건물이 크기(±랜덤)만 다를 뿐
+  // 완전히 동일한 도형이라, 플레이어가 건물 외형만으로는 "저기가 조선소인지 시장인지"
+  // 전혀 구분할 수 없었다. 이 도시의 NPC 역할 중 실제로 건물이 있어야 말이 되는 역할
+  // (조선소기사/상인/은행원/항구 관리인/총독)을 뽑아 앞쪽 건물 슬롯부터 순서대로 배정하고,
+  // _drawBuildingBlock/_drawHanokBlock이 type에 맞춰 지붕 위 장식(간판 격)을 얹는다.
   _layoutBuildings() {
     const t = this.layout;
     const buildings = [];
@@ -131,13 +136,72 @@ export class CityScene {
       ? [...t.buildingPositions, ...t.buildingPositions.map(([x, z]) => [x * 1.7, z * 1.7])]
       : t.buildingPositions;
     const sizeBoost = this.isCapital ? 5 : 0;
+    const ROLE_PRIORITY = ['shipwright', 'merchant', 'harbormaster', 'banker', 'governor'];
+    const rolesHere = ROLE_PRIORITY.filter((r) => this.city.npcs.some((n) => n.role === r));
+    let roleIdx = 0;
     for (const [x, z] of positions) {
       const w = 16 + sizeBoost + Math.random() * 6, d = 14 + sizeBoost + Math.random() * 5;
       const box = { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 };
-      buildings.push({ x, z, w, d, wallA: t.wallA, wallB: t.wallB, roofA: t.roofA, roofB: t.roofB, hanok: t.hanok });
+      const type = roleIdx < rolesHere.length ? rolesHere[roleIdx++] : 'generic';
+      buildings.push({ x, z, w, d, wallA: t.wallA, wallB: t.wallB, roofA: t.roofA, roofB: t.roofB, hanok: t.hanok, type });
       this.buildingColliders.push(box);
     }
     return buildings;
+  }
+
+  // 건물 type별 지붕 위/앞 장식 — 조선소는 작은 돛대+깃발, 시장은 줄무늬 차양,
+  // 은행은 정면 기둥 한 쌍, 항구 관리인(의뢰 게시판)은 나무 팻말. wallTop/roofPeak는
+  // _drawBuildingBlock·_drawHanokBlock이 이미 계산해둔 화면 좌표를 그대로 받는다.
+  _drawBuildingTopper(ctx, b, wallTop, roofPeak) {
+    const z = this.camera.zoom;
+    // 앞쪽 벽(카메라를 향한 두 면 중 하나) 위 모서리 — poly(corners[2],corners[3],wallTop[3],wallTop[2])와 동일한 변.
+    const a = wallTop[2], bb = wallTop[3];
+    if (b.type === 'shipwright') {
+      const mastTop = { x: roofPeak.x, y: roofPeak.y - 22 * z };
+      ctx.strokeStyle = '#3a2c1c'; ctx.lineWidth = Math.max(1, 1.6 * z);
+      ctx.beginPath(); ctx.moveTo(roofPeak.x, roofPeak.y); ctx.lineTo(mastTop.x, mastTop.y); ctx.stroke();
+      ctx.fillStyle = '#c9432f';
+      ctx.beginPath();
+      ctx.moveTo(mastTop.x, mastTop.y);
+      ctx.lineTo(mastTop.x + 11 * z, mastTop.y + 4 * z);
+      ctx.lineTo(mastTop.x, mastTop.y + 8 * z);
+      ctx.closePath(); ctx.fill();
+    } else if (b.type === 'merchant') {
+      const stripes = 4;
+      const dx = (bb.x - a.x) / stripes;
+      for (let i = 0; i < stripes; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#c9432f' : '#e8ddc4';
+        ctx.beginPath();
+        ctx.moveTo(a.x + dx * i, a.y);
+        ctx.lineTo(a.x + dx * (i + 1), a.y);
+        ctx.lineTo(a.x + dx * (i + 1) + 2 * z, a.y + 9 * z);
+        ctx.lineTo(a.x + dx * i + 2 * z, a.y + 9 * z);
+        ctx.closePath(); ctx.fill();
+      }
+    } else if (b.type === 'banker') {
+      const cols = [0.28, 0.72];
+      for (const f of cols) {
+        const cx = a.x + (bb.x - a.x) * f, topY = a.y - 3 * z, botY = a.y + 14 * z;
+        ctx.fillStyle = '#d9cfae';
+        ctx.fillRect(cx - 1.6 * z, topY, 3.2 * z, botY - topY);
+        ctx.fillStyle = '#8a7c58';
+        ctx.fillRect(cx - 2.4 * z, topY - 2 * z, 4.8 * z, 2 * z);
+      }
+    } else if (b.type === 'harbormaster') {
+      const postX = a.x - 6 * z, postTopY = a.y + 2 * z, postBotY = a.y + 16 * z;
+      ctx.strokeStyle = '#4a3624'; ctx.lineWidth = Math.max(1, 1.4 * z);
+      ctx.beginPath(); ctx.moveTo(postX, postBotY); ctx.lineTo(postX, postTopY); ctx.stroke();
+      ctx.fillStyle = '#8a6a44';
+      ctx.fillRect(postX - 5 * z, postTopY - 6 * z, 10 * z, 7 * z);
+      ctx.strokeStyle = '#3a2c1c'; ctx.lineWidth = Math.max(0.6, 0.8 * z);
+      ctx.strokeRect(postX - 5 * z, postTopY - 6 * z, 10 * z, 7 * z);
+    } else if (b.type === 'governor') {
+      const poleTop = { x: roofPeak.x, y: roofPeak.y - 18 * z };
+      ctx.strokeStyle = '#5a5a54'; ctx.lineWidth = Math.max(1, 1.4 * z);
+      ctx.beginPath(); ctx.moveTo(roofPeak.x, roofPeak.y); ctx.lineTo(poleTop.x, poleTop.y); ctx.stroke();
+      ctx.fillStyle = '#d9ac54';
+      ctx.fillRect(poleTop.x, poleTop.y, 10 * z, 6 * z);
+    }
   }
 
   _layoutNpcs() {
@@ -146,7 +210,9 @@ export class CityScene {
     return this.city.npcs.map((npc, i) => {
       const angle = angleStep * i - Math.PI / 2;
       const pos = new Vec2(Math.cos(angle) * r, Math.sin(angle) * r - 10);
-      return { npc, pos, facing: angle + Math.PI, gender: npc.role === 'merchant' && i % 2 === 0 ? 'female' : 'male' };
+      // 예전엔 상인만 절반 확률로 여성이고 나머지 전 역할이 전부 남성으로 고정돼 있었다 —
+      // 이제 서양식 실루엣도 성별로 갈리니(치마/장식) 모든 역할에 고르게 다양성을 준다.
+      return { npc, pos, facing: angle + Math.PI, gender: i % 2 === 0 ? 'female' : 'male' };
     });
   }
 
@@ -291,6 +357,7 @@ export class CityScene {
     poly(ctx, [wallTop[2], wallTop[3], roofPeak], b.roofB || '#a8492f');
     poly(ctx, [wallTop[0], wallTop[1], roofPeak], b.roofA || '#8a3a28');
     poly(ctx, [wallTop[3], wallTop[0], roofPeak], b.roofB || '#a8492f');
+    this._drawBuildingTopper(ctx, b, wallTop, roofPeak);
   }
 
   // 한옥 전용 건물 블록 — 벽 위 지붕선이 바깥으로 내밀며(처마) 위로 살짝 들려 올라가는
@@ -321,6 +388,7 @@ export class CityScene {
     // 팔작지붕 상단 — 처마에서 용마루로 모이는 완만한 기와 경사면.
     poly([eave[1], eave[2], roofPeak], b.roofA || '#33332f');
     poly([eave[2], eave[3], roofPeak], b.roofA || '#33332f');
+    this._drawBuildingTopper(ctx, b, eave, roofPeak);
   }
 
   render(ctx) {
@@ -364,7 +432,7 @@ export class CityScene {
     ctx.fillStyle = roleColor;
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 3, 4.6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
-    const sprite = characterSprite(o.gender, roleColor, this.layout.hanok);
+    const sprite = characterSprite(o.gender, roleColor, this.layout.hanok, o.npc.role);
     const scale = this.camera.zoom * 1.3;
     ctx.drawImage(sprite, p.x - (sprite.width * scale) / 2, p.y - sprite.height * scale + 4, sprite.width * scale, sprite.height * scale);
     ctx.fillStyle = 'rgba(20,14,8,0.75)';

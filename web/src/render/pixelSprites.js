@@ -9,8 +9,8 @@ import { COUNTRY_COLORS } from '../data/ships.js';
 // ---- 캐릭터(도시 씬) ----
 // hanbok: true면 한국 항구(hanok 레이아웃)용 한복 실루엣 — 아래로 퍼지는 치마/도포 자락 +
 // 여성은 저고리 옷고름, 남성은 갓을 얹어 서양식 복장과 실루엣부터 다르게 그린다.
-export function characterSprite(gender, roleColor, hanbok) {
-  const key = `char_${gender}_${roleColor || 'p'}_${hanbok ? 'hb' : 'w'}`;
+export function characterSprite(gender, roleColor, hanbok, role) {
+  const key = `char_${gender}_${roleColor || 'p'}_${hanbok ? 'hb' : 'w'}_${role || 'none'}`;
   return cachedSprite(key, 10, 12, (ctx, w, h) => {
     const outfit = roleColor || (gender === 'female' ? '#8a2d4d' : '#2d4a8a');
     // 그림자
@@ -43,15 +43,67 @@ export function characterSprite(gender, roleColor, hanbok) {
       }
       return;
     }
-    // 몸통
+    // 몸통 — 여성은 아래로 살짝 퍼지는 치마 실루엣, 남성은 각진 상의로 실루엣부터 구분한다
+    // (예전엔 서양식 캐릭터가 성별과 무관하게 완전히 동일한 사각형 하나였다).
     ctx.fillStyle = outfit;
-    ctx.fillRect(w / 2 - 3, h / 2 - 2, 6, 6);
+    if (gender === 'female') {
+      ctx.beginPath();
+      ctx.moveTo(w / 2 - 2.4, h / 2 - 2); ctx.lineTo(w / 2 + 2.4, h / 2 - 2);
+      ctx.lineTo(w / 2 + 3.4, h / 2 + 4); ctx.lineTo(w / 2 - 3.4, h / 2 + 4);
+      ctx.closePath(); ctx.fill();
+    } else {
+      ctx.fillRect(w / 2 - 3, h / 2 - 2, 6, 6);
+    }
     // 머리
     ctx.fillStyle = '#e0b18c';
     ctx.beginPath(); ctx.arc(w / 2, h / 2 - 4, 2.6, 0, Math.PI * 2); ctx.fill();
-    // 머리카락
+    // 머리카락 — 여성은 얼굴을 감싸는 긴 머리, 남성은 짧은 뒷머리만.
     ctx.fillStyle = '#2b2118';
-    ctx.beginPath(); ctx.arc(w / 2, h / 2 - 5, 2.6, Math.PI, 0); ctx.fill();
+    if (gender === 'female') {
+      ctx.beginPath(); ctx.arc(w / 2, h / 2 - 4, 2.9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e0b18c';
+      ctx.beginPath(); ctx.ellipse(w / 2, h / 2 - 3.6, 2.2, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(w / 2, h / 2 - 5, 2.6, Math.PI, 0); ctx.fill();
+    }
+
+    // ---- 역할별 액세서리 — 옷 색 하나로만 구분되던 걸 실루엣 차이로 보강한다 ----
+    if (role === 'shipwright') {
+      // 목공용 가죽 앞치마 + 손에 든 망치
+      ctx.fillStyle = '#5a3d24';
+      ctx.fillRect(w / 2 - 2.2, h / 2 - 1, 4.4, 5);
+      ctx.fillStyle = '#7a6a52';
+      ctx.fillRect(w / 2 + 2.6, h / 2 + 0.4, 1.1, 3);
+      ctx.fillStyle = '#3a2c1c';
+      ctx.fillRect(w / 2 + 2.1, h / 2 - 0.4, 2.1, 1.3);
+    } else if (role === 'merchant') {
+      // 챙 넓은 상인 모자
+      ctx.fillStyle = '#3a2c1c';
+      ctx.beginPath(); ctx.ellipse(w / 2, h / 2 - 6.1, 3.1, 0.9, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(w / 2 - 1.3, h / 2 - 7.3, 2.6, 1.4);
+    } else if (role === 'banker') {
+      // 짙은 정장의 대비되는 셔츠 라인 + 겨드랑이에 낀 장부
+      ctx.fillStyle = '#f0e6d2';
+      ctx.fillRect(w / 2 - 0.6, h / 2 - 1.8, 1.2, 3);
+      ctx.fillStyle = '#8a7c58';
+      ctx.fillRect(w / 2 + 2.3, h / 2 - 0.2, 1.7, 2.3);
+    } else if (role === 'harbormaster') {
+      // 이각모(항구 관리인 정복) + 팔에 두른 완장
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.moveTo(w / 2 - 3.2, h / 2 - 5.8); ctx.lineTo(w / 2 + 3.2, h / 2 - 5.8); ctx.lineTo(w / 2, h / 2 - 8);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#d9ac54';
+      ctx.fillRect(w / 2 - 2.8, h / 2 - 0.8, 1.5, 1.3);
+    } else if (role === 'governor') {
+      // 짙은 망토 자락 + 깃털 장식 모자
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(w / 2 - 3.6, h / 2 - 1, 1.3, 5.6);
+      ctx.fillStyle = '#8a2d2d';
+      ctx.beginPath(); ctx.ellipse(w / 2, h / 2 - 6.3, 2.7, 1.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#f2ece0'; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(w / 2 + 1.5, h / 2 - 6.8); ctx.lineTo(w / 2 + 3, h / 2 - 9); ctx.stroke();
+    }
   });
 }
 

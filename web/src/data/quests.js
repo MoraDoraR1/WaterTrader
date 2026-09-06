@@ -137,10 +137,10 @@ export const QUESTS = [
   // routePrereq로 그 항로가 먼저 열려 있을 것을 요구한다(도착지 자체가 그 항로 안에 있다).
 
   // -- 4) 바스코 다가마 헌정 원정: 포르투 ↔ 리스본 정향 보급 → 말라바르 해협의 검은돛대호 토벌 → 캘리컷 항해
-  { id: 'chain_dagama_delivery', type: 'delivery', cityId: 'porto', destCityId: 'lisboa', goodId: 'clove', qty: 10, reward: 800,
+  { id: 'chain_dagama_delivery', type: 'delivery', cityId: 'sevilla', destCityId: 'lisboa', goodId: 'clove', qty: 10, reward: 800,
     minRankIndex: 3, routePrereq: 'indian_ocean',
     title: '[명사 의뢰 1/3] 정향 10t → 리스본', desc: '늙은 항해가 바스코 다가마 제독이 처음 캘리컷에 닿았던 항로를 다시 한번 밟아보고 싶어합니다. 원정 물자로 정향을 모아주십시오. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
-    acceptLine: '포르투 항구 관리인이 말합니다. "리스본에 계신 다가마 제독께서 마지막으로 캘리컷 항로를 다시 밟고 싶다 하시더군. 원정에 쓸 정향을 좀 구해다 드리게."' },
+    acceptLine: '세비야 항구 관리인이 말합니다. "리스본에 계신 다가마 제독께서 마지막으로 캘리컷 항로를 다시 밟고 싶다 하시더군. 원정에 쓸 정향을 좀 구해다 드리게."' },
   { id: 'chain_dagama_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_elite_malabar_route', reward: 1400,
     requires: 'chain_dagama_delivery',
     title: '[명사 의뢰 2/3] 말라바르 해협의 검은돛대호 토벌', desc: '캘리컷 앞바다에 눌러앉은 해적선이 다가마 제독의 원정로를 위협하고 있습니다. 제독의 안전을 위해 먼저 처치해주십시오.',

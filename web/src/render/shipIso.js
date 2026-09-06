@@ -76,7 +76,9 @@ export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, varia
   const tierColor = isHostile && tier === 'legendary' ? '#c41e3a'
     : isHostile && tier === 'boss' ? '#8b2fc9' : isHostile && tier === 'elite' ? '#d68a1a' : null;
   const flagColor = tierColor || (isHostile ? '#221d19' : (COUNTRY_COLORS[shipDef.country] || '#999'));
-  const sailColor = isWreck ? '#8f8577' : '#e9e2cf';
+  // 해적선은 상선과 실루엣이 같으니 돛 색부터 다르게 해 멀리서도 적선임을 알아채게 한다
+  // (기존엔 상선과 완전히 같은 크림색 돛이라 깃발 색만으로 구분해야 했다).
+  const sailColor = isWreck ? '#8f8577' : isHostile ? '#a89a82' : '#e9e2cf';
   const hullBase = isWreck ? '#453b30' : '#8a5a34';
   const hostileOfs = isHostile ? -20 : 0;
   const tone = (amt) => shade(hullBase, hostileOfs + amt);
@@ -198,6 +200,18 @@ export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, varia
         ctx.fillStyle = tone(-54);
         ctx.beginPath(); ctx.arc(baseP.x, topY, Math.max(0.9, camera.zoom * 0.7), 0, Math.PI * 2); ctx.fill();
         if (mastCount >= 3) { ctx.fillStyle = roleColor; ctx.fillRect(baseP.x - 0.7 * camera.zoom, topY - 2 * camera.zoom, 1.4 * camera.zoom, 1.6 * camera.zoom); }
+        if (isHostile) {
+          // 주돛에 해골 표식을 그려 실루엣만으로도 해적선임을 알 수 있게 한다
+          const midX = (yardL.x + yardR.x + sailBotL.x + sailBotR.x) / 4;
+          const midY = (yardL.y + yardR.y + sailBotL.y + sailBotR.y) / 4;
+          const sSize = Math.max(1.6, camera.zoom * 1.3);
+          ctx.strokeStyle = 'rgba(24,18,14,0.6)'; ctx.lineWidth = Math.max(0.5, camera.zoom * 0.32);
+          ctx.beginPath(); ctx.arc(midX, midY - sSize * 0.35, sSize * 0.5, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(midX - sSize * 0.7, midY + sSize * 0.55); ctx.lineTo(midX + sSize * 0.7, midY + sSize * 1.35);
+          ctx.moveTo(midX + sSize * 0.7, midY + sSize * 0.55); ctx.lineTo(midX - sSize * 0.7, midY + sSize * 1.35);
+          ctx.stroke();
+        }
       }
     }
   } else {
@@ -224,6 +238,34 @@ export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, varia
         ctx.fillRect(gp.x - gs / 2, gp.y - wallPx * 0.55 - gs / 2, gs, gs);
       }
     }
+  }
+
+  // ---- 방향타(고물 아래) + 닻(이물 옆) — 3D→2D 전환 과정에서 빠졌던 디테일 복원 ----
+  if (!isWreck) {
+    const rudderTop = { x: (basePts[3].x + basePts[4].x) / 2, y: (basePts[3].y + basePts[4].y) / 2 };
+    const rudderBack = { x: rudderTop.x - fwdUnit.x * 1.6 * camera.zoom, y: rudderTop.y - fwdUnit.y * 1.6 * camera.zoom };
+    const rudderDrop = 3.2 * camera.zoom;
+    const rudderBottom = { x: rudderBack.x, y: rudderBack.y + rudderDrop };
+    const rudderW = Math.max(1, 1.4 * camera.zoom);
+    fillPoly(ctx, [
+      { x: rudderBack.x - rudderW * 0.5, y: rudderBack.y },
+      { x: rudderBack.x + rudderW * 0.5, y: rudderBack.y },
+      { x: rudderBottom.x + rudderW * 0.3, y: rudderBottom.y },
+      { x: rudderBottom.x - rudderW * 0.3, y: rudderBottom.y },
+    ], tone(-56));
+
+    const anchorSide = toWorld(halfLen * 0.62, halfBeam * 1.02);
+    const anchorBase = iso.toScreen(camera, anchorSide.x, anchorSide.z, w, h);
+    const ax = anchorBase.x, ay = anchorBase.y - wallPx * 0.55;
+    const asz = Math.max(1, camera.zoom * 0.85);
+    ctx.strokeStyle = tone(-58); ctx.lineWidth = Math.max(0.6, asz * 0.35);
+    ctx.beginPath(); ctx.moveTo(ax, ay - asz * 1.6); ctx.lineTo(ax, ay + asz * 0.6); ctx.stroke();
+    ctx.beginPath(); ctx.arc(ax, ay - asz * 1.9, asz * 0.4, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax - asz * 0.7, ay - asz * 0.7); ctx.lineTo(ax + asz * 0.7, ay - asz * 0.7); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ax, ay + asz * 0.6); ctx.lineTo(ax - asz * 0.8, ay + asz * 1.2);
+    ctx.moveTo(ax, ay + asz * 0.6); ctx.lineTo(ax + asz * 0.8, ay + asz * 1.2);
+    ctx.stroke();
   }
 
   // ---- 고물 깃대 + 깃발(난파선은 깃발을 내린다) ----
