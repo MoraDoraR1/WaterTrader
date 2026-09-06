@@ -356,10 +356,15 @@ export class SeaScene {
     this._astroReady = this.weather.isNight && this.weather.stormIntensity < 0.3;
 
     if (this._nearbySite) {
-      const found = state.compendium[this._nearbySite.category][this._nearbySite.site.id];
-      const icon = this._nearbySite.category === 'archaeology' ? '🏺' : '🗺️';
-      const label = found ? this._nearbySite.site.name : '미확인 지점';
-      hud.showInteractPrompt(true, `G: ${icon} ${label} 조사`);
+      const { category, site } = this._nearbySite;
+      const found = state.compendium[category][site.id];
+      const icon = category === 'archaeology' ? '🏺' : '🗺️';
+      if (!found && getSkillLevel(category) < site.minSkillLevel) {
+        hud.showInteractPrompt(true, `🔒 ${PLAYER_SKILLS[category].name} Lv.${site.minSkillLevel} 필요 (현재 Lv.${getSkillLevel(category)})`);
+      } else {
+        const label = found ? site.name : '미확인 지점';
+        hud.showInteractPrompt(true, `G: ${icon} ${label} 조사`);
+      }
     } else if (this._astroReady) {
       hud.showInteractPrompt(true, '🔭 G: 별자리 관측');
     } else {
@@ -380,8 +385,16 @@ export class SeaScene {
       hud.toast('방금 조사했습니다. 잠시 후 다시 시도하세요.');
       return;
     }
-    this._investigateCooldowns[site.id] = REINVESTIGATE_COOLDOWN;
     const already = !!state.compendium[category][site.id];
+    // 아직 발견 못 한 곳은 minSkillLevel 미만이면 조사 자체가 막힌다 — 의뢰 게시판(수락) 쪽
+    // 게이팅만 있고 현장 조사에는 게이팅이 없으면, 좌표만 알면 레벨과 무관하게 최상급 유적을
+    // 곧바로 발견해버려 숙련도 곡선이 의미가 없어진다. 이미 발견한 곳을 다시 조사하는 것은
+    // 레벨과 무관하게 항상 허용한다(소량 exp만 주므로 악용 여지가 없다).
+    if (!already && getSkillLevel(category) < site.minSkillLevel) {
+      hud.toast(`🔒 ${PLAYER_SKILLS[category].name} Lv.${site.minSkillLevel} 이상이어야 조사할 수 있습니다. (현재 Lv.${getSkillLevel(category)})`);
+      return;
+    }
+    this._investigateCooldowns[site.id] = REINVESTIGATE_COOLDOWN;
     if (already) {
       gainSkillExp(category, 1);
       hud.toast(`${site.name}을(를) 다시 조사했습니다. (${PLAYER_SKILLS[category].name} 숙련도 +1)`);
@@ -405,7 +418,11 @@ export class SeaScene {
     }
     this._astroCooldown = REINVESTIGATE_COOLDOWN;
     const found = state.compendium.astronomy;
-    const next = ASTRONOMY_ENTRIES.find((s) => !found[s.id]);
+    const level = getSkillLevel('astronomy');
+    // 미발견 중에서도 현재 레벨로 관측 가능한(minSkillLevel 이하) 것만 후보로 삼는다 —
+    // 안 그러면 레벨1에서도 최상급 별자리(플레이아데스 등)를 곧바로 관측해버려 숙련도
+    // 곡선이 무의미해진다. 후보가 없으면(전부 발견했거나, 레벨이 못 미침) 재관측으로 취급.
+    const next = ASTRONOMY_ENTRIES.find((s) => !found[s.id] && level >= s.minSkillLevel);
     if (!next) {
       gainSkillExp('astronomy', 1);
       hud.toast('🔭 밤하늘을 다시 관측했습니다. (천문학 숙련도 +1)');
