@@ -51,6 +51,71 @@ const CYCLE_MUL_MIN = 0.85, CYCLE_MUL_MAX = 1.2;
 // 변동성이 크고, 포도주·모직물·주석 같은 대량 생산 벌크 상품(goods)은 가장 안정적이다.
 const CATEGORY_VOLATILITY = { spice: 1.3, luxury: 1.1, goods: 0.7 };
 
+// ---- 항구별 한정 재고("교역품 매입 재고") ----
+// 위의 VOLUME_CAP이 "한 번에 후려칠 수 있는 양"을 막는 즉석 스로틀이라면, 이건 그 항구가
+// 실제로 "갖고 있는" 물량 자체를 유한하게 만드는 재고 시스템이다 — 다 팔리면 진짜로 바닥나고,
+// 며칠(항해일자 기준) 지나야 다시 들어온다. 반드시 절대 시각(state.dayTimer) 기준으로 재입고
+// 시각을 못박아 두어야 한다(구매 시점 기준으로 타이머를 매번 늦추면, 재입고 직전에 살짝만 사서
+// "타이머 초기화"를 유발해 사실상 무한 재고가 되는 편법이 생긴다). 재입고량은 매번 새로
+// 굴리며, 품목 카테고리(벌크/향신료/사치품)로 기본량이 다르고, 그 도시가 마침 대호황/대폭락
+// 중이면 "이번 재입고에 한해" 일부 품목만 골라 크게/작게 흔든다 — 대호황이면 몇몇 품목이
+// 창고에 쌓여 있고, 대기근이면 어느 품목은 거의 안 들어오는 식의 체감을 준다.
+const STOCK_DAY_SECONDS = 60; // 항해일자 1일 = 실제 60초(다른 시스템과 동일 기준)
+const STOCK_RESET_MIN_DAYS = 5, STOCK_RESET_MAX_DAYS = 10;
+// 카테고리별 평시 재입고량 범위(t) — 벌크 물자는 흔하게 많이, 향신료·사치품은 원래도 희귀하니 적게.
+const STOCK_BASE_RANGE = { goods: [45, 90], spice: [15, 35], luxury: [10, 28] };
+const STOCK_EVENT_PICK_CHANCE = 0.5; // 이벤트 도시에서 "이번 재입고 때 크게 흔들릴" 품목으로 뽑힐 확률(전 품목이 아니라 일부만)
+const STOCK_BOOM_MUL_MIN = 1.8, STOCK_BOOM_MUL_MAX = 2.8; // 대호황: 뽑힌 품목은 재고를 두둑하게
+const STOCK_CRASH_MUL_MIN = 0.2, STOCK_CRASH_MUL_MAX = 0.5; // 대기근/대폭락: 뽑힌 품목은 재고가 빈약하게
+
+function getStockEntry(cityId, goodId) {
+  state.marketStock = state.marketStock || {};
+  const cityState = state.marketStock[cityId] || (state.marketStock[cityId] = {});
+  return cityState[goodId] || (cityState[goodId] = { qty: 0, resetAt: -Infinity });
+}
+
+// 재입고 한 번을 실제로 굴린다 — 카테고리 기본량에, 이 도시가 지금 대호황/대폭락 중이면
+// 절반 확률로 그 방향으로 크게 흔든 뒤, 다음 재입고까지 5~10항해일 사이의 새 주기를 잡는다.
+function rollStock(cityId, goodId) {
+  const entry = getStockEntry(cityId, goodId);
+  const category = getGood(goodId)?.category;
+  const [lo, hi] = STOCK_BASE_RANGE[category] || STOCK_BASE_RANGE.goods;
+  let qty = Math.round(lo + Math.random() * (hi - lo));
+  const event = getCityEvent(cityId);
+  if (event.active && Math.random() < STOCK_EVENT_PICK_CHANCE) {
+    qty = Math.round(qty * (event.type === 'boom'
+      ? STOCK_BOOM_MUL_MIN + Math.random() * (STOCK_BOOM_MUL_MAX - STOCK_BOOM_MUL_MIN)
+      : STOCK_CRASH_MUL_MIN + Math.random() * (STOCK_CRASH_MUL_MAX - STOCK_CRASH_MUL_MIN)));
+  }
+  const cycleDays = STOCK_RESET_MIN_DAYS + Math.random() * (STOCK_RESET_MAX_DAYS - STOCK_RESET_MIN_DAYS);
+  entry.qty = Math.max(1, qty);
+  entry.resetAt = state.dayTimer + cycleDays * STOCK_DAY_SECONDS;
+  return entry;
+}
+
+// 재입고 시각이 지났으면(최초 조회 포함) 새로 굴리고, 아니면 지금 남은 재고를 그대로 돌려준다.
+function ensureStockFresh(cityId, goodId) {
+  const entry = getStockEntry(cityId, goodId);
+  if (state.dayTimer >= entry.resetAt) rollStock(cityId, goodId);
+  return entry;
+}
+
+function availableStock(cityId, goodId) {
+  return Math.max(0, Math.floor(ensureStockFresh(cityId, goodId).qty));
+}
+
+function consumeStock(cityId, goodId, qty) {
+  const entry = getStockEntry(cityId, goodId);
+  entry.qty = Math.max(0, entry.qty - qty);
+}
+
+// UI(시장 패널)에서 "재고 Nt · 며칠 후 재입고" 문구를 만드는 데 쓰는 조회용.
+export function getStockInfo(cityId, goodId) {
+  const entry = ensureStockFresh(cityId, goodId);
+  const resetInDays = Math.max(1, Math.ceil((entry.resetAt - state.dayTimer) / STOCK_DAY_SECONDS));
+  return { qty: Math.max(0, Math.floor(entry.qty)), resetInDays };
+}
+
 // ---- 항구별 즉시 소화 물량 한도("시장 깊이") ----
 // 위의 supply-mul은 "값이 서서히 변한다"는 체감용이지, 그 자체로는 배가 커질수록 무제한으로
 // 퍼갈 수 있는 문제를 못 막는다(마진이 아무리 낮아져도 톤수를 늘리면 절대 이문은 그대로 비례
@@ -298,7 +363,8 @@ export function getMarketRows(cityId) {
     // 현재가/기준가처럼, 이 도시 이 품목의 시세가 그동안 얼마나 오르내렸는지 그대로 보여준다.
     const pct = Math.round(dynMul * 100);
     const trend = pct > 100 ? 'up' : pct < 100 ? 'down' : 'flat';
-    return { good: getGood(goodId), price: { buy: effBuy, sell: effSell }, heldQty: held ? held.qty : 0, trend, pct };
+    const stock = getStockInfo(cityId, goodId);
+    return { good: getGood(goodId), price: { buy: effBuy, sell: effSell }, heldQty: held ? held.qty : 0, trend, pct, stock };
   });
 }
 
@@ -311,7 +377,8 @@ export function buyGood(cityId, goodId, qty) {
     const spaceLeft = getCargoCapacity() - getCargoUsed();
     const affordable = Math.floor(state.gold / row.price.buy);
     const volumeLeft = availableVolume(cityId, goodId);
-    const chunk = Math.max(0, Math.min(remaining, TRADE_CHUNK_SIZE, spaceLeft, affordable, volumeLeft));
+    const stockLeft = availableStock(cityId, goodId);
+    const chunk = Math.max(0, Math.min(remaining, TRADE_CHUNK_SIZE, spaceLeft, affordable, volumeLeft, stockLeft));
     if (chunk <= 0) break;
     const cost = chunk * row.price.buy;
     state.gold -= cost;
@@ -320,12 +387,17 @@ export function buyGood(cityId, goodId, qty) {
     else state.inventory.push({ id: goodId, name: getGood(goodId).name, qty: chunk });
     nudgeSupply(cityId, goodId, chunk, 1);
     consumeVolume(cityId, goodId, chunk);
+    consumeStock(cityId, goodId, chunk);
     totalQty += chunk;
     totalCost += cost;
     remaining -= chunk;
   }
   if (totalQty <= 0) {
     if (getCargoCapacity() - getCargoUsed() <= 0) return { ok: false, reason: '화물칸이 가득 찼습니다.' };
+    if (availableStock(cityId, goodId) <= 0) {
+      const days = getStockInfo(cityId, goodId).resetInDays;
+      return { ok: false, reason: `이 항구의 재고가 모두 소진되었습니다. ${days}일 후 재입고됩니다.` };
+    }
     if (availableVolume(cityId, goodId) <= 0) return { ok: false, reason: '이 항구에 남은 물량이 없습니다. 시간이 지나면 다시 채워집니다.' };
     return { ok: false, reason: '골드가 부족합니다.' };
   }

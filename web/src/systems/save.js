@@ -51,6 +51,7 @@ export function saveGame() {
     marketCycle: state.marketCycle,
     marketVolume: state.marketVolume,
     cityEvents: state.cityEvents,
+    marketStock: state.marketStock,
     audioMuted: state.audioMuted,
     endingShown: state.endingShown,
     explorationSite: state.explorationSite,
@@ -110,6 +111,7 @@ export function applySave(data) {
   state.marketCycle = data.marketCycle && typeof data.marketCycle === 'object' ? data.marketCycle : {};
   state.marketVolume = data.marketVolume && typeof data.marketVolume === 'object' ? data.marketVolume : {};
   state.cityEvents = data.cityEvents && typeof data.cityEvents === 'object' ? data.cityEvents : {};
+  state.marketStock = data.marketStock && typeof data.marketStock === 'object' ? data.marketStock : {};
   state.audioMuted = !!data.audioMuted;
   state.endingShown = !!data.endingShown;
   state.explorationSite = data.explorationSite && typeof data.explorationSite === 'object' ? data.explorationSite : null;

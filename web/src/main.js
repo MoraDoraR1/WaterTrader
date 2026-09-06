@@ -22,7 +22,8 @@ import { openCrew } from './ui/crewPanel.js';
 import { repairAtSea, getCannonSlotCount, buyShip, buildShip } from './systems/shipyard.js';
 import { audio } from './systems/audio.js';
 import { getRankInfo, computeScore } from './systems/rank.js';
-import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood } from './systems/market.js';
+import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood, sellGood, getStockInfo } from './systems/market.js';
+import { GOODS, CITY_MARKET } from './data/goods.js';
 import { SUPPLY_DEFS } from './systems/supplies.js';
 import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUnlock.js';
 import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
@@ -453,7 +454,8 @@ window.__debug = {
   get citySceneObj() { return citySceneObj; },
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
-  checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
-  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity, computeScore, checkExplorationSite,
+  checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, sellGood, getStockInfo,
+  getCargoCapacity, getCargoUsed,
+  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, GOODS, CITY_MARKET, goToCity, computeScore, checkExplorationSite,
   hud, getQuestsForCity, QUESTS, openMarket, openSupplies, openShipyard,
 };

@@ -30,16 +30,20 @@ function renderMarket(cityId) {
   // 항해일자 5일 사이클로 지금 몇 %인지를 그대로 보여준다(systems/market.js의 pct).
   const trendColor = { up: '#e0645a', down: '#6fc8e0', flat: '#9fb8c9' };
   const trendArrow = { up: '▲', down: '▼', flat: '' };
-  const rows = getMarketRows(cityId).map(({ good, price, heldQty, trend, pct }) => {
+  const rows = getMarketRows(cityId).map(({ good, price, heldQty, trend, pct, stock }) => {
     const marginPct = Math.round((price.sell / good.basePrice - 1) * 100);
     const marginLabel = ` · 기준가대비 ${marginPct >= 0 ? '+' : ''}${marginPct}%`;
     const cycleLabel = ` · <span style="color:${trendColor[trend]}">시세 ${pct}% ${trendArrow[trend]}</span>`;
+    const stockLabel = stock.qty > 0
+      ? ` · <span style="color:${stock.qty <= 15 ? '#e0645a' : '#9fb8c9'}">재고 ${stock.qty}t</span>`
+      : ` · <span style="color:#e0645a">품절 (${stock.resetInDays}일 후 재입고)</span>`;
     return {
       name: goodTip(good),
-      sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${cycleLabel}${marginLabel}`,
+      sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${cycleLabel}${marginLabel}${stockLabel}`,
       actions: [
         {
           label: `${STEP}t 구매`,
+          disabled: stock.qty <= 0,
           onAction: () => {
             const res = buyGood(cityId, good.id, STEP);
             if (res.ok) { hud.toast(`${good.name} ${res.qty}t 구매 (-${res.cost.toLocaleString('ko-KR')} 두캇)`); renderMarket(cityId); }

@@ -59,6 +59,9 @@ export const state = {
   marketCycle: {}, // cityId -> goodId -> { mul, bucket } — 항해일자 5일 주기로 한 걸음씩 오르내리는 시세 사이클(주식 종가 개념)
   marketVolume: {}, // cityId -> goodId -> { remaining, updatedAt } — 한 항구에서 한 번에 소화 가능한 거래량 상한(VOLUME_CAP), 시간이 지나며 회복
   cityEvents: {}, // cityId -> { type: 'boom'|'crash'|null, mul, endBucket, checkedBucket } — 도시 전체에 걸리는 대호황(150~170%)/대폭락(40~50%) 사건
+  marketStock: {}, // cityId -> goodId -> { qty, resetAt } — 항구가 "매입" 방향으로 실제 보유한 한정 재고. 플레이어 구매로만 소진되고,
+  // 항해일자 기준 절대 시각(resetAt, state.dayTimer 기준)에 도달하면 새 물량으로 재입고된다 — 구매 시점 기준 타이머가 아니라
+  // 도시·품목별로 독립적으로 흘러가는 절대 시각이라 재입고 직전에 사재기해 타이머를 늦추는 식의 편법이 통하지 않는다.
   audioMuted: false,
   endingShown: false, // 최고 랭크(바다의 제독) 도달 엔딩 화면을 이미 본 적 있는지
   // 원양 항로 해금 여부 — systems/routeUnlock.js가 랭크에 따라 true로 바꾼다(한 번 열리면
