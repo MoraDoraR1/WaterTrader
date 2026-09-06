@@ -50,6 +50,11 @@ const STORM_HEADWIND_DMG_PCT_PER_SEC = 0.0035;
 const LIGHTNING_CHECK_INTERVAL = 8; // 초 — 이 주기마다 한 번씩 확률을 굴린다
 const LIGHTNING_CHANCE = 0.12; // 판정마다 실제로 발동할 확률
 const LIGHTNING_DMG_PCT_MIN = 0.03, LIGHTNING_DMG_PCT_MAX = 0.06; // 최대 내구도 대비 피해 비율
+// 좋은 날씨(weather.isFairWeather) — 폭풍/안개와 짝을 이루는 위험 없는 순수 보너스.
+// 전투 회복 스킬(combatHpRegenPerSec)보다 훨씬 느려, "전투를 피하고 맑은 날 천천히 쉬어가는"
+// 선택지일 뿐 주력 회복 수단이 되지는 않게 잡았다.
+const FAIR_WEATHER_HP_REGEN_PCT_PER_SEC = 0.0006; // 최대 내구도의 0.06%/초
+const FAIR_WEATHER_MORALE_REGEN_PER_SEC = 0.15; // 사기 +0.15/초(최대 100)
 // 충돌 피해는 충돌 순간 속도에 비례한다 — 제자리에서 스치듯 부딪히면 가볍게, 전속력으로
 // 들이받으면(충각 전술) 양측 모두 크게 상한다.
 const COLLISION_DAMAGE_BASE = 18;
@@ -127,6 +132,7 @@ export class SeaScene {
     this.t = 0;
     this.onDock = null;
     this.collisionTimers = new Map();
+    this.impactSparks = []; // 피격 지점에 잠깐 튀는 스파크 파편 — { x, y, dx, dy, life, maxLife }
     this.meleeState = null;
     this._boardable = null; // 충돌 직후 F로 승선(백병전)할 수 있는 짧은 창구 — { npc, timer }
     this.selectedTarget = null; // 클릭으로 지정한 NPC — 상호작용 범위 원 + 전투/대화/종료 메뉴
@@ -163,6 +169,28 @@ export class SeaScene {
   setOnDock(fn) { this.onDock = fn; }
   addShake(amount) { this.shakeTrauma = Math.min(1, this.shakeTrauma + amount); }
   onWheelZoom(deltaY) { this.camera.zoom = clamp(this.camera.zoom - deltaY * 0.0011, this.camera.minZoom, this.camera.maxZoom); }
+
+  // 피격 지점(포탄 명중/충돌/벼락)에 잠깐 튀는 파편 스파크 — 순수 시각 효과라 판정에는
+  // 관여하지 않는다. 매번 4~6개를 무작위 방향으로 흩뿌리고, 수명이 다하면 _updateImpactSparks가 정리한다.
+  _spawnImpactEffect(x, y) {
+    const count = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 18 + Math.random() * 26;
+      const maxLife = 0.22 + Math.random() * 0.16;
+      this.impactSparks.push({ x, y, dx: Math.cos(angle) * speed, dy: Math.sin(angle) * speed, life: maxLife, maxLife });
+    }
+  }
+
+  _updateImpactSparks(delta) {
+    for (let i = this.impactSparks.length - 1; i >= 0; i--) {
+      const s = this.impactSparks[i];
+      s.life -= delta;
+      if (s.life <= 0) { this.impactSparks.splice(i, 1); continue; }
+      s.x += s.dx * delta;
+      s.y += s.dy * delta;
+    }
+  }
 
   // 피격으로 바뀐 escort의 hp를 state.fleet의 해당 항목에 즉시 되써준다 — 세이브나 함대
   // 탭 교체(rebuildEscorts) 시에도 깎인 체력이 그대로 이어지게 하기 위해서다.
@@ -446,6 +474,8 @@ export class SeaScene {
       npc.takeDamage(npcDmg);
       audio.playHit();
       this.addShake(0.6);
+      hud.flashShipHit();
+      this._spawnImpactEffect((this.ship.pos.x + npc.pos.x) / 2, (this.ship.pos.y + npc.pos.y) / 2);
       hud.toast(`충돌! 선체가 ${selfDmg} 손상되고, 상대는 ${npcDmg} 손상되었습니다.`);
       if (npc.dead) {
         this._victoryToast(`${npc.def.name}을(를) 격침했습니다!`, npc);
@@ -702,7 +732,22 @@ export class SeaScene {
     state.shipHp = Math.max(0, state.shipHp - dmg);
     this.addShake(0.5);
     audio.playHit();
+    hud.flashShipHit();
+    this._spawnImpactEffect(this.ship.pos.x, this.ship.pos.y);
     hud.toast(`⚡ 벼락이 배에 떨어졌습니다! 선체가 ${dmg} 손상되었습니다.`);
+  }
+
+  // 폭풍(위험+보상)·안개(트레이드오프)의 반대편 — 진짜로 잔잔한 날(weather.isFairWeather)에는
+  // 위험 부담 없이 선체와 사기가 아주 천천히 회복된다. 토스트로 알리진 않는다(매초 반복될
+  // 만큼 흔한 상태라 스팸이 된다) — HUD의 날씨 표시(☀ 맑음)만으로 충분하다.
+  _processFairWeather(delta) {
+    if (!this.weather.isFairWeather) return;
+    const maxHp = this.ship.shipDef.hp;
+    if (state.shipHp > 0 && state.shipHp < maxHp) {
+      state.shipHp = Math.min(maxHp, state.shipHp + maxHp * FAIR_WEATHER_HP_REGEN_PCT_PER_SEC * delta);
+    }
+    const morale = state.crewMorale ?? 100;
+    if (morale < 100) state.crewMorale = Math.min(100, morale + FAIR_WEATHER_MORALE_REGEN_PER_SEC * delta);
   }
 
   update(delta, elapsed) {
@@ -771,9 +816,11 @@ export class SeaScene {
       checkDiscoveryEvents(delta);
       this._processStormSailing(delta);
       this._processLightning(delta);
+      this._processFairWeather(delta);
       checkExplorationSite(this.ship.pos);
     }
     this._updateWake(delta);
+    this._updateImpactSparks(delta);
     const escortTarget = state.inCombat ? this._nearestHostile() : null;
     for (const escort of this.escorts) {
       escort.update(delta, this.ship);
@@ -854,12 +901,14 @@ export class SeaScene {
     ];
     this.cannonPool.update(delta, targets, (target, ball) => {
       audio.playHit();
+      this._spawnImpactEffect(ball.x, ball.y);
       if (target.ref === 'player') {
         // 쏜 NPC의 shotDmg(배 종류별 위력)를 그대로 쓰고, 못 찾으면(이론상 없음) 18로 폴백한다.
         const hitDmg = Math.round((ball.dmg ?? 18) * this._incomingDamageMul());
         state.shipHp = Math.max(0, state.shipHp - hitDmg);
         loseMoraleFromCombat();
         this.addShake(0.45);
+        hud.flashShipHit();
       } else if (target.isEscort) {
         this.addShake(0.12);
         target.ref.takeDamage(ball.dmg ?? 18);
@@ -1027,7 +1076,17 @@ export class SeaScene {
     ].sort((a, b) => a.z - b.z);
     for (const d of drawables) d.draw();
 
+    for (const n of this.npcShips) {
+      if (n.dead || n.hp >= n.maxHp) continue;
+      this._drawWorldHpBar(ctx, w, h, n.pos, n.maxHp > 0 ? n.hp / n.maxHp : 1, 'hostile');
+    }
+    for (const e of this.escorts) {
+      if (e.dead) continue;
+      this._drawWorldHpBar(ctx, w, h, e.pos, e.maxHp > 0 ? e.hp / e.maxHp : 1, 'friendly');
+    }
+
     this._drawCannonballs(ctx, w, h);
+    this._drawImpactSparks(ctx, w, h);
     this._drawWeatherOverlay(ctx, w, h);
     if (this.rain.visible) this._drawRain(ctx, w, h);
 
@@ -1201,6 +1260,35 @@ export class SeaScene {
       ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  // 피격 스파크 — 수명(life/maxLife)이 줄수록 옅어지고 작아진다. 밝은 주황~노랑 계열로
+  // 화약/파편이 튀는 느낌을 낸다.
+  _drawImpactSparks(ctx, w, h) {
+    for (const s of this.impactSparks) {
+      const p = this.iso.toScreen(this.camera, s.x, s.y, w, h);
+      const t = clamp(s.life / s.maxLife, 0, 1);
+      ctx.fillStyle = `rgba(255,${180 + Math.round(50 * t)},${60 * t},${t})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1 + 1.6 * t, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // 함대(예비 선박)와 손상 입은 적선 머리 위에 작은 내구도 바를 그린다 — 클릭 선택 없이도
+  // 한눈에 상태를 알 수 있게 한다. 함대는 항상 표시(자체 UI가 따로 없어서), 적선은 만피가
+  // 아닐 때만(평시엔 굳이 보여줄 필요 없음) 표시한다.
+  _drawWorldHpBar(ctx, w, h, pos, hpRatio, variant) {
+    const p = this.iso.toScreen(this.camera, pos.x, pos.y, w, h);
+    const barW = 26, barH = 3.5, yOff = -30;
+    const x = p.x - barW / 2, y = p.y + yOff;
+    ctx.fillStyle = 'rgba(8,10,10,0.55)';
+    ctx.fillRect(x - 1, y - 1, barW + 2, barH + 2);
+    const ratio = clamp(hpRatio, 0, 1);
+    ctx.fillStyle = variant === 'friendly'
+      ? (ratio < 0.25 ? '#e0503f' : ratio < 0.5 ? '#e6c15a' : '#7fe0a0')
+      : (ratio < 0.25 ? '#ff6a4a' : ratio < 0.5 ? '#e6c15a' : '#e0847a');
+    ctx.fillRect(x, y, barW * ratio, barH);
   }
 
   _drawWeatherOverlay(ctx, w, h) {

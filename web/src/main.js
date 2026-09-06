@@ -451,4 +451,5 @@ window.__debug = {
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
   checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
   buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity, computeScore, checkExplorationSite,
+  hud,
 };

@@ -88,6 +88,10 @@ export class WeatherSystem {
   // 파도·바람이 문제이므로 이 배율에는 관여하지 않는다). 1=평시, 낮을수록 더 안 보인다.
   get fogVisMul() { return lerp(1, 0.45, this.fogIntensity); }
 
+  // 폭풍(위험+보상)·안개(트레이드오프)와 짝을 이루는 "좋은 날씨" — 둘 다 거의 없을 때만
+  // true. 위험 없는 순수 회복 보너스(scenes/seaScene.js _processFairWeather)의 조건이다.
+  get isFairWeather() { return this.stormIntensity < 0.1 && this.fogIntensity < 0.1; }
+
   get label() {
     if (this.stormIntensity > 0.5) return '⛈ 폭풍';
     if (this.fogIntensity > 0.5) return '🌫 안개';

@@ -1,5 +1,12 @@
 const $ = (id) => document.getElementById(id);
 
+// 내구도 바 색상 단계 — 절반 밑이면 노랑(hp-mid), 1/4 밑이면 빨강+점멸(hp-low). 둘 다 아니면
+// 원래 클래스(.bar-fill 기본 초록 / .enemy 기본 빨강)로 돌아간다.
+function applyHpTier(el, ratio) {
+  el.classList.toggle('hp-mid', ratio < 0.5 && ratio >= 0.25);
+  el.classList.toggle('hp-low', ratio < 0.25);
+}
+
 let toastTimer = null;
 let mmBounds = null;
 let mmLandPolygons = null;
@@ -193,7 +200,24 @@ export const hud = {
     $('wind-needle').style.transform = `rotate(${deg}deg)`;
     $('wind-label').textContent = label;
   },
-  setShipHp(ratio) { $('ship-hp-fill').style.width = `${Math.max(0, ratio * 100)}%`; },
+  setShipHp(ratio) {
+    const fill = $('ship-hp-fill');
+    fill.style.width = `${Math.max(0, ratio * 100)}%`;
+    applyHpTier(fill, ratio);
+  },
+  // 피격 순간(포격/충돌/벼락) 호출 — 내구도 패널을 붉게 짧게 번쩍이고, 화면 가장자리에도
+  // 옅은 붉은 비네트를 짧게 띄운다. 카메라 흔들림(seaScene의 addShake)과 함께 써서
+  // "맞았다"는 느낌을 시각적으로 분명히 한다.
+  flashShipHit() {
+    const box = $('ship-hp-box');
+    box.classList.remove('hit-flash');
+    void box.offsetWidth;
+    box.classList.add('hit-flash');
+    const vignette = $('hit-vignette');
+    vignette.classList.add('show');
+    clearTimeout(this._hitVignetteTimer);
+    this._hitVignetteTimer = setTimeout(() => vignette.classList.remove('show'), 90);
+  },
 
   setShipRoleBadge(label, color) {
     const el = $('ship-role-badge');
@@ -419,7 +443,9 @@ export const hud = {
   },
   setTargetHp(name, ratio) {
     $('target-name').textContent = name;
-    $('target-hp-fill').style.width = `${Math.max(0, ratio * 100)}%`;
+    const fill = $('target-hp-fill');
+    fill.style.width = `${Math.max(0, ratio * 100)}%`;
+    applyHpTier(fill, ratio);
   },
 
   showDialogue(name, line, actions = []) {
