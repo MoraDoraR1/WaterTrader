@@ -254,7 +254,7 @@ export const CITY_MARKET = {
   // 베네치아(IT): 무라노 유리공예품이 세계 최고 명물. 옛 향신료길의 종착지라 도자기도 취급.
   // 북방 원자재(모직물·주석·모피)는 직접 조달할 수 없어 비싸게 사들인다.
   venezia: {
-    glass: { buy: 59, sell: 45 },
+    glass: { buy: 42, sell: 32 },
     porcelain: { buy: 56, sell: 42 },
     wool: { buy: 33, sell: 29 },
     tin: { buy: 52, sell: 46 },
@@ -400,7 +400,6 @@ export const CITY_MARKET = {
   },
   luanda: {
     gold: { buy: 54, sell: 42 },
-    fur: { buy: 29, sell: 23 },
     ivory: { buy: 72, sell: 56 },
   },
   cartagena: {
@@ -504,13 +503,13 @@ export const CITY_MARKET = {
     timber: { buy: 8, sell: 6 }, hemp: { buy: 7, sell: 5 }, iron_ore: { buy: 10, sell: 8 },
     copper: { buy: 13, sell: 10 }, rope: { buy: 8, sell: 6 }, pitch_tar: { buy: 6, sell: 5 } },
   cadiz: { silver: { buy: 24, sell: 18 }, wine: { buy: 11, sell: 9 }, salt: { buy: 3, sell: 2 }, indigo: { buy: 42, sell: 33 } },
-  valletta: { olive_oil: { buy: 10, sell: 7 }, glass: { buy: 55, sell: 42 }, salt: { buy: 4, sell: 3 }, coral: { buy: 48, sell: 36 } },
+  valletta: { olive_oil: { buy: 10, sell: 7 }, glass: { buy: 62, sell: 48 }, salt: { buy: 4, sell: 3 }, coral: { buy: 48, sell: 36 } },
   dubrovnik: { wine: { buy: 16, sell: 13 }, silk: { buy: 92, sell: 70 }, coral: { buy: 66, sell: 52 } },
   zanzibar: { clove: { buy: 30, sell: 23 }, ivory: { buy: 68, sell: 52 } },
-  alexandria: { pepper: { buy: 26, sell: 20 }, glass: { buy: 52, sell: 40 },
+  alexandria: { pepper: { buy: 26, sell: 20 }, glass: { buy: 58, sell: 45 },
     carpet: { buy: 55, sell: 42 }, coffee: { buy: 26, sell: 20 }, cotton_cloth: { buy: 22, sell: 17 } },
   cape_town: { wine: { buy: 17, sell: 13 }, wool: { buy: 22, sell: 18 }, ivory: { buy: 90, sell: 70 }, dried_meat: { buy: 6, sell: 5 } },
-  sao_tome: { sugar: { buy: 17, sell: 13 }, brazilwood: { buy: 19, sell: 15 } },
+  sao_tome: { sugar: { buy: 17, sell: 13 } },
   new_orleans: { fur: { buy: 17, sell: 13 }, sugar: { buy: 22, sell: 17 },
     tobacco: { buy: 12, sell: 9 }, rice: { buy: 8, sell: 6 }, cotton: { buy: 15, sell: 12 } },
   charleston: { sugar: { buy: 24, sell: 18 }, fur: { buy: 19, sell: 14 },

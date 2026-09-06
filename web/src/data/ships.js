@@ -460,7 +460,7 @@ export const COUNTRY_COLORS = {
 
 export const COUNTRY_NAMES = {
   PT: '포르투갈', ES: '스페인', EN: '잉글랜드', NL: '네덜란드',
-  HAN: '한자동맹', IT: '베네치아', SE: '스웨덴', FR: '프랑스',
+  HAN: '한자동맹', IT: '이탈리아', SE: '스웨덴', FR: '프랑스',
   OT: '오스만', DK: '덴마크',
   KR: '조선', JP: '일본', CN: '중국', VN: '베트남',
   SM: '샴', BU: '버마', AC: '아체', BN: '브루나이',
