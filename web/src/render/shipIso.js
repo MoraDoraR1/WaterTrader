@@ -73,7 +73,8 @@ export function drawShipIso(ctx, iso, camera, w, h, pos, heading, shipDef, varia
   const roleColor = (SHIP_ROLES[shipDef.role] || SHIP_ROLES.trade).color;
   // 잡몹/엘리트/보스 위협 등급을 깃발·갑판 중심선 색으로 멀리서도 구분할 수 있게 한다 —
   // 평시 배(상선·모험가 등)는 tier가 없으니 이 값이 null이 되어 기존 배색을 그대로 쓴다.
-  const tierColor = isHostile && tier === 'boss' ? '#8b2fc9' : isHostile && tier === 'elite' ? '#d68a1a' : null;
+  const tierColor = isHostile && tier === 'legendary' ? '#c41e3a'
+    : isHostile && tier === 'boss' ? '#8b2fc9' : isHostile && tier === 'elite' ? '#d68a1a' : null;
   const flagColor = tierColor || (isHostile ? '#221d19' : (COUNTRY_COLORS[shipDef.country] || '#999'));
   const sailColor = isWreck ? '#8f8577' : '#e9e2cf';
   const hullBase = isWreck ? '#453b30' : '#8a5a34';

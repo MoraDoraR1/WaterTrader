@@ -4,7 +4,7 @@ import { cityIconSprite } from '../render/pixelSprites.js';
 import { drawShipIso } from '../render/shipIso.js';
 import { ShipController } from '../entities/shipController.js';
 import { worldSizeFor } from '../entities/shipSize.js';
-import { NpcShip, getKillGold, rollCombatLoot, checkPirateRespawns, checkDailyEscalationReset } from '../entities/pirate.js';
+import { NpcShip, getKillGold, rollCombatLoot, checkPirateRespawns, checkDailyEscalationReset, checkLegendaryUnlockAnnouncements } from '../entities/pirate.js';
 import { EscortShip } from '../entities/escort.js';
 import { CannonballPool } from '../entities/cannon.js';
 import { WakeTrail } from '../entities/wake.js';
@@ -239,7 +239,7 @@ export class SeaScene {
     const w = this.logicalW, h = this.logicalH;
     let best = null, bestD2 = Infinity;
     for (const npc of this.npcShips) {
-      if (npc.dead) continue;
+      if (npc.dead || !npc.isActive()) continue;
       const p = this.iso.toScreen(this.camera, npc.pos.x, npc.pos.y, w, h);
       const dx = screenX - p.x, dy = screenY - p.y;
       const d2 = dx * dx + dy * dy;
@@ -430,7 +430,7 @@ export class SeaScene {
   _nearestHostile() {
     let best = null, bestD = Infinity;
     for (const npc of this.npcShips) {
-      if (npc.dead || !npc.isHostile()) continue;
+      if (npc.dead || !npc.isHostile() || !npc.isActive()) continue;
       const d = npc.pos.distanceTo(this.ship.pos);
       if (d < bestD) { bestD = d; best = npc; }
     }
@@ -447,7 +447,7 @@ export class SeaScene {
 
     const playerR = worldSizeFor(this.ship.shipDef).length * 0.5;
     for (const npc of this.npcShips) {
-      if (npc.dead || !npc.isHostile()) continue;
+      if (npc.dead || !npc.isHostile() || !npc.isActive()) continue;
       const dx = this.ship.pos.x - npc.pos.x, dz = this.ship.pos.y - npc.pos.y;
       const dist = Math.hypot(dx, dz);
       const minDist = playerR + npc.radius;
@@ -585,7 +585,7 @@ export class SeaScene {
     for (const bounty of bounties) bits.push(`의뢰 완료: ${bounty.title} (+${bounty.reward.toLocaleString('ko-KR')} 두캇)`);
 
     // 엘리트/보스를 처음 잡아보는 순간 딱 한 번만 리스폰·강화 시스템을 설명해준다.
-    if ((npc.tier === 'elite' || npc.tier === 'boss') && !state.seenRespawnIntro) {
+    if ((npc.tier === 'elite' || npc.tier === 'boss' || npc.tier === 'legendary') && !state.seenRespawnIntro) {
       state.seenRespawnIntro = true;
       bits.push('📖 [엘리트/보스는 격침해도 며칠 뒤 이전보다 25% 강해진 채로 돌아옵니다(무한 누적). 강화는 매일 자정(이 기기의 현지 시각)에 초기화됩니다.]');
     }
@@ -851,6 +851,7 @@ export class SeaScene {
       for (const npc of this.npcShips) npc.update(delta, elapsed, this.ship.pos, this.cannonPool, this.weather.fogVisMul);
       checkDailyEscalationReset(this.npcShips);
       checkPirateRespawns(this.npcShips);
+      checkLegendaryUnlockAnnouncements(this.npcShips);
       checkQuestRespawns();
       this._resolveShipCollisions(delta);
       // 해적의 확률적 강습(ambush) — 플레이어의 선택 없이 즉시 교전이 시작된 경우, 여기서
@@ -894,7 +895,7 @@ export class SeaScene {
 
     const targets = [
       { owner: 'player', position: this.ship.pos, radius: worldSizeFor(this.ship.shipDef).length * 0.55, ref: 'player' },
-      ...this.npcShips.filter((n) => !n.dead).map((n) => ({ owner: n.owner, position: n.pos, radius: n.radius, ref: n })),
+      ...this.npcShips.filter((n) => !n.dead && n.isActive()).map((n) => ({ owner: n.owner, position: n.pos, radius: n.radius, ref: n })),
       // 함대(예비 선박)도 owner를 'player'로 둔다 — 플레이어/함대 자신의 포탄과는 owner가
       // 같아 서로 맞지 않고(아군 오사 방지), 적 npc의 포탄(owner가 그 npc의 id)만 맞는다.
       ...this.escorts.filter((e) => !e.dead).map((e) => ({ owner: 'player', position: e.pos, radius: worldSizeFor(e.shipDef).length * 0.5, ref: e, isEscort: true })),
@@ -1019,7 +1020,7 @@ export class SeaScene {
       this._minimapBounds(),
       { x: this.ship.pos.x, z: this.ship.pos.y, heading: this.ship.heading },
       this.minimapCities,
-      this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.isHostile() })),
+      this.npcShips.filter((n) => !n.dead && n.isActive()).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.isHostile() })),
       this.wind.towardDirection,
       state.explorationSite
     );
@@ -1070,14 +1071,14 @@ export class SeaScene {
     // 화면 앞뒤 순서(페인터 알고리즘) — (x+z, 즉 스크린 y에 대응하는 값)가 클수록 앞쪽이라
     // 나중에 그려야 뒤 물체를 가리지 않는다.
     const drawables = [
-      ...this.npcShips.map((n) => ({ z: n.pos.x + n.pos.y, draw: () => this._drawShip(ctx, w, h, n.pos, n.heading, n.shipDef, n.dead ? 'wreck' : 'hostile', n.dead ? clamp(1 - n.sinkT / 1.5, 0, 1) : 1, n.tier) })),
+      ...this.npcShips.filter((n) => n.isActive()).map((n) => ({ z: n.pos.x + n.pos.y, draw: () => this._drawShip(ctx, w, h, n.pos, n.heading, n.shipDef, n.dead ? 'wreck' : 'hostile', n.dead ? clamp(1 - n.sinkT / 1.5, 0, 1) : 1, n.tier) })),
       ...this.escorts.map((e) => ({ z: e.pos.x + e.pos.y, draw: () => this._drawShip(ctx, w, h, e.pos, e.heading, e.shipDef, 'friendly', 1) })),
       { z: this.ship.pos.x + this.ship.pos.y, draw: () => this._drawShip(ctx, w, h, this.ship.pos, this.ship.heading, this.ship.shipDef, 'player', 1) },
     ].sort((a, b) => a.z - b.z);
     for (const d of drawables) d.draw();
 
     for (const n of this.npcShips) {
-      if (n.dead || n.hp >= n.maxHp) continue;
+      if (n.dead || n.hp >= n.maxHp || !n.isActive()) continue;
       this._drawWorldHpBar(ctx, w, h, n.pos, n.maxHp > 0 ? n.hp / n.maxHp : 1, 'hostile');
     }
     for (const e of this.escorts) {

@@ -27,6 +27,8 @@ const TIER_MULS = {
   grunt: { hp: 1, dmg: 1, fireIntervalMul: 1, rangeMul: 1 },
   elite: { hp: 1.4, dmg: 1.3, fireIntervalMul: 0.85, rangeMul: 1.15 },
   boss: { hp: 2.2, dmg: 1.7, fireIntervalMul: 0.7, rangeMul: 1.35 },
+  // 세 항로를 모두 개척해야 조우하는 엔드게임 전용 등급 — 보스보다 한 단계 더 강하다.
+  legendary: { hp: 2.6, dmg: 1.9, fireIntervalMul: 0.65, rangeMul: 1.4 },
 };
 
 // 해역별 난이도(레벨 디자인) — spawn 데이터의 region 필드(1~4, 생략 시 1)로 정해진다.
@@ -58,9 +60,11 @@ const BOSS_REGION_MULS = {
 // 자연히 보상도 커진다. 보스는 그 위에 고정 보너스(정부/상회의 별도 포상금 명목)가 더 붙는다.
 const GOLD_PER_HP = 0.35;
 const BOSS_FLAT_BONUS = 1200;
+const LEGENDARY_FLAT_BONUS = 2500;
 
 export function getKillGold(npc) {
   const base = Math.round(npc.maxHp * GOLD_PER_HP);
+  if (npc.tier === 'legendary') return base + LEGENDARY_FLAT_BONUS;
   return npc.tier === 'boss' ? base + BOSS_FLAT_BONUS : base;
 }
 
@@ -72,13 +76,13 @@ const CARGO_LOOT_POOL = {
   3: ['pepper', 'cinnamon', 'clove', 'nutmeg', 'silk'],
   4: ['silk', 'porcelain', 'tea', 'ginseng'],
 };
-const CARGO_LOOT_CHANCE = { grunt: 0.25, elite: 0.55, boss: 1 };
-const CARGO_LOOT_QTY = { grunt: [1, 3], elite: [3, 6], boss: [8, 15] };
+const CARGO_LOOT_CHANCE = { grunt: 0.25, elite: 0.55, boss: 1, legendary: 1 };
+const CARGO_LOOT_QTY = { grunt: [1, 3], elite: [3, 6], boss: [8, 15], legendary: [15, 25] };
 
-// 자재·포탄 소량 노획 — 잡몹/엘리트만 해당(보스는 대신 초대형 건조 전용 재료를 확정으로
-// 준다 — 아래 참고). 자재는 바다 위 응급수리, 포탄은 포격 자체의 필수 소모품이라 어떤
-// 상황에서도 쓸모가 확실하다.
-const SUPPLY_LOOT_CHANCE = { grunt: 0.3, elite: 0.3, boss: 0 };
+// 자재·포탄 소량 노획 — 잡몹/엘리트만 해당(보스·레전더리는 대신 초대형 건조 전용 재료를
+// 확정으로 준다 — 아래 참고). 자재는 바다 위 응급수리, 포탄은 포격 자체의 필수 소모품이라
+// 어떤 상황에서도 쓸모가 확실하다.
+const SUPPLY_LOOT_CHANCE = { grunt: 0.3, elite: 0.3, boss: 0, legendary: 0 };
 
 // ---- 건조 재료 드랍 ----
 // 상급 조선용 참나무 — 대형/초대형 건조에 쓰이는 오래 묵은 원목(엘리트 전용 드랍).
@@ -89,6 +93,9 @@ const SUPPLY_LOOT_CHANCE = { grunt: 0.3, elite: 0.3, boss: 0 };
 const OAK_DROP_CHANCE = 0.6;
 const OAK_DROP_QTY = [1, 2];
 const IRONCLAD_DROP_QTY = [1, 2];
+// 레전더리(세 항로 완주 이후 등장)는 보스보다도 훨씬 큰 폭으로 철갑판을 준다 — "3부작을
+// 다 끝낸 뒤에도 남는 목표"가 되도록, 최상급 건조 재료의 최고 효율 파밍처를 여기에 둔다.
+const LEGENDARY_IRONCLAD_DROP_QTY = [3, 5];
 
 function randInt([lo, hi]) {
   return lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -116,6 +123,8 @@ export function rollCombatLoot(npc) {
   }
   if (tier === 'boss') {
     loot.ironcladPlating = randInt(IRONCLAD_DROP_QTY);
+  } else if (tier === 'legendary') {
+    loot.ironcladPlating = randInt(LEGENDARY_IRONCLAD_DROP_QTY);
   }
   return loot;
 }
@@ -127,7 +136,7 @@ export function rollCombatLoot(npc) {
 // 되돌아간다(checkDailyEscalationReset) — 그래야 하루 이상 묵혀둔 파밍이 통제 불능으로
 // 커지는 사고를 막는다.
 const ESCALATION_STEP = 0.25;
-const RESPAWN_DELAY_VOYAGE_DAYS = { elite: 3, boss: 10 };
+const RESPAWN_DELAY_VOYAGE_DAYS = { elite: 3, boss: 10, legendary: 14 };
 const VOYAGE_DAY_SECONDS = 60; // entities/weather.js DAY_CYCLE_SECONDS와 동일 기준
 
 function getEscalationLevel(ownerId) {
@@ -175,10 +184,15 @@ export class NpcShip {
   _computeStats() {
     const tm = TIER_MULS[this.tier] || TIER_MULS.grunt;
     const isBoss = this.tier === 'boss';
+    // 레전더리는 특정 해역 소속이 아니라 세 대양 전체를 상징하는 유일 개체라, 보스처럼
+    // region 배율을 겹쳐 얹지 않는다(TIER_MULS.legendary 하나만으로 이미 보스보다 강하다).
+    const isLegendary = this.tier === 'legendary';
     const rm = isBoss
       ? { ...(BOSS_REGION_MULS[this.region] || BOSS_REGION_MULS[1]), fireIntervalMul: 1 }
-      : (REGION_MULS[this.region] || REGION_MULS[1]);
-    this.escalationLevel = (this.tier === 'elite' || this.tier === 'boss') ? getEscalationLevel(this.owner) : 0;
+      : isLegendary
+        ? { hp: 1, dmg: 1, fireIntervalMul: 1 }
+        : (REGION_MULS[this.region] || REGION_MULS[1]);
+    this.escalationLevel = (this.tier === 'elite' || this.tier === 'boss' || isLegendary) ? getEscalationLevel(this.owner) : 0;
     const esc = 1 + this.escalationLevel * ESCALATION_STEP;
     this.maxHp = Math.round(this.def.hp * tm.hp * rm.hp * esc);
     const cannons = this.shipDef?.cannons || 0;
@@ -205,6 +219,14 @@ export class NpcShip {
 
   isHostile() { return this.def.hostile || this.hostileOverride; }
 
+  // 세 항로를 모두 열어야 조우하는 엔드게임 개체(requiresRoutes)용 — 조건이 아직 안 채워졌으면
+  // false를 반환하고, seaScene의 클릭 타겟팅/충돌/포격/렌더/미니맵이 전부 이 값을 확인해
+  // 마치 존재하지 않는 것처럼 완전히 걸러낸다. requiresRoutes가 없는 일반 NPC는 항상 true.
+  isActive() {
+    if (!this.def.requiresRoutes) return true;
+    return this.def.requiresRoutes.every((r) => state.unlockedRoutes[r]);
+  }
+
   // 플레이어가 상호작용 메뉴에서 "전투"를 선택했을 때 seaScene이 호출한다.
   engage() {
     if (!this.def.hostile) this.hostileOverride = true;
@@ -223,7 +245,7 @@ export class NpcShip {
     if (this.hp <= 0 && !this.dead) {
       this.dead = true;
       this.state = 'sunk';
-      if (this.tier === 'elite' || this.tier === 'boss') {
+      if (this.tier === 'elite' || this.tier === 'boss' || this.tier === 'legendary') {
         const prev = state.pirateEscalation[this.owner] || { level: 0, respawnAt: null };
         const level = prev.level + 1;
         const respawnAt = state.dayTimer + RESPAWN_DELAY_VOYAGE_DAYS[this.tier] * VOYAGE_DAY_SECONDS;
@@ -245,6 +267,7 @@ export class NpcShip {
       this.sinkT += delta;
       return;
     }
+    if (!this.isActive()) return; // 잠금 해제 전 — AI 갱신 자체를 건너뛰어 완전히 비활성 상태로 둔다
 
     const toPlayer = new Vec2(playerPos2.x - this.pos.x, playerPos2.y - this.pos.y);
     const distToPlayer = toPlayer.length();
@@ -327,7 +350,7 @@ export function checkPirateRespawns(npcShips) {
     const reactivated = reactivateRepeatableBounties(npc.owner);
     const repeatNote = reactivated.length > 0 ? ' 관련 반복 토벌 의뢰가 다시 게시됐습니다.' : '';
     // 잡몹 단순 리스폰(respawnDays)은 강화가 없으므로(escalationLevel 항상 0) 그 문구를 뺀다.
-    const escalationNote = (npc.tier === 'elite' || npc.tier === 'boss')
+    const escalationNote = (npc.tier === 'elite' || npc.tier === 'boss' || npc.tier === 'legendary')
       ? ` (강화 Lv.${npc.escalationLevel} · 이전 대비 +${npc.escalationLevel * 25}%)` : '';
     hud.toast(`⚔ ${npc.def.name}이(가) 다시 나타났습니다!${escalationNote}${repeatNote}`);
   }
@@ -353,10 +376,23 @@ export function checkDailyEscalationReset(npcShips) {
   if (isFirstRun || !hadEscalation) return;
 
   for (const npc of npcShips) {
-    if (!npc.dead && (npc.tier === 'elite' || npc.tier === 'boss')) {
+    if (!npc.dead && (npc.tier === 'elite' || npc.tier === 'boss' || npc.tier === 'legendary')) {
       npc._computeStats();
       npc.hp = npc.maxHp;
     }
   }
   hud.toast('🌅 자정이 지나 강화됐던 해적들의 위세가 원래대로 돌아왔습니다.');
+}
+
+// 세 항로를 모두 개척한 순간(requiresRoutes 조건 충족) 딱 한 번, 레전더리 해적이 나타났음을
+// 알린다 — 탐사 사이트처럼 좌표를 직접 알려주진 않고(엔드게임이니 스스로 찾는 재미를
+// 남긴다), 등장 사실과 이름만 귀띔한다. 세션 한정 가드(모듈 스코프 Set)라 새로고침 후 아직
+// 조건이 유지 중이면 한 번 더 뜨는 정도는 오히려 놓치지 않게 도와준다.
+const legendaryAnnounced = new Set();
+export function checkLegendaryUnlockAnnouncements(npcShips) {
+  for (const npc of npcShips) {
+    if (npc.tier !== 'legendary' || npc.dead || legendaryAnnounced.has(npc.owner) || !npc.isActive()) continue;
+    legendaryAnnounced.add(npc.owner);
+    hud.toast(`🏴‍☠️ 세 대양의 항로를 모두 개척했습니다 — ${npc.def.name}이(가) 대양 어딘가에 나타났다는 소문이 돕니다.`, 4800);
+  }
 }

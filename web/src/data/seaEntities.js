@@ -127,4 +127,15 @@ export const SEA_NPC_SHIPS = [
     hp: 900, hostile: true, patrolRadius: 35, tier: 'elite', region: 4 },
   { id: 'pirate_boss_zheng', type: 'pirate', name: '[보스] 정씨 해적 선단 기함', pos: project(114.0, 21.5), shipId: 'pirate_junk_flagship',
     hp: 2600, hostile: true, patrolRadius: 25, tier: 'boss', region: 4 },
+
+  // ── [엔드게임: 세 항로를 모두 개척해야 조우하는 레전더리 해적] ──
+  // requiresRoutes에 적힌 항로가 전부 해금되기 전까지는 entities/pirate.js의 isActive()가
+  // false를 반환해 클릭·조준·렌더링·AI 갱신 전부에서 완전히 제외된다 — 그 자리를 미리
+  // 지나가도 아무것도 없는 것처럼 보인다. 특정 지역 소속이 아니라 세 대양 전체를 상징하는
+  // 존재라 region은 지정하지 않고(기본값 1), TIER_MULS.legendary 배율만으로 강함을 낸다.
+  // 격침해도 보스와 마찬가지로 무한 리스폰+누적 강화가 그대로 적용된다(다만 리스폰 주기는
+  // 14항해일로 보스보다 더 길다) — 최상급 건조 재료(전설 해적기함의 철갑판)의 최고 효율
+  // 파밍처가 되어, "세 항로 완주"가 끝이 아니라 다음 목표(진짜 최상급 함선)로 이어지게 한다.
+  { id: 'pirate_legendary_roberts', type: 'pirate', name: '[레전더리] 바르톨로뮤 로버츠의 로열 포춘호', pos: project(-20.0, 0.5), shipId: 'pirate_flagship_roberts',
+    hp: 3600, hostile: true, patrolRadius: 30, tier: 'legendary', requiresRoutes: ['west_africa', 'new_world', 'indian_ocean'] },
 ];

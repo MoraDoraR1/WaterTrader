@@ -94,6 +94,7 @@ export const SHIP_TYPES = {
   galliot: { label: '갤리엇', era: '1650~1800s', nations: [], sizes: ['small'] },
   pirate_frigate: { label: '해적 프리깃', era: '1690~1720s', nations: [], sizes: ['large'] },
   pirate_flagship_every: { label: '해적 기함', era: '1690~1700s', nations: [], sizes: ['xlarge'] },
+  pirate_flagship_roberts: { label: '해적 기함', era: '1719~1722s', nations: [], sizes: ['xlarge'] },
 };
 
 export const SHIPS = [
@@ -378,6 +379,12 @@ export const SHIPS = [
   { id: 'pirate_flagship_every', name: '[보스] 헨리 에브리의 팬시호', class: 'xlarge', role: 'combat', type: 'pirate_flagship_every',
     country: 'PR', era: '1690~1700s', speed: 9, turnRate: 22, hp: 2700, cargo: 320, cannons: 65, cannonSlotTiers: [4, 3, 2, 2, 2, 1], skills: ['multi_cannon', 'precision_fire', 'boarding_mastery', 'agile_maneuvers'], crew: 200, price: 17000,
     desc: '1695년 무굴 제국의 보물선 간즈이사와이호를 나포해 역사상 최대급 해적질을 해낸 실존 해적 헨리 에브리의 쾌속 프리깃. 인도양을 주름잡은 뒤 끝내 붙잡히지 않고 종적을 감췄다.', purchasable: false },
+  // 바르톨로뮤 로버츠("검은 바트") — 3년간 400척 이상을 나포해 해적 역사상 최다 전과를
+  // 남긴 실존 해적. 서아프리카·카리브해·브라질을 오가며 활동해 세 대양을 종횡한 유일한
+  // 해적이었다는 점에서, 세 항로를 전부 개척해야 조우하는 엔드게임 콘텐츠의 상징으로 삼았다.
+  { id: 'pirate_flagship_roberts', name: '[레전더리] 바르톨로뮤 로버츠의 로열 포춘호', class: 'xlarge', role: 'combat', type: 'pirate_flagship_roberts',
+    country: 'PR', era: '1719~1722s', speed: 9, turnRate: 20, hp: 3200, cargo: 340, cannons: 92, cannonSlotTiers: [4, 4, 3, 2, 2, 1], skills: ['multi_cannon', 'precision_fire', 'rapid_reload', 'ironclad_defense'], crew: 240, price: 20000,
+    desc: '3년간 400척 이상을 나포해 해적 역사상 최다 전과를 남긴 실존 해적 바르톨로뮤 로버츠("검은 바트")의 기함. 서아프리카·카리브해·브라질을 오가며 세 대양을 종횡했다 — 세 항로를 모두 개척한 자만이 마주할 자격이 있다.', purchasable: false },
   { id: 'pirate_xebec', name: '해적 제벡선', class: 'medium', role: 'combat', type: 'xebec',
     country: 'PR', era: '1650~1800s', speed: 14, turnRate: 66, hp: 480, cargo: 90, cannons: 7, cannonSlotTiers: [2, 1], skills: ['assault_speed', 'reinforced_ram'], crew: 70, price: 1900,
     desc: '지중해 바르바리 해적이 애용한 삼각돛 쾌속 제벡선. 노와 돛을 겸용해 무풍에도 빠르게 접근한다.', purchasable: false },
