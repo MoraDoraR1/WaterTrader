@@ -43,7 +43,24 @@ export function isQuestChainReady(q) {
   // 전) 아예 게시판에 뜨지 않고, 배웠어도 skillId 스킬이 minSkillLevel 이상이어야 뜬다.
   if (q.minSkillLevel != null && !isLearned(q.skillId)) return false;
   if (q.minSkillLevel != null && getSkillLevel(q.skillId) < q.minSkillLevel) return false;
+  // 두 학문을 동시에 요구하는 연계 의뢰(예: 안티키테라 기계 = 천문 계산기이니 천문학도 함께
+  // 필요) — extraSkillReqs: [{ skillId, minLevel }] 전부를 만족해야 한다.
+  if (Array.isArray(q.extraSkillReqs)) {
+    for (const req of q.extraSkillReqs) {
+      if (!isLearned(req.skillId) || getSkillLevel(req.skillId) < req.minLevel) return false;
+    }
+  }
   return true;
+}
+
+// 도감 사이트 id로 그 발견을 노리는 investigate 의뢰의 extraSkillReqs를 찾는다 — G키 현장
+// 발견(seaScene.js _investigateSite/_observeSky) 쪽에도 똑같이 걸어야 한다. 게시판 노출만
+// 막고 실제 발견 자체는 안 막으면, 의뢰를 수락하지 않고 그냥 좌표로 가서 G만 눌러 두 번째
+// 학문 요구 조건을 완전히 우회할 수 있기 때문이다(예전에 minSkillLevel에서 겪은 것과 같은
+// 유형의 구멍).
+export function getExtraSkillReqs(siteId) {
+  const q = QUESTS.find((x) => x.type === 'investigate' && x.siteId === siteId && Array.isArray(x.extraSkillReqs));
+  return q ? q.extraSkillReqs : null;
 }
 
 export function addReputation(country, amount) {

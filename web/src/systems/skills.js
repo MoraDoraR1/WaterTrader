@@ -6,8 +6,8 @@
 // 호출해 바다·도시 화면 어느 쪽에 있든 항상 흐르게 한다.
 import { state, notify } from '../state.js';
 import {
-  PLAYER_SKILLS, MAX_SKILL_LEVEL, MAX_LEARNED_SKILLS, QUICKSLOT_COUNT, SKILL_EXP_CURVE,
-  getSkillDef, castExpFor, lerpByLevel,
+  PLAYER_SKILLS, MAX_SKILL_LEVEL, MAX_LEARNED_SKILLS, QUICKSLOT_COUNT,
+  getSkillDef, castExpFor, lerpByLevel, curveFor,
 } from '../data/playerSkills.js';
 import { hud } from '../ui/hud.js';
 
@@ -19,10 +19,11 @@ export function getSkillLevel(id) {
   return getSkillState(id).level;
 }
 
-// 레벨(1~14)에서 다음 레벨까지 필요한 사용 횟수 — 이미 만렙(15)이면 null.
-export function expToNext(level) {
+// 레벨(1~14)에서 다음 레벨까지 필요한 사용 횟수 — 이미 만렙(15)이면 null. 스킬마다 곡선이
+// 다르므로(전투/교역은 SKILL_EXP_CURVE, 학문은 ACADEMIC_EXP_CURVE) id가 반드시 필요하다.
+export function expToNext(level, id) {
   if (level >= MAX_SKILL_LEVEL) return null;
-  return SKILL_EXP_CURVE[level - 1];
+  return curveFor(id)[level - 1];
 }
 
 // 스킬을 "사용"할 때마다 호출 — amount는 보통 castExpFor(level)(전투/교역) 또는 도감 발견
@@ -36,7 +37,7 @@ export function gainSkillExp(id, amount = 1) {
   exp += amount;
   let leveledUp = false;
   while (level < MAX_SKILL_LEVEL) {
-    const need = expToNext(level);
+    const need = expToNext(level, id);
     if (exp < need) break;
     exp -= need;
     level += 1;
@@ -54,7 +55,7 @@ export function gainSkillExp(id, amount = 1) {
 // 스킬 패널의 진행도 바 — { level, exp, need(null이면 만렙), ratio(0~1) }
 export function getSkillProgress(id) {
   const { level, exp } = getSkillState(id);
-  const need = expToNext(level);
+  const need = expToNext(level, id);
   return { level, exp, need, ratio: need ? Math.min(1, exp / need) : 1, isMax: need == null };
 }
 

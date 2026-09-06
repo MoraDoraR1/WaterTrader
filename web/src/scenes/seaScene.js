@@ -23,7 +23,7 @@ import { SEA_NPC_SHIPS } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
-import { checkBountyKill, addReputation, checkQuestRespawns, checkInvestigateComplete } from '../systems/quests.js';
+import { checkBountyKill, addReputation, checkQuestRespawns, checkInvestigateComplete, getExtraSkillReqs } from '../systems/quests.js';
 import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, ASTRONOMY_ENTRIES, rewardFor, rewardForRank } from '../data/compendium.js';
 import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
 import { checkExplorationSite } from '../systems/exploration.js';
@@ -355,10 +355,13 @@ export class SeaScene {
       const { category, site } = this._nearbySite;
       const found = state.compendium[category][site.id];
       const icon = category === 'archaeology' ? '🏺' : '🗺️';
+      const missingExtra = !found && this._missingExtraReq(site);
       if (!isLearned(category)) {
         hud.showInteractPrompt(true, `🔒 ${PLAYER_SKILLS[category].name}을(를) 배우지 않았습니다`);
       } else if (!found && getSkillLevel(category) < site.minSkillLevel) {
         hud.showInteractPrompt(true, `🔒 ${PLAYER_SKILLS[category].name} Lv.${site.minSkillLevel} 필요 (현재 Lv.${getSkillLevel(category)})`);
+      } else if (missingExtra) {
+        hud.showInteractPrompt(true, `🔒 ${missingExtra}도 함께 필요`);
       } else {
         const label = found ? site.name : '미확인 지점';
         hud.showInteractPrompt(true, `G: ${icon} ${label} 조사`);
@@ -382,6 +385,20 @@ export class SeaScene {
     hud.toast('조사하거나 관측할 대상이 근처에 없습니다.');
   }
 
+  // 두 학문을 병렬로 요구하는 사이트(예: 안티키테라 기계 = 천문학도 필요)의 extra 요구가
+  // 충족됐는지 — 의뢰 게시판(isQuestChainReady)만 막고 G키 현장 발견을 안 막으면, 의뢰를
+  // 아예 수락하지 않고 좌표로 직접 가서 그 요구를 통째로 우회할 수 있으므로 여기서도 검사한다.
+  _missingExtraReq(site) {
+    const reqs = getExtraSkillReqs(site.id);
+    if (!reqs) return null;
+    for (const req of reqs) {
+      if (!isLearned(req.skillId) || getSkillLevel(req.skillId) < req.minLevel) {
+        return `${PLAYER_SKILLS[req.skillId].name} Lv.${req.minLevel}`;
+      }
+    }
+    return null;
+  }
+
   _investigateSite({ category, site }) {
     // 학문 3종도 처음부터 갖고 있지 않다 — 도시의 학자에게 배우기 전엔 조사 자체가 불가능하다
     // (레벨 검사보다 먼저 걸어야 한다. 안 그러면 기본 레벨1로도 minSkillLevel1 사이트는
@@ -401,6 +418,11 @@ export class SeaScene {
     // 레벨과 무관하게 항상 허용한다(소량 exp만 주므로 악용 여지가 없다).
     if (!already && getSkillLevel(category) < site.minSkillLevel) {
       hud.toast(`🔒 ${PLAYER_SKILLS[category].name} Lv.${site.minSkillLevel} 이상이어야 조사할 수 있습니다. (현재 Lv.${getSkillLevel(category)})`);
+      return;
+    }
+    const missingExtra = !already && this._missingExtraReq(site);
+    if (missingExtra) {
+      hud.toast(`🔒 ${missingExtra}도 함께 필요합니다.`);
       return;
     }
     this._investigateCooldowns[site.id] = REINVESTIGATE_COOLDOWN;
@@ -435,7 +457,7 @@ export class SeaScene {
     // 미발견 중에서도 현재 레벨로 관측 가능한(minSkillLevel 이하) 것만 후보로 삼는다 —
     // 안 그러면 레벨1에서도 최상급 별자리(플레이아데스 등)를 곧바로 관측해버려 숙련도
     // 곡선이 무의미해진다. 후보가 없으면(전부 발견했거나, 레벨이 못 미침) 재관측으로 취급.
-    const next = ASTRONOMY_ENTRIES.find((s) => !found[s.id] && level >= s.minSkillLevel);
+    const next = ASTRONOMY_ENTRIES.find((s) => !found[s.id] && level >= s.minSkillLevel && !this._missingExtraReq(s));
     if (!next) {
       gainSkillExp('astronomy', 1);
       hud.toast('🔭 밤하늘을 다시 관측했습니다. (천문학 숙련도 +1)');

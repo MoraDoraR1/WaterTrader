@@ -31,7 +31,7 @@ import { checkExplorationSite } from './systems/exploration.js';
 import { initTooltips } from './ui/tooltip.js';
 import { openSkillPanel, wireSkillTabs } from './ui/skillPanel.js';
 import { openCompendiumPanel, wireCompendiumTabs } from './ui/compendiumPanel.js';
-import { PLAYER_SKILLS, QUICKSLOT_COUNT } from './data/playerSkills.js';
+import { PLAYER_SKILLS, QUICKSLOT_COUNT, ACADEMIC_EXP_CURVE, SKILL_EXP_CURVE } from './data/playerSkills.js';
 import {
   getSkillSlots, castSkill, tickSkillBuffs, getActiveBuffs, getSkillCooldown,
   learnSkill, equipSkill, unequipSkill, getLearnedSkills, buffMul, buffAdd,
@@ -41,7 +41,7 @@ import { RANKS } from './data/ranks.js';
 import {
   checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
   getQuestStatus, isQuestChainReady, syncUnlockedRoutes, checkQuestRespawns, addReputation,
-  getQuestsForCity,
+  getQuestsForCity, getExtraSkillReqs,
 } from './systems/quests.js';
 import { QUESTS } from './data/quests.js';
 
@@ -521,5 +521,5 @@ window.__debug = {
   hud, getQuestsForCity, QUESTS, openMarket, openSupplies, openShipyard,
   ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, openSkillPanel, openCompendiumPanel,
   learnSkill, equipSkill, unequipSkill, getLearnedSkills, getSkillSlots, getActiveBuffs, buffMul, buffAdd, castSkill,
-  rewardForRank,
+  rewardForRank, getExtraSkillReqs, ACADEMIC_EXP_CURVE, SKILL_EXP_CURVE,
 };

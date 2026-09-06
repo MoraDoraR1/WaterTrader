@@ -238,9 +238,12 @@ const ACADEMIC_CHAIN_QUESTS = [
   { id: 'chain_geo_south_2', type: 'investigate', cityId: 'cape_town', siteId: 'geo_maelstrom', skillId: 'geography', requires: 'chain_geo_south_1', reward: 750,
     title: '[지리학 연계 2/3] 모스크스트라우멘 소용돌이 답사', desc: '이번엔 북쪽 끝, 배를 통째로 삼킨다는 전설의 소용돌이를 답사해주십시오.',
     acceptLine: '"이번엔 정반대로 북쪽 끝일세 — 노르웨이의 그 소용돌이, 옛 지도엔 심연으로 그려져 있더군."' },
+  // 사르가소해는 바람도 해류도 종잡을 수 없어(적도 무풍대와 함께 뱃사람들이 가장 두려워한
+  // 해역), 위치를 가늠할 유일한 수단이 결국 별이었다 — 천문학도 함께 요구한다.
   { id: 'chain_geo_south_3', type: 'investigate', cityId: 'cape_town', siteId: 'geo_sargasso', skillId: 'geography', requires: 'chain_geo_south_2', reward: 950,
-    title: '[지리학 연계 3/3] 사르가소해 답사', desc: '마지막으로 해안선 하나 없이 해류로만 둘러싸인 유일한 바다, 사르가소해를 답사해주십시오.',
-    acceptLine: '"마지막은 가장 기이한 곳일세 — 사르가소해, 유령선 전설이 끊이지 않는 그 바다 말이네."' },
+    extraSkillReqs: [{ skillId: 'astronomy', minLevel: 10 }],
+    title: '[지리학 연계 3/3] 사르가소해 답사', desc: '마지막으로 해안선 하나 없이 해류로만 둘러싸인 유일한 바다, 사르가소해를 답사해주십시오. (천문학 Lv.10 이상 — 바람도 해류도 없는 이 바다에서는 별을 볼 줄 알아야만 위치를 가늠할 수 있습니다)',
+    acceptLine: '"마지막은 가장 기이한 곳일세 — 사르가소해, 유령선 전설이 끊이지 않는 그 바다 말이네. 바람도 해류도 없으니, 별을 읽을 줄 모르면 그 안에서 영영 표류할 걸세."' },
 
   // -- 천문학 1) 고대 그리스 별자리: 오리온 → 큰곰자리 → 전갈자리
   { id: 'chain_astro_greek_1', type: 'investigate', cityId: 'venezia', siteId: 'star_orion', skillId: 'astronomy', minSkillLevel: 1, reward: 300,
@@ -271,12 +274,29 @@ const ACADEMIC_CHAIN_QUESTS = [
   { id: 'chain_astro_south_1', type: 'investigate', cityId: 'cape_town', siteId: 'star_crux', skillId: 'astronomy', minSkillLevel: 8, reward: 550,
     title: '[천문학 연계 1/3] 남십자자리 관측', desc: '케이프타운의 항해장이 남반구 별자리를 정리하고 있습니다. 남십자자리부터 관측해주십시오.',
     acceptLine: '케이프타운 항구 관리인이 말합니다. "북극성이 안 보이는 이 바다에선 저 작은 십자가가 대신 방위를 알려준다네."' },
+  // 노인성(카노푸스)은 아랍 항해자들이 인도양 계절풍 항로에서 위도를 가늠하던 별이다 — 그
+  // 항로의 지리(계절풍대·호르무즈 해협)를 모르면 이 별이 왜 중요했는지 이해할 수 없으므로,
+  // 지리학도 함께 요구한다(고고학·지리학·천문학 2개 학문을 병렬로 요구하는 연계 의뢰).
   { id: 'chain_astro_south_2', type: 'investigate', cityId: 'cape_town', siteId: 'star_canopus', skillId: 'astronomy', requires: 'chain_astro_south_1', reward: 700,
-    title: '[천문학 연계 2/3] 노인성(카노푸스) 관측', desc: '이번엔 아랍 항해자들이 위도를 가늠하던 노인성을 관측해주십시오.',
-    acceptLine: '"이번엔 노인성이야 — 하늘에서 둘째로 밝은 별인데, 남쪽 수평선 가까이서만 보인다더군."' },
+    extraSkillReqs: [{ skillId: 'geography', minLevel: 4 }],
+    title: '[천문학 연계 2/3] 노인성(카노푸스) 관측', desc: '이번엔 아랍 항해자들이 위도를 가늠하던 노인성을 관측해주십시오. (지리학 Lv.4 이상 — 이 별이 쓰이던 계절풍 항로를 먼저 알아야 합니다)',
+    acceptLine: '"이번엔 노인성이야 — 하늘에서 둘째로 밝은 별인데, 남쪽 수평선 가까이서만 보인다더군. 다만 이 별이 왜 중요했는지 알려면, 자네가 계절풍 항로부터 먼저 알아야 할 걸세."' },
   { id: 'chain_astro_south_3', type: 'investigate', cityId: 'cape_town', siteId: 'star_argo_navis', skillId: 'astronomy', requires: 'chain_astro_south_2', reward: 900,
     title: '[천문학 연계 3/3] 아르고자리 관측', desc: '마지막으로 전설의 배 아르고호를 본뜬, 한때 밤하늘에서 가장 거대했던 별자리를 관측해주십시오.',
     acceptLine: '"마지막으로 가장 큰 별자리를 보세 — 이아손의 배, 아르고자리일세. 너무 커서 훗날 여럿으로 쪼개졌다더군."' },
+
+  // ---- 2개 학문을 병렬로 요구하는 단독 의뢰 2건 ----
+  // 원래는 buildDiscoveryQuests()가 자동 생성하는 개별 발견 의뢰였지만, 실제로 두 학문이
+  // 함께 필요한 이유가 있는 항목이라 손으로 옮겨 extraSkillReqs를 얹었다(사이트 자체는
+  // 그대로라 도감·보상은 동일, 수주 조건만 하나 더 걸린다).
+  { id: 'disc_wreck_antikythera', type: 'investigate', cityId: 'valletta', siteId: 'wreck_antikythera', skillId: 'archaeology', minSkillLevel: 1, reward: 260,
+    extraSkillReqs: [{ skillId: 'astronomy', minLevel: 2 }],
+    title: '[고고학 발견] 🏺 안티키테라 유물', desc: '1901년 그리스 어부들이 건져올린 난파선에서 나온 청동 장치 — 훗날 "세계 최초의 아날로그 컴퓨터"로 불리는 천체 계산기(안티키테라 기계)가 이 안에 있었다. (천문학 Lv.2 이상 — 이 장치가 계산하던 것이 무엇인지 알아야 진가를 알아볼 수 있습니다)',
+    acceptLine: '발레타의 한 수집가가 말합니다. "몰타 앞바다에 가라앉은 청동기 하나가 있는데, 그 안에 든 톱니 장치가 심상치 않아. 다만 이걸 알아보려면 별자리를 좀 알아야 할 걸세."' },
+  { id: 'disc_myth_atlantis', type: 'investigate', cityId: 'azores', siteId: 'myth_atlantis', skillId: 'archaeology', minSkillLevel: 14, reward: 500,
+    extraSkillReqs: [{ skillId: 'geography', minLevel: 6 }],
+    title: '[고고학 발견] 🏺 전설의 침몰 대륙', desc: '플라톤이 "헤라클레스의 기둥 너머"에 있었다고 전한 침몰한 섬나라 — 실체를 증명할 유적은 없지만, 대서양 한복판 화산섬 지형이 오랫동안 이 전설의 근거로 지목되어 왔다. (지리학 Lv.6 이상 — 산토리니 같은 실제 화산 지형학을 알아야 전설과 지질을 구분할 수 있습니다)',
+    acceptLine: '아조레스 항구 관리인이 말합니다. "플라톤이 남겼다는 그 침몰한 섬나라 말인데, 자네가 산토리니 같은 화산 지형을 볼 줄 안다면 전설과 진짜를 가려낼 수 있을지도 모르겠군."' },
 ];
 
 // 위 9개 체인에 이미 쓰인 사이트는 개별 발견 의뢰로 중복 생성하지 않는다.
