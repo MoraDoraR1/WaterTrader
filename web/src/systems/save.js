@@ -58,7 +58,8 @@ export function saveGame() {
     nextExplorationSiteAt: state.nextExplorationSiteAt,
     explorationCount: state.explorationCount,
     playerSkills: state.playerSkills,
-    combatSkillSlots: state.combatSkillSlots,
+    learnedSkills: state.learnedSkills,
+    skillSlots: state.skillSlots,
     compendium: state.compendium,
   };
   try {
@@ -121,7 +122,18 @@ export function applySave(data) {
   state.nextExplorationSiteAt = typeof data.nextExplorationSiteAt === 'number' ? data.nextExplorationSiteAt : null;
   state.explorationCount = typeof data.explorationCount === 'number' ? data.explorationCount : 0;
   state.playerSkills = data.playerSkills && typeof data.playerSkills === 'object' ? data.playerSkills : {};
-  state.combatSkillSlots = Array.isArray(data.combatSkillSlots) ? data.combatSkillSlots : [null, null];
+  // 구버전 세이브(combatSkillSlots, 2칸, "배우기" 없이 바로 장착 가능하던 시절)를 새 9칸
+  // skillSlots로 옮긴다 — 그때 장착돼 있던 스킬은 이미 쓰고 있었으니 learnedSkills에도 함께
+  // 넣어줘야 "장착엔 학습이 선행돼야 한다"는 새 규칙에서도 계속 장착 상태로 남는다.
+  const legacySlots = Array.isArray(data.combatSkillSlots) ? data.combatSkillSlots.filter(Boolean) : [];
+  state.learnedSkills = Array.isArray(data.learnedSkills)
+    ? [...new Set([...data.learnedSkills, ...legacySlots])]
+    : [...new Set(legacySlots)];
+  if (Array.isArray(data.skillSlots)) {
+    state.skillSlots = Array(9).fill(null).map((_, i) => data.skillSlots[i] ?? null);
+  } else {
+    state.skillSlots = Array(9).fill(null).map((_, i) => legacySlots[i] ?? null);
+  }
   state.compendium = data.compendium && typeof data.compendium === 'object'
     ? { archaeology: data.compendium.archaeology || {}, geography: data.compendium.geography || {}, astronomy: data.compendium.astronomy || {} }
     : { archaeology: {}, geography: {}, astronomy: {} };

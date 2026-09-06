@@ -13,6 +13,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 미겔', line: '새 배를 건조하거나 수리해드립니다.' },
       { role: 'harbormaster', name: '출항 관리인 안토니오', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '어부 파울로', line: '오늘은 파도가 잔잔하군요.' },
+      { role: 'mentor', name: '상관 조합장 두아르트', line: '"장사꾼이라면 값을 깎고 붙이는 눈치부터 배워야지."' },
     ],
   },
   {
@@ -23,6 +24,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 디에고', line: '갈레온 건조는 저희 조선소가 최고입니다.' },
       { role: 'harbormaster', name: '항무관 페르난도', line: '통상원의 허가 없이는 신대륙行 항로를 열 수 없습니다.' },
       { role: 'citizen', name: '상인 견습생 루이스', line: '과달키비르 강을 따라 배가 끊이질 않네요.' },
+      { role: 'mentor', name: '보급창 관리인 이네스', line: '"한 번에 많이 사면 값이 낮아지는 법이지."' },
     ],
   },
   {
@@ -43,6 +45,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 피터', line: '플라위트(fluyt)선 건조는 저희 특기입니다.' },
       { role: 'harbormaster', name: '항구 관리인 헨드릭', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '환전상 코르넬리스', line: '튤립 값이 또 올랐다더군요.' },
+      { role: 'mentor', name: '동인도 상관장 빌럼', line: '"각국 관리들과 잘 지내는 법을 가르쳐주지."' },
     ],
   },
   {
@@ -53,6 +56,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 하인리히', line: '튼튼한 코게선이라면 맡겨주십시오.' },
       { role: 'harbormaster', name: '항구 관리인 게오르크', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '선원 조합원 콘라트', line: '한자동맹 깃발 아래 교역은 항상 든든하지요.' },
+      { role: 'mentor', name: '군의관 프리츠', line: '"전장에서 응급 처치를 할 줄 알면 목숨이 여럿 산다네."' },
     ],
   },
   {
@@ -63,6 +67,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 앙투안', line: '지중해를 누빌 튼튼한 배를 지어드립니다.' },
       { role: 'harbormaster', name: '항구 관리인 루이', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '어부 피에르', line: '오늘 아침 그물이 묵직했습니다.' },
+      { role: 'mentor', name: '늙은 항해사 클로드', line: '"먼 항로일수록 값이 더 붙는다는 걸 아는 자가 드물지."' },
     ],
   },
   {
@@ -73,6 +78,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 마르코', line: '갤리선 건조는 제노바가 원조입니다.' },
       { role: 'harbormaster', name: '항구 관리인 파올로', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '환전상 지오반니', line: '제노바 은행가의 신용은 유럽 어디서나 통합니다.' },
+      { role: 'mentor', name: '포술장 로렌초', line: '"제노바 포병대의 속사 태세, 자네에게 전수해줌세."' },
     ],
   },
   {
@@ -83,6 +89,7 @@ export const CITIES = [
       { role: 'shipwright', name: '아르세날레 조선기사 니콜로', line: '이곳 아르세날레는 유럽에서 가장 빠른 조선소입니다.' },
       { role: 'harbormaster', name: '항구 관리인 자코모', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '곤돌라 사공 필리포', line: '운하도 좋지만 역시 넓은 바다가 그립군요.' },
+      { role: 'mentor', name: '검술 사범 마르코', line: '"승선전은 기세 싸움일세. 병사들의 함성을 이끄는 법을 가르쳐주겠네."' },
     ],
   },
   // ---- 대서양 섬(중간 기항지) ----
@@ -125,6 +132,7 @@ export const CITIES = [
       { role: 'shipwright', name: '조선소 기사 셀림', line: '금각만의 조선소는 제국 해군의 자랑입니다.' },
       { role: 'harbormaster', name: '항구 관리인 오스만', line: '출항하시겠습니까? 우클릭으로 배로 돌아갑니다.' },
       { role: 'citizen', name: '시장 상인 아이셰', line: '보스포루스 해협은 하루도 배가 끊이지 않아요.' },
+      { role: 'mentor', name: '해군 교관 데니즈', line: '"오스만 함대의 회피 기동술이지. 맞기 전에 피하는 법부터 배우게."' },
     ],
   },
   // ---- 아프리카 항로 ----
@@ -696,6 +704,7 @@ export const NPC_ROLE_LABELS = {
   citizen: '주민',
   governor: '총독',
   banker: '은행원',
+  mentor: '스승',
 };
 
 export const NPC_ROLE_COLORS = {
@@ -705,4 +714,5 @@ export const NPC_ROLE_COLORS = {
   citizen: '#6b6b6b',
   governor: '#8a1f3d',
   banker: '#2f6b4f',
+  mentor: '#a34fd9',
 };

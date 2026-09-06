@@ -330,7 +330,14 @@
   #skill-card { width: 560px; max-width: 92vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
     border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
   #skill-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; margin-bottom: 0.7rem; }
-  #skill-body { max-height: 58vh; overflow-y: auto; }
+  #skill-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+  #skill-quickslot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 0.8rem; }
+  .qslot { background: rgba(255,255,255,0.04); border: 1px solid rgba(200,180,120,0.3); border-radius: 8px;
+    padding: 0.45rem 0.5rem; font-size: 0.74rem; color: #cfe0ea; cursor: pointer; text-align: left; }
+  .qslot:hover { background: rgba(230,193,90,0.14); }
+  .qslot.qslot-filled { border-color: rgba(230,193,90,0.55); }
+  .qslot .qslot-num { color: #8fa6b4; font-size: 0.68rem; margin-right: 0.3rem; }
+  #skill-body { max-height: 46vh; overflow-y: auto; }
   .skill-section-title { font-size: 0.82rem; color: #9fb8c9; margin: 1rem 0 0.6rem; letter-spacing: 0.03rem; }
   .skill-section-title:first-child { margin-top: 0; }
   #skill-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
@@ -348,16 +355,16 @@
   .compendium-found { color: #9ee08a; }
   .compendium-unfound { color: #6b7c86; }
 
-  /* ---- 바다 HUD: 장착된 전투 액티브 버프 슬롯(쿨다운/지속시간 상시 표시) ---- */
+  /* ---- 퀵슬롯 9칸(장착된 스킬의 쿨다운/지속시간 상시 표시) — 바다·도시 공통 HUD ---- */
   #buff-slots { position: fixed; top: 100px; left: 14px; z-index: 15; pointer-events: none;
-    display: flex; flex-direction: column; gap: 6px; width: 170px; }
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 168px; }
   .buff-slot { background: rgba(8,18,26,0.65); border: 1px solid rgba(200,180,120,0.35); border-radius: 8px;
-    padding: 0.35rem 0.6rem; font-size: 0.72rem; color: #cfe0ea; }
-  .buff-slot-name { display: flex; justify-content: space-between; gap: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    padding: 0.3rem 0.4rem; font-size: 0.66rem; color: #cfe0ea; }
+  .buff-slot-name { display: flex; justify-content: space-between; gap: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .buff-slot.buff-ready .buff-slot-name { color: #9ee08a; }
   .buff-slot.buff-active { border-color: rgba(111,200,224,0.6); }
   .buff-slot.buff-active .buff-slot-name { color: #6fc8e0; }
-  .buff-slot.buff-empty { opacity: 0.45; }
+  .buff-slot.buff-empty { opacity: 0.4; }
 
   /* ---- 아이템 툴팁(건조 재료 등) — 이름에 마우스를 올리면 설명/효과/획득처가 뜬다 ----
      예전엔 .tip-box를 .item-tip의 자식으로 두고 순수 CSS :hover로만 띄웠는데, 그러면 시장/
@@ -573,8 +580,14 @@
   <div id="skill-panel" class="hidden">
     <div id="skill-card">
       <div id="skill-header-title">🎓 선장의 스킬</div>
+      <div id="skill-tabs">
+        <button class="sy-tab" data-tab="quickslots">퀵슬롯</button>
+        <button class="sy-tab" data-tab="learned">보유 스킬</button>
+        <button class="sy-tab" data-tab="academic">학문</button>
+      </div>
+      <div id="skill-quickslot-grid"></div>
       <div id="skill-body"></div>
-      <div class="close-hint">1/2: 장착된 전투 버프 시전 · K 또는 ESC 로 닫기</div>
+      <div class="close-hint">1~9: 퀵슬롯 시전 · K 또는 ESC 로 닫기</div>
     </div>
   </div>
 

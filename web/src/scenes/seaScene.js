@@ -14,8 +14,8 @@ import { getShip, COUNTRY_COLORS, COUNTRY_NAMES } from '../data/ships.js';
 import { getEffectiveShipDef, armorDamageMul } from '../data/shipParts.js';
 import { getCombatants, getCombatPower, getNpcCombatPower } from '../systems/combatPower.js';
 import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
-import { PLAYER_SKILLS, lerpByLevel } from '../data/playerSkills.js';
-import { gainSkillExp, getSkillLevel } from '../systems/skills.js';
+import { PLAYER_SKILLS } from '../data/playerSkills.js';
+import { gainSkillExp, getSkillLevel, buffMul, buffAdd, castSkill } from '../systems/skills.js';
 import { CITIES } from '../data/cities.js';
 import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
 import { seaRegionAt, getSeaLockBucket } from '../data/seaRegions.js';
@@ -24,7 +24,7 @@ import { isDown, consumeJustPressed } from '../controls/keys.js';
 import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { checkBountyKill, addReputation, checkQuestRespawns, checkInvestigateComplete } from '../systems/quests.js';
-import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, ASTRONOMY_ENTRIES, rewardFor } from '../data/compendium.js';
+import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, ASTRONOMY_ENTRIES, rewardFor, rewardForRank } from '../data/compendium.js';
 import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
 import { checkExplorationSite } from '../systems/exploration.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
@@ -144,10 +144,6 @@ export class SeaScene {
     this._boardable = null; // 충돌 직후 F로 승선(백병전)할 수 있는 짧은 창구 — { npc, timer }
     this.selectedTarget = null; // 클릭으로 지정한 NPC — 상호작용 범위 원 + 전투/대화/종료 메뉴
     this.shakeTrauma = 0;
-    // 전투 액티브 버프(선장 개인 스킬, data/playerSkills.js) — skillId -> { timer(초 남음), level }.
-    // 쿨다운도 같은 방식(delta 감산)으로 관리한다. 둘 다 세션 한정 상태라 저장하지 않는다.
-    this.activeBuffs = {};
-    this.skillCooldowns = {};
     // 학문(고고학/지리학/천문학) 조사·관측 — 사이트별/관측 공용 재사용 쿨다운(초, 세션 한정).
     this._investigateCooldowns = {};
     this._astroCooldown = 0;
@@ -401,8 +397,8 @@ export class SeaScene {
       return;
     }
     state.compendium = { ...state.compendium, [category]: { ...state.compendium[category], [site.id]: true } };
-    const { exp, gold } = rewardFor(site.rarity);
-    gainSkillExp(category, exp);
+    const { gold } = rewardFor(site.rarity);
+    gainSkillExp(category, rewardForRank(site.minSkillLevel));
     const matches = checkInvestigateComplete(site.id);
     state.gold += gold;
     const icon = category === 'archaeology' ? '🏺' : '🗺️';
@@ -429,8 +425,8 @@ export class SeaScene {
       return;
     }
     state.compendium = { ...state.compendium, astronomy: { ...found, [next.id]: true } };
-    const { exp, gold } = rewardFor(next.rarity);
-    gainSkillExp('astronomy', exp);
+    const { gold } = rewardFor(next.rarity);
+    gainSkillExp('astronomy', rewardForRank(next.minSkillLevel));
     const matches = checkInvestigateComplete(next.id);
     state.gold += gold;
     const chainNote = matches.length ? ` + 연계 의뢰 완료(+${matches.reduce((a, q) => a + q.reward, 0).toLocaleString('ko-KR')})` : '';
@@ -438,47 +434,26 @@ export class SeaScene {
     notify({ compendiumChanged: true });
   }
 
-  // 전투 액티브 버프 시전(숫자키 1/2 → 장착 슬롯 0/1) — 장착된 스킬만, 쿨다운이 끝났을 때만
-  // 발동한다. 백병전 중에는 포격과 마찬가지로 쓸 수 없다(별도의 판정 루프라 다른 신호를 준다).
-  castCombatSkill(slotIdx) {
-    if (this.meleeState) { hud.toast('백병전 중에는 스킬을 쓸 수 없습니다.'); return; }
-    const skillId = (state.combatSkillSlots || [])[slotIdx];
-    if (!skillId) { hud.toast('장착된 스킬이 없습니다. (K: 스킬 패널)'); return; }
-    const skill = PLAYER_SKILLS[skillId];
-    if (!skill) return;
-    if ((this.skillCooldowns[skillId] || 0) > 0) {
-      hud.toast(`재사용 대기 중입니다. (${Math.ceil(this.skillCooldowns[skillId])}초)`);
-      return;
-    }
-    const level = getSkillLevel(skillId);
-    this.activeBuffs[skillId] = { timer: skill.duration, level };
-    this.skillCooldowns[skillId] = skill.cooldown;
-    gainSkillExp(skillId, 1);
-    hud.toast(`${skill.icon} '${skill.name}' 발동! (Lv.${level}, ${skill.duration}초)`);
+  // 퀵슬롯 시전(숫자키 1~9) — 실제 엔진(쿨다운/지속시간/exp)은 systems/skills.js에 공용화돼
+  // 있다(교역 스킬은 도시에서도 효과가 나야 하므로). 백병전 중엔 포격과 마찬가지로 스킬을 쓸
+  // 수 없다는 바다 전투만의 제약을 canCast로 넘긴다.
+  castQuickslot(slotIdx) {
+    castSkill(slotIdx, {
+      canCast: () => {
+        if (this.meleeState) { hud.toast('백병전 중에는 스킬을 쓸 수 없습니다.'); return false; }
+        return true;
+      },
+    });
   }
 
   // 활성 버프 중 key와 일치하는 효과를 곱/가산으로 모아 적용한다 — mulSkillEffect/sumSkillEffect
   // (배 자체의 고정 스킬)와 같은 계산식에 나란히 곱하거나 더해 쓴다.
   _buffMul(key, base) {
-    let total = base;
-    for (const [id, b] of Object.entries(this.activeBuffs)) {
-      if (b.timer <= 0) continue;
-      for (const eff of PLAYER_SKILLS[id]?.effects || []) {
-        if (eff.key === key && eff.mode === 'mul') total *= lerpByLevel(eff.v1, eff.v15, b.level);
-      }
-    }
-    return total;
+    return buffMul(key, base);
   }
 
   _buffAdd(key, base) {
-    let total = base;
-    for (const [id, b] of Object.entries(this.activeBuffs)) {
-      if (b.timer <= 0) continue;
-      for (const eff of PLAYER_SKILLS[id]?.effects || []) {
-        if (eff.key === key && eff.mode === 'add') total += lerpByLevel(eff.v1, eff.v15, b.level);
-      }
-    }
-    return total;
+    return buffAdd(key, base);
   }
 
   // 실제 해안선(coastline.js)을 검사해 "확실히 뭍이 아닌" 방향으로 정박지를 찾는다 — 3D 시절과
@@ -972,16 +947,8 @@ export class SeaScene {
       if (regen > 0) state.shipHp = Math.min(this.ship.shipDef.hp, state.shipHp + regen * delta);
     }
 
-    // 전투 액티브 버프의 쿨다운/지속시간 — fireTimer 등 다른 타이머와 같은 방식(delta 감산)으로 흐른다.
-    for (const id of Object.keys(this.skillCooldowns)) {
-      const next = this.skillCooldowns[id] - delta;
-      if (next <= 0) delete this.skillCooldowns[id]; else this.skillCooldowns[id] = next;
-    }
-    for (const id of Object.keys(this.activeBuffs)) {
-      const b = this.activeBuffs[id];
-      b.timer -= delta;
-      if (b.timer <= 0) delete this.activeBuffs[id];
-    }
+    // 전투/교역 액티브 버프의 쿨다운/지속시간은 이제 systems/skills.js가 공용으로 관리한다
+    // (main.js의 공용 프레임 루프가 tickSkillBuffs를 호출 — 바다·도시 어디서든 흐른다).
     for (const id of Object.keys(this._investigateCooldowns)) {
       const next = this._investigateCooldowns[id] - delta;
       if (next <= 0) delete this._investigateCooldowns[id]; else this._investigateCooldowns[id] = next;

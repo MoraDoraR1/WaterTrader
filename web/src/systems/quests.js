@@ -9,7 +9,7 @@ import { mulSkillEffect } from '../data/shipSkills.js';
 import { getRankInfo } from './rank.js';
 import { WORLD_REGIONS } from '../data/worldRegions.js';
 import { hud } from '../ui/hud.js';
-import { getSkillLevel } from './skills.js';
+import { getSkillLevel, buffMul } from './skills.js';
 
 // 완료한 배달 의뢰가 다시 게시되기까지(항해일자 기준) — 항로 개척 3부작(id가 'chain_'로
 // 시작)은 스토리 게이트라 순환 대상에서 제외한다.
@@ -46,9 +46,11 @@ export function isQuestChainReady(q) {
 
 export function addReputation(country, amount) {
   if (!country) return;
-  // 항구 친화 스킬은 평판이 오르는 속도 자체를 키운다(음수 방향/페널티에는 손대지 않는다 —
-  // "친화력"이 나쁜 평판까지 완화해주는 건 어색하다).
-  const gain = amount > 0 ? amount * mulSkillEffect(getShip(state.currentShipId), 'reputationGainMul', 1) : amount;
+  // 항구 친화(선박 고정 스킬) + 사교술(선장 개인 액티브 스킬)은 평판이 오르는 속도 자체를
+  // 키운다(음수 방향/페널티에는 손대지 않는다 — "친화력"이 나쁜 평판까지 완화해주는 건 어색하다).
+  const gain = amount > 0
+    ? amount * mulSkillEffect(getShip(state.currentShipId), 'reputationGainMul', 1) * buffMul('reputationGainMul', 1)
+    : amount;
   state.reputation = { ...state.reputation, [country]: (state.reputation[country] || 0) + gain };
 }
 

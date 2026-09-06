@@ -29,11 +29,14 @@ import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUn
 import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
 import { checkExplorationSite } from './systems/exploration.js';
 import { initTooltips } from './ui/tooltip.js';
-import { openSkillPanel } from './ui/skillPanel.js';
+import { openSkillPanel, wireSkillTabs } from './ui/skillPanel.js';
 import { openCompendiumPanel, wireCompendiumTabs } from './ui/compendiumPanel.js';
-import { PLAYER_SKILLS } from './data/playerSkills.js';
-import { getCombatSkillSlots } from './systems/skills.js';
-import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES } from './data/compendium.js';
+import { PLAYER_SKILLS, QUICKSLOT_COUNT } from './data/playerSkills.js';
+import {
+  getSkillSlots, castSkill, tickSkillBuffs, getActiveBuffs, getSkillCooldown,
+  learnSkill, equipSkill, unequipSkill, getLearnedSkills, buffMul, buffAdd,
+} from './systems/skills.js';
+import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, rewardForRank } from './data/compendium.js';
 import { RANKS } from './data/ranks.js';
 import {
   checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
@@ -129,12 +132,11 @@ function goToSea(fromCityId) {
   hud.showBuffSlots(true);
   const role = SHIP_ROLES[seaScene.ship.shipDef.role] || SHIP_ROLES.trade;
   hud.setShipRoleBadge(role.label, role.color);
-  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', '충돌 후 F 승선', 'R 자재로 응급수리', '1/2 전투버프', 'G 조사/관측', 'K 스킬', 'C 도감', 'M 전체지도', 'T 선박정보']);
+  hud.showActionHints(true, ['휠 확대/축소', 'W/S 속도', 'A/D 선회', '우클릭 자동항해', '좌클릭 정박/포격', '스페이스 포격', '충돌 후 F 승선', 'R 자재로 응급수리', '1~9 스킬 시전', 'G 조사/관측', 'K 스킬', 'C 도감', 'M 전체지도', 'T 선박정보']);
 }
 
 function goToCity(cityId) {
   hud.showSeaHud(false);
-  hud.showBuffSlots(false);
   hud.showTargetHp(false);
   hud.showCombatBanner(false);
   hud.showInteractPrompt(false);
@@ -143,7 +145,7 @@ function goToCity(cityId) {
   setScreen('city');
   audio.startHarbor();
   audio.stopOcean();
-  hud.showActionHints(true, ['휠 확대/축소', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', 'M 전체지도', 'T 선박정보']);
+  hud.showActionHints(true, ['휠 확대/축소', 'WASD 이동', '우클릭 지점이동', 'F/좌클릭 상호작용', 'E 인벤토리', '1~9 스킬 시전', 'K 스킬', 'M 전체지도', 'T 선박정보']);
 
   const { wage, paid } = payWagesOnDock();
   hud.setGold(state.gold);
@@ -249,18 +251,21 @@ document.getElementById('world-map-next').addEventListener('click', () => cycleW
 
 wireShipyardTabs();
 wireCompendiumTabs();
+wireSkillTabs();
 
-// 바다 HUD의 전투 버프 슬롯 표시 — 장착된 스킬의 쿨다운/지속시간을 매 프레임 반영한다.
-function updateBuffSlotsHud(scene) {
-  const slots = getCombatSkillSlots();
+// 퀵슬롯(9칸) HUD 표시 — 장착된 스킬의 쿨다운/지속시간을 매 프레임 반영한다. 버프 엔진이
+// systems/skills.js로 공용화돼 있어 바다·도시 어느 화면에서도 같은 정보를 보여줄 수 있다.
+function updateBuffSlotsHud() {
+  const slots = getSkillSlots();
+  const activeBuffs = getActiveBuffs();
   hud.renderBuffSlots(slots.map((id) => {
     if (!id) return { state: 'empty' };
     const skill = PLAYER_SKILLS[id];
-    const buff = scene.activeBuffs[id];
+    const buff = activeBuffs[id];
     if (buff && buff.timer > 0) {
       return { icon: skill.icon, name: skill.name, state: 'active', statusText: `발동 중 (${Math.ceil(buff.timer)}초)` };
     }
-    const cd = scene.skillCooldowns[id] || 0;
+    const cd = getSkillCooldown(id);
     if (cd > 0) return { icon: skill.icon, name: skill.name, state: 'cooldown', statusText: `대기 ${Math.ceil(cd)}초` };
     return { icon: skill.icon, name: skill.name, state: 'ready', statusText: '준비됨' };
   }));
@@ -451,10 +456,15 @@ function animate(now) {
       if (res.ok) hud.toast(`자재 ${res.materialsUsed}개로 선체를 ${res.healed} 복구했습니다. (내구도 ${Math.round(state.shipHp)}/${seaScene.ship.shipDef.hp})`);
       else hud.toast(res.reason);
     }
-    // 전투 액티브 버프 시전 — 1/2번 키가 각각 장착 슬롯 0/1에 대응한다(K: 스킬 패널에서 장착 변경).
-    if (state.screen === 'sea' && seaScene) {
-      if (consumeJustPressed('Digit1')) seaScene.castCombatSkill(0);
-      if (consumeJustPressed('Digit2')) seaScene.castCombatSkill(1);
+    // 퀵슬롯 시전 — 숫자키 1~9가 각각 장착 슬롯 0~8에 대응한다(K: 스킬 패널에서 장착 변경).
+    // 바다·도시 어디서든 시전 가능(교역 스킬은 도시 시장에서 효과가 난다).
+    if (!anyBigPanelOpen && (state.screen === 'sea' || state.screen === 'city')) {
+      for (let i = 0; i < QUICKSLOT_COUNT; i++) {
+        if (consumeJustPressed(`Digit${i + 1}`)) {
+          if (state.screen === 'sea' && seaScene) seaScene.castQuickslot(i);
+          else castSkill(i);
+        }
+      }
     }
     if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
       const priceMap = state.screen === 'city' && citySceneObj
@@ -480,10 +490,12 @@ function animate(now) {
     && !hud.isSkillPanelOpen() && !hud.isCompendiumPanelOpen()) {
     const ctx = surface.ctx;
     ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
+    // 퀵슬롯 쿨다운/지속시간은 바다·도시 공통으로 흐른다(교역 스킬은 도시에서 효과가 난다).
+    tickSkillBuffs(delta);
+    updateBuffSlotsHud();
     if (state.screen === 'sea' && seaScene) {
       seaScene.update(delta, elapsed);
       seaScene.render(ctx);
-      updateBuffSlotsHud(seaScene);
     } else if (state.screen === 'city' && citySceneObj) {
       citySceneObj.update(delta);
       citySceneObj.render(ctx);
@@ -508,4 +520,6 @@ window.__debug = {
   buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, GOODS, CITY_MARKET, goToCity, computeScore, checkExplorationSite,
   hud, getQuestsForCity, QUESTS, openMarket, openSupplies, openShipyard,
   ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, openSkillPanel, openCompendiumPanel,
+  learnSkill, equipSkill, unequipSkill, getLearnedSkills, getSkillSlots, getActiveBuffs, buffMul, buffAdd, castSkill,
+  rewardForRank,
 };

@@ -19,6 +19,13 @@ export function rewardFor(rarity) {
   return RARITY_REWARD[rarity] || RARITY_REWARD.common;
 }
 
+// 학문 스킬(고고학/지리학/천문학)의 숙련도는 "시전"이 아니라 "발견"으로만 오르며, 그 상승폭은
+// 발견물 자체의 랭크(=minSkillLevel, 1~15)에 비례한다 — 만렙에 가까운 어려운 발견일수록
+// 숙련도를 더 많이 준다. 골드는 여전히 rarity 기준(rewardFor)을 쓴다.
+export function rewardForRank(rank) {
+  return 4 + rank * 2;
+}
+
 // ---- 고고학(해저 유적·난파선) — 실제 발굴된 유적 21곳 + 신화 속 전설 1곳. ----
 export const ARCHAEOLOGY_SITES = [
   { id: 'wreck_antikythera', name: '안티키테라 유물', era: '기원전 1세기 그리스', rarity: 'rare', minSkillLevel: 1, cityId: 'valletta',

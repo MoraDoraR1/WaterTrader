@@ -285,10 +285,27 @@ export const hud = {
   showSkillPanel(v) { $('skill-panel').classList.toggle('hidden', !v); },
   hideSkillPanel() { $('skill-panel').classList.add('hidden'); },
   isSkillPanelOpen() { return !$('skill-panel').classList.contains('hidden'); },
-  // rows: renderRowList와 같은 스키마 — 스킬 하나당 한 행(레벨/진행도 + 전투 버프는 장착 버튼).
+  setSkillActiveTab(tab) {
+    document.querySelectorAll('#skill-tabs .sy-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  },
+  // rows: renderRowList와 같은 스키마 — 스킬 하나당 한 행(레벨/진행도 + 학습/장착 버튼 등).
   renderSkillPanel(rows) {
     renderRowList($('skill-body'), rows);
   },
+  // 퀵슬롯 9칸 그리드(스킬 패널 "퀵슬롯" 탭 전용) — slots: [{ label, sub, filled, onClick }]
+  renderQuickslotGrid(slots) {
+    const grid = $('skill-quickslot-grid');
+    grid.innerHTML = '';
+    grid.classList.remove('hidden');
+    slots.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'qslot' + (s.filled ? ' qslot-filled' : '');
+      btn.innerHTML = `<span class="qslot-num">${i + 1}</span>${s.label}${s.sub ? `<div style="color:#8fa6b4;margin-top:2px;">${s.sub}</div>` : ''}`;
+      if (s.onClick) btn.onclick = s.onClick;
+      grid.appendChild(btn);
+    });
+  },
+  hideQuickslotGrid() { $('skill-quickslot-grid').classList.add('hidden'); },
 
   showCompendiumPanel(v) { $('compendium-panel').classList.toggle('hidden', !v); },
   hideCompendiumPanel() { $('compendium-panel').classList.add('hidden'); },
@@ -497,6 +514,7 @@ export const hud = {
     for (const a of actions) {
       const btn = document.createElement('button');
       btn.textContent = a.label;
+      btn.disabled = !!a.disabled;
       btn.onclick = a.onClick;
       box.appendChild(btn);
     }

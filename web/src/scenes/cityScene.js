@@ -13,6 +13,9 @@ import { openBank } from '../ui/bankPanel.js';
 import { openSupplies } from '../ui/suppliesPanel.js';
 import { openQuestBoard } from '../ui/questPanel.js';
 import { openCrew } from '../ui/crewPanel.js';
+import { getMentorAt } from '../data/skillMentors.js';
+import { getSkillDef } from '../data/playerSkills.js';
+import { isLearned, learnSkill } from '../systems/skills.js';
 import { formatCityEventBadge } from '../systems/market.js';
 
 const BOUNDS = { minX: -85, maxX: 85, minZ: -85, maxZ: 85 };
@@ -250,6 +253,25 @@ export class CityScene {
     if (npc.role === 'merchant') {
       hud.showDialogue(npc.name, npc.line, [
         { label: '거래', onClick: () => { hud.hideDialogue(); openMarket(this.city.id); } },
+        { label: '닫기', onClick: () => hud.hideDialogue() },
+      ]);
+      return;
+    }
+    if (npc.role === 'mentor') {
+      const mentor = getMentorAt(this.city.id);
+      const skill = mentor && getSkillDef(mentor.skillId);
+      if (!mentor || !skill) { hud.showDialogue(npc.name, npc.line, [{ label: '닫기', onClick: () => hud.hideDialogue() }]); return; }
+      const already = isLearned(mentor.skillId);
+      hud.showDialogue(npc.name, mentor.flavor, [
+        {
+          label: already ? '이미 배웠습니다' : `${skill.icon} '${skill.name}' 배우기 (${mentor.cost.toLocaleString('ko-KR')} 두캇)`,
+          disabled: already,
+          onClick: () => {
+            const res = learnSkill(mentor.skillId, mentor.cost);
+            if (res.ok) { hud.hideDialogue(); hud.toast(`${skill.icon} '${skill.name}'을(를) 배웠습니다! (K: 스킬 패널에서 퀵슬롯 장착)`); }
+            else hud.toast(res.reason);
+          },
+        },
         { label: '닫기', onClick: () => hud.hideDialogue() },
       ]);
       return;

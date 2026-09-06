@@ -5,6 +5,7 @@ import { state, notify } from '../state.js';
 import { getCargoCapacity, getCargoUsed } from './market.js';
 import { getShip } from '../data/ships.js';
 import { mulSkillEffect } from '../data/shipSkills.js';
+import { buffMul } from './skills.js';
 
 // desc/effect: ui/suppliesPanel.js가 이름 툴팁(ui/tooltip.js)을 만들 때 쓰는 설명·효과 텍스트.
 export const SUPPLY_DEFS = {
@@ -21,8 +22,10 @@ export const SUPPLY_DEFS = {
 export function buySupply(type, qty) {
   const def = SUPPLY_DEFS[type];
   if (!def) return { ok: false, reason: '알 수 없는 물자입니다.' };
-  // 대량 구매 스킬 — 식량/식수/자재/포탄 등 모든 보급품 구매가를 일괄로 깎아준다.
-  const unitPrice = def.price * mulSkillEffect(getShip(state.currentShipId), 'supplyBuyPriceMul', 1);
+  // 대량 매입 스킬(선장 개인 액티브) + 대량 구매(선박 고정 스킬) — 식량/식수/자재/포탄 등
+  // 모든 보급품 구매가를 일괄로 깎아준다.
+  const unitPrice = def.price * mulSkillEffect(getShip(state.currentShipId), 'supplyBuyPriceMul', 1)
+    * buffMul('supplyBuyPriceMul', 1);
   const spaceLeft = getCargoCapacity() - getCargoUsed();
   const affordable = Math.floor(state.gold / unitPrice);
   const actualQty = Math.max(0, Math.min(qty, spaceLeft, affordable));
