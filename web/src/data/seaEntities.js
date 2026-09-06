@@ -78,6 +78,10 @@ export const SEA_NPC_SHIPS = [
     hp: 650, hostile: true, patrolRadius: 35, tier: 'elite', region: 2 },
   { id: 'pirate_boss_blackbeard', type: 'pirate', name: '[보스] 흑수염의 앤 여왕의 복수호', pos: project(-27.0, 36.0), shipId: 'pirate_flagship_blackbeard',
     hp: 2400, hostile: true, patrolRadius: 25, tier: 'boss', region: 2 },
+  // 명사 NPC 헌정 원정(data/quests.js chain_soleil_*)의 2부 토벌 대상 — 왕실함대의 신대륙
+  // 원정을 노리는 대서양 한복판의 사략선.
+  { id: 'pirate_elite_atlantic_crossing', type: 'pirate', name: '[엘리트] 대서양의 사략선 검은백합호', pos: project(-45.0, 44.0), shipId: 'pirate_frigate',
+    hp: 600, hostile: true, patrolRadius: 35, tier: 'elite', region: 2 },
 
   // ── [region 3: 인도양·동남아 향신료 항로] 캘리컷 이후 육두구 등 향신료 무역권 ──
   { id: 'merchant_goa', type: 'merchant', name: '동인도 무역선 상투메호', pos: project(72.5, 16.5), shipId: 'east_indiaman',
@@ -94,6 +98,10 @@ export const SEA_NPC_SHIPS = [
     hp: 480, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
   { id: 'pirate_indian_ocean', type: 'pirate', name: '[엘리트] 해적선 계절풍의 습격자호', pos: project(101.0, 3.5), shipId: 'pirate_frigate',
     hp: 560, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
+  // 명사 NPC 헌정 원정(data/quests.js chain_dagama_*)의 2부 토벌 대상 — 캘리컷 앞바다에
+  // 눌러앉아 다가마 제독의 원정로를 위협하는 해적선.
+  { id: 'pirate_elite_malabar_route', type: 'pirate', name: '[엘리트] 말라바르 해협의 검은돛대호', pos: project(73.5, 11.8), shipId: 'pirate_frigate',
+    hp: 540, hostile: true, patrolRadius: 35, tier: 'elite', region: 3 },
   // 올리비에 르바쇠르(라 뷔즈, "매") — 마다가스카르를 근거지로 무굴 보물선 나포에도
   // 가담한 실존 인도양 해적. 처형 직전 관중에게 던졌다는 미해독 보물 암호문으로 유명하다.
   { id: 'pirate_elite_labuse', type: 'pirate', name: '[엘리트] 라 뷔즈의 해적선', pos: project(47.5, -18.0), shipId: 'pirate_frigate',

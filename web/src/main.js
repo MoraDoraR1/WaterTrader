@@ -29,7 +29,9 @@ import { RANKS } from './data/ranks.js';
 import {
   checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
   getQuestStatus, isQuestChainReady, syncUnlockedRoutes, checkQuestRespawns, addReputation,
+  getQuestsForCity,
 } from './systems/quests.js';
+import { QUESTS } from './data/quests.js';
 
 const wrap = document.getElementById('canvas-wrap');
 const displayCanvas = document.createElement('canvas');
@@ -451,5 +453,5 @@ window.__debug = {
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
   checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
   buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity, computeScore, checkExplorationSite,
-  hud,
+  hud, getQuestsForCity, QUESTS,
 };

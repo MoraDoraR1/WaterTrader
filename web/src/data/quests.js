@@ -127,6 +127,44 @@ export const QUESTS = [
     routePrereq: 'indian_ocean', repeatable: true,
     title: '[반복] 계절풍의 습격자호 소탕', desc: '인도양 항로가 열렸지만 계절풍의 습격자호가 계속 되살아나 향신료 무역선을 노립니다. 볼 때마다 처치해주십시오.',
     acceptLine: '케이프타운 항구 관리인이 말합니다. "그 습격자호 말이야, 가라앉혀도 계절풍처럼 또 돌아오더군. 볼 때마다 사례할 테니 계속 처리해주게."' },
+
+  // ---- 명사(名士) NPC 헌정 원정(3부작) ----
+  // 항로 개척 3부작과 완전히 같은 포맷(배달→토벌→항해)을 그대로 재사용한다. 다만 새 항로를
+  // 여는 게 아니라, 이미 열려 있는 항로 위에서 실존 인물(바다 위 notable 타입 NPC로 이미
+  // 등장하는 바스코 다가마·프랑스 왕실함대)에게 바치는 헌정 원정이라 voyage 단계에
+  // unlocksRoute가 없다 — 그 점만 빼면 requires/minRankIndex/routePrereq 게이팅과
+  // checkVoyageArrival 자동완료 로직을 그대로 탄다. 이미 열린 항로 위의 여정이므로
+  // routePrereq로 그 항로가 먼저 열려 있을 것을 요구한다(도착지 자체가 그 항로 안에 있다).
+
+  // -- 4) 바스코 다가마 헌정 원정: 포르투 ↔ 리스본 정향 보급 → 말라바르 해협의 검은돛대호 토벌 → 캘리컷 항해
+  { id: 'chain_dagama_delivery', type: 'delivery', cityId: 'porto', destCityId: 'lisboa', goodId: 'clove', qty: 10, reward: 800,
+    minRankIndex: 3, routePrereq: 'indian_ocean',
+    title: '[명사 의뢰 1/3] 정향 10t → 리스본', desc: '늙은 항해가 바스코 다가마 제독이 처음 캘리컷에 닿았던 항로를 다시 한번 밟아보고 싶어합니다. 원정 물자로 정향을 모아주십시오. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
+    acceptLine: '포르투 항구 관리인이 말합니다. "리스본에 계신 다가마 제독께서 마지막으로 캘리컷 항로를 다시 밟고 싶다 하시더군. 원정에 쓸 정향을 좀 구해다 드리게."' },
+  { id: 'chain_dagama_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_elite_malabar_route', reward: 1400,
+    requires: 'chain_dagama_delivery',
+    title: '[명사 의뢰 2/3] 말라바르 해협의 검은돛대호 토벌', desc: '캘리컷 앞바다에 눌러앉은 해적선이 다가마 제독의 원정로를 위협하고 있습니다. 제독의 안전을 위해 먼저 처치해주십시오.',
+    acceptLine: '"제독께서 연로하신데 그 바다에 아직도 해적이 있다는군. 검은돛대호라던가 — 자네가 먼저 정리해주면 제독께서도 마음 놓고 배를 띄우실 걸세."' },
+  { id: 'chain_dagama_voyage', type: 'voyage', cityId: 'lisboa', targetCityId: 'calicut', reward: 1200,
+    requires: 'chain_dagama_bounty',
+    title: '[명사 의뢰 3/3] 캘리컷까지 항해 — 다가마 제독을 대신하여', desc: '길이 안전해졌습니다. 제독을 대신해 캘리컷까지 항해하여, 그가 처음 닿았던 그 해안에 다시 한번 닻을 내려주십시오.',
+    acceptLine: '"고맙네. 이제 자네가 내 대신 캘리컷까지 가주게 — 늙은 몸으로 직접 가지 못하는 게 한이지만, 자네가 그 항로를 다시 밟아준다면 그걸로 충분하네."',
+    arriveLine: '캘리컷 해안에 닻을 내리자 뱃사람들 사이에서 짧은 함성이 터져나옵니다. 다가마 제독이 처음 이곳에 닿은 지 오랜 세월이 지났지만, 그가 열어젖힌 항로는 오늘도 여전히 살아 있습니다.' },
+
+  // -- 5) 프랑스 왕실함대 헌정 원정: 보르도 ↔ 마르세유 설탕 보급 → 대서양의 사략선 검은백합호 토벌 → 퀘벡 항해
+  { id: 'chain_soleil_delivery', type: 'delivery', cityId: 'bordeaux', destCityId: 'marseille', goodId: 'sugar', qty: 18, reward: 850,
+    minRankIndex: 3, routePrereq: 'new_world',
+    title: '[명사 의뢰 1/3] 설탕 18t → 마르세유', desc: '마르세유에 정박한 왕실함대 솔레유 루아얄호가 신대륙 원정을 준비하며 물자를 모으고 있습니다. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
+    acceptLine: '보르도 항구 관리인이 말합니다. "마르세유의 왕실함대에서 전갈이 왔네. 태양왕의 이름으로 신대륙까지 원정을 떠난다는데, 그 채비에 설탕이 필요하다더군."' },
+  { id: 'chain_soleil_bounty', type: 'bounty', cityId: 'marseille', targetId: 'pirate_elite_atlantic_crossing', reward: 1500,
+    requires: 'chain_soleil_delivery',
+    title: '[명사 의뢰 2/3] 대서양의 사략선 검은백합호 토벌', desc: '대서양 항로 한복판에 왕실함대의 원정을 노리는 사략선이 도사리고 있습니다. 함대가 출항하기 전에 처치해주십시오.',
+    acceptLine: '"왕실함대씩이나 되는 배가 사략선 따위에 발이 묶여서야 체면이 서겠나. 검은백합호, 그놈부터 가라앉혀주게."' },
+  { id: 'chain_soleil_voyage', type: 'voyage', cityId: 'marseille', targetCityId: 'quebec', reward: 1300,
+    requires: 'chain_soleil_bounty',
+    title: '[명사 의뢰 3/3] 퀘벡까지 항해 — 왕실 함대를 대신하여', desc: '바다가 안전해졌습니다. 왕실함대를 대신해 대서양을 건너 누벨프랑스의 관문 퀘벡까지 항해하여, 태양왕의 깃발이 여전히 대양을 넘나든다는 것을 보여주십시오.',
+    acceptLine: '"함대는 여기 마르세유에 남아 위엄을 지켜야 하네만, 누군가는 실제로 퀘벡까지 가서 깃발을 꽂아야지. 자네가 그 몫을 맡아주게."',
+    arriveLine: '퀘벡 항구에 닻을 내리자 요새의 백합 문장 깃발이 눈에 들어옵니다. 태양왕의 함대는 마르세유에 머물러 있지만, 그 이름을 실은 배는 오늘도 대서양을 건넜습니다.' },
 ];
 
 export function getQuest(id) {
