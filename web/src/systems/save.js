@@ -52,6 +52,9 @@ export function saveGame() {
     cityEvents: state.cityEvents,
     audioMuted: state.audioMuted,
     endingShown: state.endingShown,
+    explorationSite: state.explorationSite,
+    nextExplorationSiteAt: state.nextExplorationSiteAt,
+    explorationCount: state.explorationCount,
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -107,6 +110,9 @@ export function applySave(data) {
   state.cityEvents = data.cityEvents && typeof data.cityEvents === 'object' ? data.cityEvents : {};
   state.audioMuted = !!data.audioMuted;
   state.endingShown = !!data.endingShown;
+  state.explorationSite = data.explorationSite && typeof data.explorationSite === 'object' ? data.explorationSite : null;
+  state.nextExplorationSiteAt = typeof data.nextExplorationSiteAt === 'number' ? data.nextExplorationSiteAt : null;
+  state.explorationCount = typeof data.explorationCount === 'number' ? data.explorationCount : 0;
 }
 
 export function deleteSave() {

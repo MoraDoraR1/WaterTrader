@@ -24,6 +24,7 @@ import { getMarketRows, getCargoCapacity, getCargoUsed, getCityEvent, buyGood } 
 import { SUPPLY_DEFS } from './systems/supplies.js';
 import { checkQuestChainAnnouncements, isRouteUnlocked } from './systems/routeUnlock.js';
 import { checkDiscoveryEvents } from './systems/discoveryEvents.js';
+import { checkExplorationSite } from './systems/exploration.js';
 import { RANKS } from './data/ranks.js';
 import {
   checkVoyageArrival, getRouteChainName, acceptQuest, turnInDelivery, checkBountyKill,
@@ -449,5 +450,5 @@ window.__debug = {
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
   checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, getCargoCapacity, getCargoUsed,
-  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity, computeScore,
+  buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, goToCity, computeScore, checkExplorationSite,
 };

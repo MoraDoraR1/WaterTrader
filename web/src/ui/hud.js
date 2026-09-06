@@ -331,7 +331,7 @@ export const hud = {
     mmLandPolygons = landPolygons;
   },
 
-  updateMinimap(bounds, ship, cities, npcShips, windTowardDir) {
+  updateMinimap(bounds, ship, cities, npcShips, windTowardDir, explorationSite) {
     if (!mmLandPolygons) return;
     mmBounds = bounds;
     const canvas = $('minimap-canvas');
@@ -367,6 +367,18 @@ export const hud = {
       if (px < -6 || px > w + 6 || py < -6 || py > h + 6) continue;
       ctx.fillStyle = n.hostile ? '#e0503f' : '#cfe0ea';
       ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // 모험 축 반복 콘텐츠(systems/exploration.js) — 미탐사 해역 좌표를 금색 다이아몬드로 표시.
+    if (explorationSite) {
+      const [ex, ey] = mmToPx(explorationSite.x, explorationSite.z, w, h);
+      if (ex >= -6 && ex <= w + 6 && ey >= -6 && ey <= h + 6) {
+        ctx.fillStyle = '#ffd76e';
+        ctx.beginPath();
+        ctx.moveTo(ex, ey - 4); ctx.lineTo(ex + 4, ey); ctx.lineTo(ex, ey + 4); ctx.lineTo(ex - 4, ey);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.6; ctx.stroke();
+      }
     }
 
     // 플레이어 삼각형 — 캔버스 rotate 대신 world의 sin/cos(heading) 그대로 재사용해

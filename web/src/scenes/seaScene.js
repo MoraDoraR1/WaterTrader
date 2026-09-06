@@ -23,6 +23,7 @@ import { state, initShipHp, initCrewCount, notify } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { checkBountyKill, addReputation, checkQuestRespawns } from '../systems/quests.js';
 import { checkDiscoveryEvents } from '../systems/discoveryEvents.js';
+import { checkExplorationSite } from '../systems/exploration.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
 import { RANKS } from '../data/ranks.js';
 import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory } from '../systems/crew.js';
@@ -770,6 +771,7 @@ export class SeaScene {
       checkDiscoveryEvents(delta);
       this._processStormSailing(delta);
       this._processLightning(delta);
+      checkExplorationSite(this.ship.pos);
     }
     this._updateWake(delta);
     const escortTarget = state.inCombat ? this._nearestHostile() : null;
@@ -969,7 +971,8 @@ export class SeaScene {
       { x: this.ship.pos.x, z: this.ship.pos.y, heading: this.ship.heading },
       this.minimapCities,
       this.npcShips.filter((n) => !n.dead).map((n) => ({ x: n.pos.x, z: n.pos.y, hostile: n.isHostile() })),
-      this.wind.towardDirection
+      this.wind.towardDirection,
+      state.explorationSite
     );
     // 승선(백병전 돌입) 안내가 떠 있는 동안은 정박 안내가 매 프레임 덮어쓰지 않도록 양보한다.
     if (!this._boardable) {
@@ -1013,6 +1016,7 @@ export class SeaScene {
     this._drawWake(ctx, w, h);
     if (this.waypoint) this._drawWaypoint(ctx, w, h);
     if (this.selectedTarget && !this.selectedTarget.dead) this._drawInteractionRange(ctx, w, h, this.selectedTarget);
+    if (state.explorationSite) this._drawExplorationSite(ctx, w, h);
 
     // 화면 앞뒤 순서(페인터 알고리즘) — (x+z, 즉 스크린 y에 대응하는 값)가 클수록 앞쪽이라
     // 나중에 그려야 뒤 물체를 가리지 않는다.
@@ -1123,6 +1127,26 @@ export class SeaScene {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    ctx.restore();
+  }
+
+  // 모험 축 고유의 반복 콘텐츠(systems/exploration.js) — 미탐사 해역 좌표를 화면에서도
+  // 눈에 띄게 펄스 링 + 아이콘으로 표시한다. 발견(근접) 판정 자체는 checkExplorationSite가
+  // 처리하고, 여기서는 순수 표시만 담당한다.
+  _drawExplorationSite(ctx, w, h) {
+    const site = state.explorationSite;
+    const p = this.iso.toScreen(this.camera, site.x, site.z, w, h);
+    if (p.x < -40 || p.x > w + 40 || p.y < -40 || p.y > h + 40) return;
+    const pulse = 0.5 + 0.5 * Math.sin(this.t * 2.4);
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,215,110,${0.55 + pulse * 0.35})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 14 + pulse * 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🗺️', p.x, p.y + 6);
     ctx.restore();
   }
 

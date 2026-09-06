@@ -64,6 +64,12 @@ export const state = {
   // 이후 랭크 점수가 일시적으로 내려가도 다시 잠기지 않는다). 서유럽/북해·발트해/지중해는
   // 이 목록에 없이 항상 열려 있다.
   unlockedRoutes: { west_africa: false, new_world: false, indian_ocean: false },
+  // ---- 모험 축 고유의 반복 콘텐츠(전투/교역 축 재탕이 아닌) ----
+  // explorationSite: 현재 존재하는 미탐사 해역 좌표({x,z}) — 없으면 null. 발견하면 골드를
+  // 주고 사라지며, nextExplorationSiteAt 이후 새 좌표가 다시 생긴다(systems/exploration.js).
+  explorationSite: null,
+  nextExplorationSiteAt: null,
+  explorationCount: 0, // 지금까지 발견한 미탐사 해역 수
 };
 
 export function initShipHp() {
