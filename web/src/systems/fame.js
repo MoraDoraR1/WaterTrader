@@ -63,9 +63,6 @@ export function addInfamy(amount) {
   const prevIndex = getInfamyTitle().index;
   state.infamy = Math.max(0, (state.infamy || 0) + amount);
   const next = getInfamyTitle();
-  // 악명은 시간이 지나면 줄어들지만(decayInfamy), 한 번 밟은 단계는 잃지 않도록 최댓값만
-  // 갱신되는 별도 필드에 남겨둔다 — 장착 가능한 칭호 목록은 이 peak 기준으로 판단한다.
-  state.infamyPeakTier = Math.max(state.infamyPeakTier || 0, next.index);
   if (next.index > prevIndex) {
     hud.toast(`🏴‍☠️ 악명이 퍼져 "${next.tier.label}"(으)로 불리기 시작했습니다!`);
   }
@@ -73,9 +70,21 @@ export function addInfamy(amount) {
 }
 
 // 매 프레임(화면 무관, main.js 공용 루프) 호출 — 악명이 있을 때만 조금씩 가라앉는다.
+// 다른 세 축과 달리 악명은 특별 취급하지 않는다: 감쇠로 어떤 단계의 문턱 밑으로 떨어지면
+// 그 칭호는 즉시 미달성 상태로 되돌아가고(장착 중이었다면 자동 해제), 다시 그 수치에
+// 도달하면 언제든 재획득할 수 있다.
 export function decayInfamy(delta) {
   if (!state.infamy) return;
   state.infamy = Math.max(0, state.infamy - INFAMY_DECAY_PER_SEC * delta);
+  // 장착 중인 칭호가 악명 축이고, 감쇠로 그 칭호의 문턱 밑으로 떨어졌다면 즉시 해제한다 —
+  // 지금 몇 단계에 있는지와 무관하게, 그 칭호 자체의 요구치만 본다.
+  if (state.equippedTitleId) {
+    const equippedInfamyTier = INFAMY_TITLES.find((t) => t.id === state.equippedTitleId);
+    if (equippedInfamyTier && state.infamy < equippedInfamyTier.minFame) {
+      state.equippedTitleId = null;
+      hud.toast(`🏴‍☠️ 악명이 가라앉아 "${equippedInfamyTier.label}" 칭호를 잃었습니다.`);
+    }
+  }
   notify({ fameChanged: true });
 }
 
@@ -124,18 +133,13 @@ const AXES = [
   { key: 'infamy', label: '악명', icon: '🏴‍☠️', tiers: INFAMY_TITLES, getInfo: getInfamyTitle },
 ];
 
-// 그 축에서 지금까지 도달한 최고 단계 인덱스 — 교역/모험/전투는 명성이 줄지 않으므로 현재
-// 칭호 인덱스와 같고, 악명만 감쇠를 우회하기 위해 별도로 기록해둔 peak를 쓴다.
-function unlockedIndexFor(axis) {
-  if (axis.key === 'infamy') return state.infamyPeakTier || 0;
-  return axis.getInfo().index;
-}
-
 // 전체 축을 훑어 { axisKey, axisLabel, icon, tier, tierIndex, unlocked } 평면 목록으로 반환.
+// unlocked는 그 축의 현재 명성치만 본다 — 교역/모험/전투는 명성이 줄지 않으니 사실상
+// "지금까지 도달한 단계"와 같고, 악명은 특별 취급 없이 감쇠하면 그대로 잠긴다(재도달 시 재획득).
 export function getAllTitleEntries() {
   const entries = [];
   for (const axis of AXES) {
-    const unlockedIdx = unlockedIndexFor(axis);
+    const unlockedIdx = axis.getInfo().index;
     axis.tiers.forEach((tier, i) => {
       entries.push({
         id: tier.id, axisKey: axis.key, axisLabel: axis.label, icon: axis.icon,

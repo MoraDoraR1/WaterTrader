@@ -47,6 +47,9 @@ export class ShipController {
     // state.inCombat 여부를 보고 갱신해준다(평시엔 항상 1).
     this.combatSpeedMul = 1;
     this.combatTurnMul = 1;
+    // 장착한 모험 칭호(systems/fame.js)의 이동속도 버프 — 전투 여부와 무관하게 항상 적용되며,
+    // seaScene이 매 프레임 buffMul('titleSpeedMul', 1)로 갱신해준다(평시 기본값 1).
+    this.titleSpeedMul = 1;
     // 바람과의 정렬도(-1=정면 역풍 ~ 1=완전한 순풍) — seaScene이 폭풍 항해 피해 판정에 쓴다.
     this.windAlign = 0;
   }
@@ -56,7 +59,7 @@ export class ShipController {
 
   get speedRatio() { return this.notch >= 0 ? this.notch / MAX_FWD : this.notch / Math.abs(MAX_REV); }
   get notchSpeed() { return this.shipDef.speed * SPEED_STAT_TO_UNIT; }
-  get maxSpeedMs() { return this.notchSpeed * MAX_FWD * this.speedMul * this.windMul * this.crewSpeedMul * this.combatSpeedMul; }
+  get maxSpeedMs() { return this.notchSpeed * MAX_FWD * this.speedMul * this.windMul * this.crewSpeedMul * this.combatSpeedMul * this.titleSpeedMul; }
 
   update(delta, t, isBlocked, wind) {
     if (wind) {
@@ -75,7 +78,7 @@ export class ShipController {
 
     const notchSpeed = this.notchSpeed;
     const turnRateBase = degToRad(this.shipDef.turnRate) * this.combatTurnMul;
-    const maxSpeed = notchSpeed * MAX_FWD * this.speedMul * this.windMul * this.crewSpeedMul * this.combatSpeedMul;
+    const maxSpeed = notchSpeed * MAX_FWD * this.speedMul * this.windMul * this.crewSpeedMul * this.combatSpeedMul * this.titleSpeedMul;
     const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.curSpeed) / maxSpeed);
     const dir = this.curSpeed < 0 ? -1 : 1;
     const targetTurnRate = this.turnInput * turnRateBase * speedFactor * dir;
@@ -83,7 +86,7 @@ export class ShipController {
     this.curTurnRate += clamp(targetTurnRate - this.curTurnRate, -maxTurnStep, maxTurnStep);
     this.heading += this.curTurnRate * delta;
 
-    const targetSpeed = this.notch * notchSpeed * this.speedMul * this.windMul * this.crewSpeedMul * this.combatSpeedMul;
+    const targetSpeed = this.notch * notchSpeed * this.speedMul * this.windMul * this.crewSpeedMul * this.combatSpeedMul * this.titleSpeedMul;
     const maxSpeedStep = this.accel * delta;
     this.curSpeed += clamp(targetSpeed - this.curSpeed, -maxSpeedStep, maxSpeedStep);
 

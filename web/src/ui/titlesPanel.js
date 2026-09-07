@@ -14,7 +14,7 @@ function effectLabel(effect) {
   const sign = pct >= 0 ? '+' : '';
   switch (effect.key) {
     case 'sellPriceMul': return `매도가 ${sign}${pct}%`;
-    case 'distancePremiumMul': return `거리 프리미엄 획득량 ${sign}${pct}%`;
+    case 'titleSpeedMul': return `이동속도 ${sign}${pct}%`;
     case 'incomingDamageMul': return `피격 데미지 ${sign}${pct}%`;
     case 'lootQtyMul': return `전투 노획량 ${sign}${pct}%`;
     default: return `${effect.key} ${sign}${pct}%`;

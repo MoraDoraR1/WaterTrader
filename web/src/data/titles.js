@@ -25,13 +25,15 @@ export const TRADE_TITLES = [
   { id: 'trade_5', label: '바다의 대상인', minFame: 6000, effect: { key: 'sellPriceMul', mode: 'mul', value: 1.06 } },
 ];
 
+// 모험 칭호는 이동속도(titleSpeedMul)를 준다 — entities/shipController.js의 이동 물리
+// 계산식에 곱해지며, seaScene.js가 매 프레임 buffMul('titleSpeedMul', 1)로 갱신해준다.
 export const ADVENTURE_TITLES = [
-  { id: 'adv_0', label: '풋내기 항해사', minFame: 0, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.00 } },
-  { id: 'adv_1', label: '견습 탐험가', minFame: 80, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.02 } },
-  { id: 'adv_2', label: '항로 탐사자', minFame: 300, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.04 } },
-  { id: 'adv_3', label: '대항해가', minFame: 700, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.06 } },
-  { id: 'adv_4', label: '세계를 그린 자', minFame: 1400, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.08 } },
-  { id: 'adv_5', label: '전설의 탐험가', minFame: 2500, effect: { key: 'distancePremiumMul', mode: 'mul', value: 1.10 } },
+  { id: 'adv_0', label: '풋내기 항해사', minFame: 0, effect: { key: 'titleSpeedMul', mode: 'mul', value: 1.00 } },
+  { id: 'adv_1', label: '견습 탐험가', minFame: 80, effect: { key: 'titleSpeedMul', mode: 'mul', value: 1.02 } },
+  { id: 'adv_2', label: '항로 탐사자', minFame: 300, effect: { key: 'titleSpeedMul', mode: 'mul', value: 1.04 } },
+  { id: 'adv_3', label: '대항해가', minFame: 700, effect: { key: 'titleSpeedMul', mode: 'mul', value: 1.06 } },
+  { id: 'adv_4', label: '세계를 그린 자', minFame: 1400, effect: { key: 'titleSpeedMul', mode: 'mul', value: 1.08 } },
+  { id: 'adv_5', label: '전설의 탐험가', minFame: 2500, effect: { key: 'titleSpeedMul', mode: 'mul', value: 1.10 } },
 ];
 
 export const COMBAT_TITLES = [
@@ -44,8 +46,9 @@ export const COMBAT_TITLES = [
 ];
 
 // 평판이 깨끗한 상태(0)에도 이름을 붙여, "칭호 없음"이 아니라 명시적인 트랙의 시작점으로 보이게 한다.
-// 악명은 시간이 지나면 감소하지만, 한 번 도달한 단계는 state.infamyPeakTier(항상 최댓값만
-// 갱신)로 따로 기록해 감쇠와 무관하게 계속 장착할 수 있게 한다(systems/fame.js 참고).
+// 악명은 특별 취급하지 않는다 — 시간이 지나 감쇠해 그 단계 밑으로 떨어지면 칭호 자체가
+// 사라지고(장착 중이었다면 자동 해제), 다시 그 수치에 도달하면 재획득할 수 있다
+// (systems/fame.js decayInfamy 참고).
 export const INFAMY_TITLES = [
   { id: 'infamy_0', label: '평판 깨끗함', minFame: 0, effect: { key: 'lootQtyMul', mode: 'mul', value: 1.00 } },
   { id: 'infamy_1', label: '소문난 무법자', minFame: 30, effect: { key: 'lootQtyMul', mode: 'mul', value: 1.02 } },

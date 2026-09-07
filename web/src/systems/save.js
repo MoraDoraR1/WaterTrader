@@ -67,7 +67,6 @@ export function saveGame() {
     tradeWealthMilestone: state.tradeWealthMilestone,
     adventureDiscoveryMilestone: state.adventureDiscoveryMilestone,
     infamy: state.infamy,
-    infamyPeakTier: state.infamyPeakTier,
     equippedTitleId: state.equippedTitleId,
   };
   try {
@@ -151,7 +150,6 @@ export function applySave(data) {
   state.tradeWealthMilestone = typeof data.tradeWealthMilestone === 'number' ? data.tradeWealthMilestone : 0;
   state.adventureDiscoveryMilestone = typeof data.adventureDiscoveryMilestone === 'number' ? data.adventureDiscoveryMilestone : 0;
   state.infamy = typeof data.infamy === 'number' ? data.infamy : 0;
-  state.infamyPeakTier = typeof data.infamyPeakTier === 'number' ? data.infamyPeakTier : 0;
   state.equippedTitleId = typeof data.equippedTitleId === 'string' ? data.equippedTitleId : null;
 }
 

@@ -36,7 +36,7 @@ import { openTitlesPanel } from './ui/titlesPanel.js';
 import {
   decayInfamy, getInfamyTitle, getTradeTitle, getAdventureTitle, getCombatTitle, getEquippedTitleEntry,
   addTradeFame, addAdventureFame, addCombatFame, addInfamy, checkWealthMilestone, checkDiscoveryMilestone,
-  getAllTitleEntries, equipTitle, unequipTitle,
+  getAllTitleEntries, equipTitle, unequipTitle, isTitleUnlocked,
 } from './systems/fame.js';
 import { PLAYER_SKILLS, QUICKSLOT_COUNT, ACADEMIC_EXP_CURVE, SKILL_EXP_CURVE } from './data/playerSkills.js';
 import {
@@ -533,5 +533,5 @@ window.__debug = {
   equipPart, unequipPart, checkCompendiumRewards, partsBySlot,
   getTradeTitle, getAdventureTitle, getCombatTitle, getInfamyTitle, decayInfamy,
   addTradeFame, addAdventureFame, addCombatFame, addInfamy, checkWealthMilestone, checkDiscoveryMilestone,
-  openTitlesPanel, getAllTitleEntries, getEquippedTitleEntry, equipTitle, unequipTitle,
+  openTitlesPanel, getAllTitleEntries, getEquippedTitleEntry, equipTitle, unequipTitle, isTitleUnlocked,
 };

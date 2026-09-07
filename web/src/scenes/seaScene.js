@@ -1076,6 +1076,8 @@ export class SeaScene {
         this.ship.turnInput = manualTurn;
       }
       this.ship.crewSpeedMul = getCrewSpeedMul();
+      // 장착한 모험 칭호의 이동속도 버프 — 전투·평시 구분 없이 항상 적용된다.
+      this.ship.titleSpeedMul = this._buffMul('titleSpeedMul', 1);
       // 전투 중에만 발동하는 스킬(신속 기동/돌격 항해술)과, 폭풍 중에만 발동하는 스킬
       // (침수 대비/폭풍 항해술)은 상태가 매 순간 바뀌므로 매 프레임 다시 계산해준다.
       this.ship.combatSpeedMul = state.inCombat ? mulSkillEffect(this.ship.shipDef, 'combatSpeedMul', 1) : 1;
