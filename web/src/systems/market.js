@@ -363,8 +363,15 @@ export function getMarketRows(cityId) {
     // dynMul 적용 "이후"에 더해서 아무리 대량으로 팔아 시세를 짓눌러도 프리미엄만큼은 절대 안
     // 깎이는 구멍이 있었다(실측: 팔면 팔수록 마진률이 바닥을 쳐야 하는데 79→67로 15%밖에 안 빠짐).
     // 흥정술(선장 개인 액티브 스킬)이 켜져 있으면 매도가 전체에 추가로 곱해진다.
-    const effSell = Math.max(1, Math.round((price.sell + premium) * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul
+    const rawSell = Math.max(1, Math.round((price.sell + premium) * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul
       * mulSkillEffect(myShipDef, 'sellPriceMul', 1) * buffMul('sellPriceMul', 1)));
+    // 원산지에서 먼 도시일수록 거리 프리미엄이 매도가에 크게 붙는데, 평판 보너스·흥정 계열
+    // 스킬·칭호까지 겹치면 그 프리미엄이 "이 도시 자신의" 매입가마저 넘어서는 경우가 생겼다
+    // (예: 향신료를 취급만 하고 원산지는 아닌 리스본에서 사자마자 그 자리에서 되팔아도 이득).
+    // 매도가는 언제나 그 도시 자신의 매입가보다는 낮게 묶어, 이문이 반드시 다른 도시로 실어
+    // 날라야만 생기도록 한다 — 서로 다른 도시 간 매입가/매도가 차이(거리 프리미엄의 핵심
+    // 존재 이유)는 이 클램프와 무관하게 그대로 유지된다.
+    const effSell = Math.min(rawSell, Math.max(1, effBuy - 1));
     // pct: "원래 설정된 가격(도시별 매입/매도가)을 100%로 뒀을 때 지금이 몇 %인지" — 주식
     // 현재가/기준가처럼, 이 도시 이 품목의 시세가 그동안 얼마나 오르내렸는지 그대로 보여준다.
     const pct = Math.round(dynMul * 100);

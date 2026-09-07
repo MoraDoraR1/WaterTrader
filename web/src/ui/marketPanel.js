@@ -59,6 +59,17 @@ function renderMarket(cityId) {
             else hud.toast(res.reason);
           },
         },
+        {
+          // 보유량 전체를 한 번에 판다 — sellGood 자체가 이미 항구의 남은 매입 여력(한정
+          // 재고)만큼만 실제로 처리하므로, 여기서는 그냥 보유량 전체를 요청하면 된다.
+          label: '전량 판매',
+          disabled: heldQty <= 0,
+          onAction: () => {
+            const res = sellGood(cityId, good.id, heldQty);
+            if (res.ok) { hud.toast(`${good.name} ${res.qty}t 판매 (+${res.revenue.toLocaleString('ko-KR')} 두캇)`); renderMarket(cityId); }
+            else hud.toast(res.reason);
+          },
+        },
       ],
     };
   });

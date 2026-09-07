@@ -402,8 +402,12 @@
   /* ---- 시장 ---- */
   #market-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
     background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
-  #market-card { width: 560px; max-width: 92vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
+  #market-card { width: 640px; max-width: 92vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
     border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+  /* 시장은 행마다 버튼이 3개(구매/판매/전량 판매)라 다른 패널(.sy-row-side 공용 규칙, max-width
+     44%)보다 옆칸이 더 필요하다 — 시장 카드 안에서만 옆칸을 넓히고 버튼을 줄바꿈 가능하게 한다. */
+  #market-body .sy-row-side { max-width: 62%; }
+  #market-body .sy-row-side-actions { flex-wrap: wrap; justify-content: flex-end; }
   #market-header { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.3rem; }
   #market-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; }
   #market-gold { font-size: 0.85rem; color: #cfe0ea; }

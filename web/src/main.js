@@ -523,7 +523,7 @@ window.__debug = {
   get citySceneObj() { return citySceneObj; },
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
-  checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, sellGood, getStockInfo,
+  checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, sellGood, getStockInfo, getMarketRows,
   getCargoCapacity, getCargoUsed,
   buyShip, buildShip, saveGame, loadSaveData, applySave, SHIPS, CITIES, GOODS, CITY_MARKET, goToCity, computeScore, checkExplorationSite,
   hud, getQuestsForCity, QUESTS, openMarket, openSupplies, openShipyard,
