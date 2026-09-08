@@ -1,6 +1,7 @@
 import { Vec2, clamp } from '../util/math2d.js';
 import { Camera2D, IsoProjection } from '../render/canvas2d.js';
 import { characterSprite } from '../render/pixelSprites.js';
+import { getCharacterImage } from '../render/characterAssets.js';
 import { CharacterController } from '../entities/characterController.js';
 import { getCity, NPC_ROLE_COLORS, NPC_ROLE_LABELS } from '../data/cities.js';
 import { COUNTRY_NAMES } from '../data/ships.js';
@@ -72,6 +73,75 @@ const LAYOUT_TEMPLATES = {
   },
 };
 
+// 국가권별 재질·건축 팔레트. 16~17세기 항구의 기후와 건축 실루엣을 게임 크기에서
+// 빠르게 구분할 수 있도록 색뿐 아니라 처마/지붕/식생/포장 방식까지 함께 묶는다.
+const CITY_VISUAL_PROFILES = {
+  iberian: {
+    style: 'iberian', groundColor: '#bda66f', plazaColor: '#d6c594', roadColor: '#cbb987', pavingLine: 'rgba(91,73,45,0.2)',
+    wallA: '#d8c996', wallB: '#efe2b9', roofA: '#873b27', roofB: '#b25532', accent: '#2f6f8b', vegetation: 'olive',
+    waterDeep: '#0d4a62', waterLight: '#19718a', quay: '#85745b',
+  },
+  north_sea: {
+    style: 'north_sea', groundColor: '#84917c', plazaColor: '#a4a493', roadColor: '#96998e', pavingLine: 'rgba(39,48,44,0.25)',
+    wallA: '#8c654b', wallB: '#b98760', roofA: '#3f4b50', roofB: '#576167', accent: '#3b3029', vegetation: 'pine',
+    waterDeep: '#123f50', waterLight: '#276879', quay: '#6e716b',
+  },
+  mediterranean: {
+    style: 'mediterranean', groundColor: '#b9a06c', plazaColor: '#d2bd89', roadColor: '#c8b27c', pavingLine: 'rgba(87,69,44,0.22)',
+    wallA: '#cfad78', wallB: '#ead4a6', roofA: '#8e442c', roofB: '#b35b37', accent: '#496e67', vegetation: 'cypress',
+    waterDeep: '#0d4c67', waterLight: '#1b7890', quay: '#88775f',
+  },
+  ottoman: {
+    style: 'ottoman', groundColor: '#b99a61', plazaColor: '#d5b978', roadColor: '#c8aa70', pavingLine: 'rgba(91,61,35,0.2)',
+    wallA: '#c18d51', wallB: '#dfb270', roofA: '#2f6970', roofB: '#45868a', accent: '#b87832', vegetation: 'palm',
+    waterDeep: '#104a5d', waterLight: '#257489', quay: '#8d7452',
+  },
+  tropical: {
+    style: 'tropical', groundColor: '#748b62', plazaColor: '#a98d5b', roadColor: '#9b8055', pavingLine: 'rgba(49,58,37,0.18)',
+    wallA: '#765236', wallB: '#9b7045', roofA: '#4b3826', roofB: '#674a2d', accent: '#b8843b', vegetation: 'palm',
+    waterDeep: '#0d5362', waterLight: '#27899a', quay: '#6d573c',
+  },
+  chinese: {
+    style: 'chinese', groundColor: '#9f997f', plazaColor: '#b8ae91', roadColor: '#aaa38e', pavingLine: 'rgba(46,43,39,0.23)',
+    wallA: '#c9b98d', wallB: '#ded1a9', roofA: '#303d39', roofB: '#43534d', accent: '#9b3429', vegetation: 'bamboo',
+    waterDeep: '#164957', waterLight: '#2b7180', quay: '#777166', eaves: true,
+  },
+  japanese: {
+    style: 'japanese', groundColor: '#96947f', plazaColor: '#aaa58e', roadColor: '#a19c88', pavingLine: 'rgba(38,39,34,0.24)',
+    wallA: '#6a5845', wallB: '#ddd5bd', roofA: '#303535', roofB: '#454a48', accent: '#6e342b', vegetation: 'pine',
+    waterDeep: '#164958', waterLight: '#2a6f7e', quay: '#706b60', eaves: true,
+  },
+  korean: {
+    style: 'korean', groundColor: '#b8ad86', plazaColor: '#d0c49a', roadColor: '#c4b890', pavingLine: 'rgba(58,54,44,0.2)',
+    wallA: '#d8cfae', wallB: '#eee5c9', roofA: '#292d2c', roofB: '#4b504d', accent: '#7c3c2d', vegetation: 'pine',
+    waterDeep: '#164956', waterLight: '#2b6d7b', quay: '#777165', eaves: true, hanok: true,
+  },
+};
+
+const COUNTRY_VISUAL_GROUP = {
+  PT: 'iberian', ES: 'iberian',
+  EN: 'north_sea', NL: 'north_sea', HAN: 'north_sea', DK: 'north_sea', SE: 'north_sea', SC: 'north_sea',
+  FR: 'mediterranean', IT: 'mediterranean', MT: 'mediterranean', RG: 'mediterranean',
+  OT: 'ottoman', OM: 'ottoman',
+  AC: 'tropical', BN: 'tropical', BU: 'tropical', SM: 'tropical', VN: 'tropical',
+  CN: 'chinese', JP: 'japanese', KR: 'korean',
+};
+
+function visualProfileFor(city) {
+  return CITY_VISUAL_PROFILES[COUNTRY_VISUAL_GROUP[city.country]] || CITY_VISUAL_PROFILES.iberian;
+}
+
+function citySeed(id) {
+  let seed = 2166136261;
+  for (let i = 0; i < id.length; i++) seed = Math.imul(seed ^ id.charCodeAt(i), 16777619);
+  return seed >>> 0;
+}
+
+function seededUnit(seed) {
+  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 function defaultNpcs() {
   return [
     { role: 'harbormaster', name: '항구 관리인', line: '아직 이 항구는 정비가 덜 되었습니다. 곧 상단이 들어올 예정입니다.' },
@@ -100,12 +170,17 @@ export class CityScene {
     this.logicalH = logicalH;
     this.camera = new Camera2D();
     this.iso = new IsoProjection(PX_PER_UNIT, 0.55);
-    this.layout = LAYOUT_TEMPLATES[city.layout] || LAYOUT_TEMPLATES.plaza;
+    const template = LAYOUT_TEMPLATES[city.layout] || LAYOUT_TEMPLATES.plaza;
+    this.profile = visualProfileFor(city);
+    this.layout = { ...template, ...this.profile, buildingPositions: template.buildingPositions };
     this.sizeMul = this.isCapital ? 1.4 : 1;
+    this.seed = citySeed(city.id);
+    this.t = 0;
 
     this.buildingColliders = [];
     this._buildings = this._layoutBuildings();
     this.npcObjects = this._layoutNpcs();
+    this.props = this._layoutProps();
     this.exitPos = new Vec2(0, 92);
 
     this.character = new CharacterController();
@@ -142,14 +217,29 @@ export class CityScene {
     const ROLE_PRIORITY = ['shipwright', 'merchant', 'harbormaster', 'banker', 'governor'];
     const rolesHere = ROLE_PRIORITY.filter((r) => this.city.npcs.some((n) => n.role === r));
     let roleIdx = 0;
-    for (const [x, z] of positions) {
-      const w = 16 + sizeBoost + Math.random() * 6, d = 14 + sizeBoost + Math.random() * 5;
+    for (let index = 0; index < positions.length; index++) {
+      const [x, z] = positions[index];
+      const w = 16 + sizeBoost + seededUnit(this.seed + index * 2) * 6;
+      const d = 14 + sizeBoost + seededUnit(this.seed + index * 2 + 1) * 5;
       const box = { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 };
       const type = roleIdx < rolesHere.length ? rolesHere[roleIdx++] : 'generic';
-      buildings.push({ x, z, w, d, wallA: t.wallA, wallB: t.wallB, roofA: t.roofA, roofB: t.roofB, hanok: t.hanok, type });
+      buildings.push({ x, z, w, d, wallA: t.wallA, wallB: t.wallB, roofA: t.roofA, roofB: t.roofB, hanok: t.hanok, eaves: t.eaves, style: t.style, accent: t.accent, type });
       this.buildingColliders.push(box);
     }
     return buildings;
+  }
+
+  _layoutProps() {
+    const m = this.sizeMul;
+    const vegetation = this.layout.vegetation || 'olive';
+    const candidates = [
+      [-72, -8, vegetation], [72, -5, vegetation], [-67, 38, vegetation], [68, 40, vegetation],
+      [-34, 50, 'crate'], [31, 49, 'barrel'], [-18, -33, 'stall'], [24, -34, 'stall'],
+      [-9, 29, 'lamp'], [10, 31, 'lamp'], [0, 8, 'well'], [-49, 48, 'crate'], [50, 46, 'barrel'],
+    ];
+    return candidates
+      .map(([x, z, type], index) => ({ x: x * m, z: z * m, type, variant: seededUnit(this.seed + 100 + index) }))
+      .filter((p) => !this.buildingColliders.some((b) => p.x > b.minX - 4 && p.x < b.maxX + 4 && p.z > b.minZ - 4 && p.z < b.maxZ + 4));
   }
 
   // 건물 type별 지붕 위/앞 장식 — 조선소는 작은 돛대+깃발, 시장은 줄무늬 차양,
@@ -303,6 +393,7 @@ export class CityScene {
   }
 
   update(delta) {
+    this.t += delta;
     const forward = (isDown('KeyW') ? 1 : 0) - (isDown('KeyS') ? 1 : 0);
     const strafe = (isDown('KeyD') ? 1 : 0) - (isDown('KeyA') ? 1 : 0);
     // 대각선(아이소메트릭) 시점에 맞춰 WASD를 화면 방향 기준으로 재매핑한다
@@ -351,11 +442,191 @@ export class CityScene {
     ctx.fill();
   }
 
+  _worldLine(ctx, w, h, points, strokeStyle, lineWidth = 1) {
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    points.forEach(([x, z], index) => {
+      const p = this.iso.toScreen(this.camera, x, z, w, h);
+      if (index === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+  }
+
+  _strokeIsoDisc(ctx, w, h, cx, cz, radius, strokeStyle, lineWidth = 1) {
+    const points = [];
+    for (let i = 0; i <= 32; i++) {
+      const a = (i / 32) * Math.PI * 2;
+      points.push([cx + Math.cos(a) * radius, cz + Math.sin(a) * radius]);
+    }
+    this._worldLine(ctx, w, h, points, strokeStyle, lineWidth);
+  }
+
+  _drawGroundAndHarbor(ctx, w, h) {
+    const groundGradient = ctx.createLinearGradient(0, 0, 0, h);
+    groundGradient.addColorStop(0, this.layout.groundColor);
+    groundGradient.addColorStop(1, this.layout.roadColor);
+    ctx.fillStyle = groundGradient;
+    ctx.fillRect(0, 0, w, h);
+
+    // 광장으로 모이는 포장도로와 항구 산책로. 직선 위에 이음매를 얹어 손으로 깐
+    // 돌/다진 흙 표면처럼 보이게 하되 이동 가능 영역은 바꾸지 않는다.
+    this._isoQuad(ctx, w, h, -8, -100, 8, 58, this.layout.roadColor);
+    this._isoQuad(ctx, w, h, -105, -7, 105, 7, this.layout.roadColor);
+    this._isoDisc(ctx, w, h, 0, 0, this.layout.plazaRadius * this.sizeMul, this.layout.plazaColor);
+    this._strokeIsoDisc(ctx, w, h, 0, 0, this.layout.plazaRadius * this.sizeMul, this.layout.pavingLine, 1.2);
+    this._strokeIsoDisc(ctx, w, h, 0, 0, this.layout.plazaRadius * this.sizeMul * 0.72, this.layout.pavingLine, 0.8);
+    for (let i = -6; i <= 6; i++) {
+      const x = i * 14;
+      this._worldLine(ctx, w, h, [[x, -96], [x, 50]], this.layout.pavingLine, 0.55);
+    }
+    for (let i = -5; i <= 3; i++) {
+      const z = i * 14;
+      this._worldLine(ctx, w, h, [[-102, z], [102, z]], this.layout.pavingLine, 0.55);
+    }
+
+    // 수심별 항만 수색과 파랑. 화면 아래로 갈수록 진해져 평면 한 장이 아니라 얕은
+    // 연안에서 깊은 바다로 이어지는 항구처럼 읽힌다.
+    this._isoQuad(ctx, w, h, -150, 55, 150, 102, this.layout.waterLight);
+    this._isoQuad(ctx, w, h, -150, 102, 150, 158, '#166379');
+    this._isoQuad(ctx, w, h, -150, 158, 150, 230, this.layout.waterDeep);
+    this._isoQuad(ctx, w, h, -150, 50, 150, 58, this.layout.quay);
+    this._worldLine(ctx, w, h, [[-150, 57], [150, 57]], 'rgba(224,219,190,0.55)', 1.2);
+    for (let i = 0; i < 18; i++) {
+      const z = 68 + (i % 6) * 24;
+      const x = -125 + Math.floor(i / 6) * 80 + ((i * 19) % 42);
+      const sway = Math.sin(this.t * 1.1 + i * 1.7) * 3;
+      this._worldLine(ctx, w, h, [[x + sway, z], [x + 12 + sway, z + 1.5]], 'rgba(192,231,229,0.34)', 1);
+    }
+
+    // 중앙 부두는 석조 교각과 목재 상판을 겹쳐 입체감을 준다. 대도시는 보조 부두도 추가한다.
+    this._isoQuad(ctx, w, h, -8, 57, 8, 101, '#463826');
+    this._isoQuad(ctx, w, h, -6.5, 57, 6.5, 98, '#6b4d2b');
+    for (let z = 61; z < 98; z += 6) this._worldLine(ctx, w, h, [[-6.5, z], [6.5, z]], 'rgba(220,181,112,0.28)', 0.7);
+    if (this.isCapital) {
+      this._isoQuad(ctx, w, h, -48, 57, -37, 88, '#60452a');
+      this._isoQuad(ctx, w, h, 37, 57, 48, 88, '#60452a');
+    }
+
+    this._isoDisc(ctx, w, h, 0, 0, 2.8, this.layout.accent);
+    this._strokeIsoDisc(ctx, w, h, 0, 0, 4.5, 'rgba(246,230,183,0.42)', 0.8);
+  }
+
+  _drawProp(ctx, w, h, prop) {
+    const p = this.iso.toScreen(this.camera, prop.x, prop.z, w, h);
+    const z = this.camera.zoom;
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#18231d';
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 2 * z, 5.5 * z, 2.3 * z, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    if (['olive', 'pine', 'palm', 'cypress', 'bamboo'].includes(prop.type)) {
+      ctx.strokeStyle = '#554129'; ctx.lineWidth = Math.max(1, 1.4 * z);
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + (prop.variant - 0.5) * 2 * z, p.y - 13 * z); ctx.stroke();
+      const topX = p.x + (prop.variant - 0.5) * 2 * z, topY = p.y - 13 * z;
+      if (prop.type === 'palm') {
+        ctx.strokeStyle = '#31583b'; ctx.lineWidth = Math.max(1, z);
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * Math.PI * 2;
+          ctx.beginPath(); ctx.moveTo(topX, topY); ctx.quadraticCurveTo(topX + Math.cos(a) * 5 * z, topY - 2 * z, topX + Math.cos(a) * 9 * z, topY + Math.sin(a) * 4 * z); ctx.stroke();
+        }
+      } else if (prop.type === 'pine') {
+        ctx.fillStyle = '#315443';
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath(); ctx.moveTo(topX, topY - (5 - i * 3) * z); ctx.lineTo(topX - (6 - i) * z, topY + (5 + i * 3) * z); ctx.lineTo(topX + (6 - i) * z, topY + (5 + i * 3) * z); ctx.closePath(); ctx.fill();
+        }
+      } else if (prop.type === 'cypress') {
+        ctx.fillStyle = '#31503a'; ctx.beginPath(); ctx.ellipse(topX, topY - 2 * z, 4 * z, 11 * z, 0, 0, Math.PI * 2); ctx.fill();
+      } else if (prop.type === 'bamboo') {
+        ctx.strokeStyle = '#446044'; ctx.lineWidth = Math.max(1, z);
+        for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(p.x + i * 1.5 * z, p.y); ctx.lineTo(p.x + i * 1.2 * z, p.y - (11 + Math.abs(i)) * z); ctx.stroke(); }
+      } else {
+        ctx.fillStyle = '#536b3d';
+        for (const [dx, dy, r] of [[-4, 0, 5], [3, -2, 5], [0, -6, 5]]) { ctx.beginPath(); ctx.arc(topX + dx * z, topY + dy * z, r * z, 0, Math.PI * 2); ctx.fill(); }
+      }
+    } else if (prop.type === 'crate') {
+      ctx.fillStyle = '#7a542e'; ctx.fillRect(p.x - 4 * z, p.y - 7 * z, 8 * z, 7 * z);
+      ctx.strokeStyle = '#4a321e'; ctx.lineWidth = Math.max(0.7, z); ctx.strokeRect(p.x - 4 * z, p.y - 7 * z, 8 * z, 7 * z);
+      ctx.beginPath(); ctx.moveTo(p.x - 4 * z, p.y - 7 * z); ctx.lineTo(p.x + 4 * z, p.y); ctx.moveTo(p.x + 4 * z, p.y - 7 * z); ctx.lineTo(p.x - 4 * z, p.y); ctx.stroke();
+    } else if (prop.type === 'barrel') {
+      ctx.fillStyle = '#755033'; ctx.beginPath(); ctx.ellipse(p.x, p.y - 4 * z, 3.5 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#342a22'; ctx.lineWidth = Math.max(0.7, z); ctx.beginPath(); ctx.moveTo(p.x - 3.2 * z, p.y - 6 * z); ctx.lineTo(p.x + 3.2 * z, p.y - 6 * z); ctx.moveTo(p.x - 3.2 * z, p.y - 2 * z); ctx.lineTo(p.x + 3.2 * z, p.y - 2 * z); ctx.stroke();
+    } else if (prop.type === 'stall') {
+      ctx.strokeStyle = '#4a3421'; ctx.lineWidth = Math.max(1, z);
+      ctx.beginPath(); ctx.moveTo(p.x - 6 * z, p.y); ctx.lineTo(p.x - 6 * z, p.y - 11 * z); ctx.moveTo(p.x + 6 * z, p.y); ctx.lineTo(p.x + 6 * z, p.y - 11 * z); ctx.stroke();
+      ctx.fillStyle = this.layout.accent; ctx.fillRect(p.x - 7 * z, p.y - 13 * z, 14 * z, 5 * z);
+      ctx.fillStyle = 'rgba(243,224,184,0.9)'; ctx.fillRect(p.x - 2 * z, p.y - 13 * z, 4 * z, 5 * z);
+    } else if (prop.type === 'lamp') {
+      ctx.strokeStyle = '#3b3328'; ctx.lineWidth = Math.max(1, z); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y - 12 * z); ctx.stroke();
+      ctx.fillStyle = '#e4bc5a'; ctx.fillRect(p.x - 2 * z, p.y - 14 * z, 4 * z, 5 * z);
+    } else if (prop.type === 'well') {
+      ctx.fillStyle = this.layout.quay; ctx.beginPath(); ctx.ellipse(p.x, p.y - 2 * z, 6 * z, 3 * z, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#40382f'; ctx.lineWidth = Math.max(1, z); ctx.beginPath(); ctx.ellipse(p.x, p.y - 3 * z, 4.5 * z, 2 * z, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  _drawFacadeDetails(ctx, b, corners, wallTop) {
+    const z = this.camera.zoom;
+    const mix = (a, bb, f) => ({ x: a.x + (bb.x - a.x) * f, y: a.y + (bb.y - a.y) * f });
+    const frontTopA = wallTop[2], frontTopB = wallTop[3], frontBottomA = corners[2], frontBottomB = corners[3];
+
+    // 석재/벽돌 층과 목조 골조는 지역 프로필을 그대로 따른다.
+    ctx.save();
+    ctx.globalAlpha = 0.38;
+    ctx.strokeStyle = b.style === 'north_sea' ? '#46362d' : 'rgba(92,68,43,0.55)';
+    ctx.lineWidth = Math.max(0.55, 0.7 * z);
+    for (const f of [0.3, 0.58]) {
+      const a = mix(frontTopA, frontBottomA, f), bb = mix(frontTopB, frontBottomB, f);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(bb.x, bb.y); ctx.stroke();
+    }
+    if (['north_sea', 'japanese', 'chinese', 'korean', 'tropical'].includes(b.style)) {
+      for (const f of [0.18, 0.5, 0.82]) {
+        const a = mix(frontTopA, frontTopB, f), bb = mix(frontBottomA, frontBottomB, f);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(bb.x, bb.y); ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    const door = mix(frontBottomA, frontBottomB, 0.52);
+    ctx.fillStyle = b.style === 'ottoman' ? '#4f3825' : '#493526';
+    ctx.fillRect(door.x - 2.4 * z, door.y - 8 * z, 4.8 * z, 8 * z);
+    ctx.fillStyle = b.accent || '#6a7b78';
+    for (const f of [0.24, 0.78]) {
+      const top = mix(frontTopA, frontTopB, f), bottom = mix(frontBottomA, frontBottomB, f);
+      const y = top.y + (bottom.y - top.y) * 0.43;
+      ctx.fillRect(top.x - 2.1 * z, y - 2 * z, 4.2 * z, 4 * z);
+      ctx.strokeStyle = 'rgba(238,220,177,0.7)'; ctx.lineWidth = Math.max(0.5, 0.6 * z); ctx.strokeRect(top.x - 2.1 * z, y - 2 * z, 4.2 * z, 4 * z);
+    }
+    if (b.style === 'iberian') {
+      const a = mix(frontTopA, frontBottomA, 0.72), bb = mix(frontTopB, frontBottomB, 0.72);
+      ctx.strokeStyle = b.accent; ctx.lineWidth = Math.max(1, 1.4 * z); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(bb.x, bb.y); ctx.stroke();
+    }
+  }
+
+  _drawCultureTopper(ctx, b, roofPeak) {
+    const z = this.camera.zoom;
+    if (b.style === 'ottoman') {
+      ctx.fillStyle = '#3c7d7a'; ctx.beginPath(); ctx.arc(roofPeak.x, roofPeak.y + 1.5 * z, 4.2 * z, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#d2a24f'; ctx.beginPath(); ctx.arc(roofPeak.x, roofPeak.y - 3 * z, 1.1 * z, 0, Math.PI * 2); ctx.fill();
+    } else if (b.style === 'north_sea') {
+      ctx.fillStyle = '#49362d'; ctx.fillRect(roofPeak.x + 3 * z, roofPeak.y - 5 * z, 3 * z, 8 * z);
+      ctx.fillStyle = 'rgba(213,219,211,0.35)'; ctx.beginPath(); ctx.arc(roofPeak.x + 5 * z, roofPeak.y - 8 * z, 2.2 * z, 0, Math.PI * 2); ctx.fill();
+    } else if (['chinese', 'japanese', 'korean'].includes(b.style)) {
+      ctx.strokeStyle = b.style === 'chinese' ? '#9b3429' : '#252a29'; ctx.lineWidth = Math.max(1, 1.3 * z);
+      ctx.beginPath(); ctx.moveTo(roofPeak.x - 7 * z, roofPeak.y + 2 * z); ctx.lineTo(roofPeak.x + 7 * z, roofPeak.y + 2 * z); ctx.stroke();
+    } else if (b.style === 'tropical') {
+      ctx.strokeStyle = '#b78a48'; ctx.lineWidth = Math.max(0.8, z); ctx.beginPath(); ctx.moveTo(roofPeak.x - 7 * z, roofPeak.y + 2 * z); ctx.lineTo(roofPeak.x + 7 * z, roofPeak.y - 2 * z); ctx.stroke();
+    }
+  }
+
   // 3면(지붕/오른쪽 벽/앞쪽 벽)이 보이는 단순 아이소메트릭 건물 블록.
   _drawBuildingBlock(ctx, w, h, b) {
-    if (b.hanok) { this._drawHanokBlock(ctx, w, h, b); return; }
+    if (b.hanok || b.eaves) { this._drawHanokBlock(ctx, w, h, b); return; }
     const hw = b.w / 2, hd = b.d / 2;
-    const wallPx = 13 * this.camera.zoom, roofPx = 9 * this.camera.zoom;
+    const wallPx = 18 * this.camera.zoom;
+    const roofPx = (b.style === 'north_sea' ? 14 : 10) * this.camera.zoom;
     const corners = [
       [b.x - hw, b.z - hd], [b.x + hw, b.z - hd], [b.x + hw, b.z + hd], [b.x - hw, b.z + hd],
     ].map(([x, z]) => this.iso.toScreen(this.camera, x, z, w, h));
@@ -374,11 +645,13 @@ export class CityScene {
     // (배색은 도시 배치 템플릿을 따른다 — 유럽 붉은기와/요새 회색석재/시장 청록타일 등)
     poly(ctx, [corners[1], corners[2], wallTop[2], wallTop[1]], b.wallA || '#c7b48c');
     poly(ctx, [corners[2], corners[3], wallTop[3], wallTop[2]], b.wallB || '#e4dcc3');
+    this._drawFacadeDetails(ctx, b, corners, wallTop);
     // 지붕(각뿔형 근사 — 꼭짓점 하나로 모으는 팔작지붕 느낌)
     poly(ctx, [wallTop[1], wallTop[2], roofPeak], b.roofA || '#8a3a28');
     poly(ctx, [wallTop[2], wallTop[3], roofPeak], b.roofB || '#a8492f');
     poly(ctx, [wallTop[0], wallTop[1], roofPeak], b.roofA || '#8a3a28');
     poly(ctx, [wallTop[3], wallTop[0], roofPeak], b.roofB || '#a8492f');
+    this._drawCultureTopper(ctx, b, roofPeak);
     this._drawBuildingTopper(ctx, b, wallTop, roofPeak);
   }
 
@@ -386,7 +659,7 @@ export class CityScene {
   // 팔작지붕 곡선 실루엣을 낸다(서양식 각뿔 지붕과 확실히 다른 형태가 되도록 별도 지오메트리로 그린다).
   _drawHanokBlock(ctx, w, h, b) {
     const hw = b.w / 2, hd = b.d / 2;
-    const wallPx = 10 * this.camera.zoom, roofPx = 8 * this.camera.zoom;
+    const wallPx = 15 * this.camera.zoom, roofPx = 10 * this.camera.zoom;
     const corners = [
       [b.x - hw, b.z - hd], [b.x + hw, b.z - hd], [b.x + hw, b.z + hd], [b.x - hw, b.z + hd],
     ].map(([x, z]) => this.iso.toScreen(this.camera, x, z, w, h));
@@ -404,12 +677,14 @@ export class CityScene {
     // 회벽 목조 벽체(오른쪽/앞쪽 면)
     poly([corners[1], corners[2], wallTop[2], wallTop[1]], b.wallA || '#e8e2d0');
     poly([corners[2], corners[3], wallTop[3], wallTop[2]], b.wallB || '#d8d0ba');
+    this._drawFacadeDetails(ctx, b, corners, wallTop);
     // 처마 — 벽보다 바깥으로 내밀리며 살짝 들려 올라간 곡선 기와 처마.
     poly([wallTop[1], wallTop[2], eave[2], eave[1]], b.roofB || '#4a4a46');
     poly([wallTop[2], wallTop[3], eave[3], eave[2]], b.roofB || '#4a4a46');
     // 팔작지붕 상단 — 처마에서 용마루로 모이는 완만한 기와 경사면.
     poly([eave[1], eave[2], roofPeak], b.roofA || '#33332f');
     poly([eave[2], eave[3], roofPeak], b.roofA || '#33332f');
+    this._drawCultureTopper(ctx, b, roofPeak);
     this._drawBuildingTopper(ctx, b, eave, roofPeak);
   }
 
@@ -418,29 +693,24 @@ export class CityScene {
     this.iso.scaleX = PX_PER_UNIT * this.camera.zoom;
     this.iso.scaleY = this.iso.scaleX * 0.55;
 
-    ctx.fillStyle = this.layout.groundColor;
-    ctx.fillRect(0, 0, w, h);
-
-    this._isoDisc(ctx, w, h, 0, 0, this.layout.plazaRadius * this.sizeMul, this.layout.plazaColor);
-
-    // 부두/바다(도시 남쪽)
-    this._isoQuad(ctx, w, h, -140, 55, 140, 220, '#0f4a63');
-    this._isoQuad(ctx, w, h, -7, 58, 7, 98, '#5a4326');
-
-    this._isoDisc(ctx, w, h, 0, 0, 2.3, '#9aa5a0');
+    this._drawGroundAndHarbor(ctx, w, h);
 
     // 출항 마커
     const exitP = this.iso.toScreen(this.camera, this.exitPos.x, this.exitPos.y, w, h);
-    ctx.fillStyle = '#e6c15a';
+    const exitPulse = 5 + Math.sin(this.t * 2.5) * 1.5;
+    ctx.fillStyle = 'rgba(230,193,90,0.18)';
+    ctx.beginPath(); ctx.arc(exitP.x, exitP.y, exitPulse + 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f0cb68';
     ctx.beginPath();
-    ctx.moveTo(exitP.x, exitP.y - 10);
-    ctx.lineTo(exitP.x - 5, exitP.y + 4);
-    ctx.lineTo(exitP.x + 5, exitP.y + 4);
+    ctx.moveTo(exitP.x, exitP.y - 12);
+    ctx.lineTo(exitP.x - 6, exitP.y + 4);
+    ctx.lineTo(exitP.x + 6, exitP.y + 4);
     ctx.closePath(); ctx.fill();
 
     // 건물 + NPC + 플레이어를 화면 깊이(x+z) 순으로 함께 정렬해 그린다(페인터 알고리즘).
     const drawables = [
       ...this._buildings.map((b) => ({ depth: b.x + b.z + b.w / 2 + b.d / 2, draw: () => this._drawBuildingBlock(ctx, w, h, b) })),
+      ...this.props.map((p) => ({ depth: p.x + p.z, draw: () => this._drawProp(ctx, w, h, p) })),
       ...this.npcObjects.map((o) => ({ depth: o.pos.x + o.pos.y, draw: () => this._drawNpc(ctx, w, h, o) })),
       { depth: this.character.pos.x + this.character.pos.y, draw: () => this._drawPlayer(ctx, w, h) },
     ].sort((a, b) => a.depth - b.depth);
@@ -452,33 +722,51 @@ export class CityScene {
     const roleColor = NPC_ROLE_COLORS[o.npc.role] || '#999';
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = roleColor;
-    ctx.beginPath(); ctx.ellipse(p.x, p.y + 3, 4.6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 3, 6.8 * this.camera.zoom, 3 * this.camera.zoom, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
-    const sprite = characterSprite(o.gender, roleColor, this.layout.hanok, o.npc.role);
-    const scale = this.camera.zoom * 1.3;
-    ctx.drawImage(sprite, p.x - (sprite.width * scale) / 2, p.y - sprite.height * scale + 4, sprite.width * scale, sprite.height * scale);
+    const generated = getCharacterImage(o.gender, this.city.country, false);
+    let spriteHeight;
+    if (generated) {
+      spriteHeight = 36 * this.camera.zoom;
+      const spriteWidth = spriteHeight * (generated.naturalWidth / generated.naturalHeight);
+      ctx.drawImage(generated, p.x - spriteWidth / 2, p.y - spriteHeight + 4 * this.camera.zoom, spriteWidth, spriteHeight);
+    } else {
+      const sprite = characterSprite(o.gender, roleColor, this.layout.hanok, o.npc.role);
+      const scale = this.camera.zoom * 2.25;
+      spriteHeight = sprite.height * scale;
+      ctx.drawImage(sprite, p.x - (sprite.width * scale) / 2, p.y - spriteHeight + 4, sprite.width * scale, spriteHeight);
+    }
     ctx.fillStyle = 'rgba(20,14,8,0.75)';
-    ctx.font = '7px sans-serif';
+    ctx.font = '8px sans-serif';
     ctx.textAlign = 'center';
     const label = NPC_ROLE_LABELS[o.npc.role] || o.npc.name;
     const tw = ctx.measureText(label).width;
-    ctx.fillRect(p.x - tw / 2 - 2, p.y - sprite.height * scale - 6, tw + 4, 9);
+    const labelY = p.y - spriteHeight - 5;
+    ctx.fillRect(p.x - tw / 2 - 3, labelY - 8, tw + 6, 11);
     ctx.fillStyle = '#f0e6d2';
-    ctx.fillText(label, p.x, p.y - sprite.height * scale + 1);
+    ctx.fillText(label, p.x, labelY);
   }
 
   _drawPlayer(ctx, w, h) {
     const cp = this.iso.toScreen(this.camera, this.character.pos.x, this.character.pos.y, w, h);
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = '#2a2016';
-    ctx.beginPath(); ctx.ellipse(cp.x, cp.y + 3, 4.6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cp.x, cp.y + 3, 7.2 * this.camera.zoom, 3.2 * this.camera.zoom, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
-    const sprite = characterSprite(state.gender, null, this.layout.hanok);
-    const scale = this.camera.zoom * 1.3;
-    ctx.save();
-    ctx.translate(cp.x, cp.y - sprite.height * scale / 2 + 3);
-    ctx.rotate(this.iso.facingAngle(this.character.facing));
-    ctx.drawImage(sprite, -sprite.width * scale / 2, -sprite.height * scale / 2, sprite.width * scale, sprite.height * scale);
-    ctx.restore();
+    const generated = getCharacterImage(state.gender, this.city.country, true);
+    if (generated) {
+      const spriteHeight = 39 * this.camera.zoom;
+      const spriteWidth = spriteHeight * (generated.naturalWidth / generated.naturalHeight);
+      const flip = Math.sin(this.character.facing) < -0.05 ? -1 : 1;
+      ctx.save();
+      ctx.translate(cp.x, 0);
+      ctx.scale(flip, 1);
+      ctx.drawImage(generated, -spriteWidth / 2, cp.y - spriteHeight + 4 * this.camera.zoom, spriteWidth, spriteHeight);
+      ctx.restore();
+    } else {
+      const sprite = characterSprite(state.gender, null, this.layout.hanok);
+      const scale = this.camera.zoom * 2.35;
+      ctx.drawImage(sprite, cp.x - sprite.width * scale / 2, cp.y - sprite.height * scale + 4, sprite.width * scale, sprite.height * scale);
+    }
   }
 }

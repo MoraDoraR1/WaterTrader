@@ -6,6 +6,15 @@ import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { SHIPS } from './src/data/ships.js';
 
+const CHARACTER_IDS = [
+  'player_male', 'player_female',
+  'european_male', 'european_female',
+  'mediterranean_male', 'mediterranean_female',
+  'east_asian_male', 'east_asian_female',
+  'korean_male', 'korean_female',
+  'tropical_male', 'tropical_female',
+];
+
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(rootDir, 'dist');
 mkdirSync(distDir, { recursive: true });
@@ -27,12 +36,17 @@ const shipImageData = Object.fromEntries(SHIPS.map((ship) => {
   return [ship.id, `data:image/webp;base64,${bytes.toString('base64')}`];
 }));
 const shipImageScript = `<script>globalThis.__SHIP_IMAGE_DATA__=${JSON.stringify(shipImageData)};<\/script>`;
+const characterImageData = Object.fromEntries(CHARACTER_IDS.map((id) => {
+  const bytes = readFileSync(resolve(rootDir, 'assets', 'characters', `${id}.webp`));
+  return [id, `data:image/webp;base64,${bytes.toString('base64')}`];
+}));
+const characterImageScript = `<script>globalThis.__CHARACTER_IMAGE_DATA__=${JSON.stringify(characterImageData)};<\/script>`;
 
 let html = readFileSync(resolve(rootDir, 'index.html'), 'utf-8');
 html = html.replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, '');
 html = html.replace(
   /<script type="module" src="\.\/src\/main\.js"><\/script>/,
-  () => `${shipImageScript}\n<script>\n${bundleJs}\n</script>`
+  () => `${shipImageScript}\n${characterImageScript}\n<script>\n${bundleJs}\n</script>`
 );
 
 const imageAssets = [
@@ -49,5 +63,5 @@ console.log(
   'artifact built:',
   'dist/bada-sangin-standalone.html',
   (bundleJs.length / 1024).toFixed(0) + 'KB JS',
-  `${imageAssets.length + SHIPS.length} embedded images (${SHIPS.length} ships)`,
+  `${imageAssets.length + SHIPS.length + CHARACTER_IDS.length} embedded images (${SHIPS.length} ships, ${CHARACTER_IDS.length} characters)`,
 );

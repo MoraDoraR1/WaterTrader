@@ -37,7 +37,7 @@ import { audio } from '../systems/audio.js';
 import { formatCityEventBadge, getCargoCapacity, getCargoUsed } from '../systems/market.js';
 import { getGood } from '../data/goods.js';
 
-const DOCK_RANGE = 55;
+const DOCK_RANGE = 95;
 const SITE_INTERACT_RANGE = 32; // 고고학/지리학 사이트에 조사 판정이 뜨는 거리
 const REINVESTIGATE_COOLDOWN = 45; // 같은 사이트(또는 관측) 재사용 사이 최소 대기시간(초)
 const FIRE_COOLDOWN = 1.5;
@@ -86,6 +86,31 @@ const WATER_DEEP = '#0d4256';
 const WATER_LIGHT = '#155a78';
 const LAND_COLOR = '#7a9c5a';
 const LAND_EDGE = '#5c7a42';
+
+const SEA_TERRAIN_BY_COUNTRY = {
+  PT: { overlay: 'rgba(185,151,82,0.46)', mark: '#6c7041', kind: 'scrub' },
+  ES: { overlay: 'rgba(190,151,76,0.48)', mark: '#74663a', kind: 'scrub' },
+  EN: { overlay: 'rgba(88,123,83,0.4)', mark: '#3d674b', kind: 'grass' },
+  NL: { overlay: 'rgba(83,126,91,0.4)', mark: '#3d6c52', kind: 'grass' },
+  HAN: { overlay: 'rgba(82,118,80,0.4)', mark: '#3e684b', kind: 'grass' },
+  DK: { overlay: 'rgba(82,119,84,0.4)', mark: '#3b664d', kind: 'grass' },
+  SE: { overlay: 'rgba(70,105,78,0.44)', mark: '#315844', kind: 'pine' },
+  SC: { overlay: 'rgba(74,111,77,0.42)', mark: '#345d46', kind: 'pine' },
+  FR: { overlay: 'rgba(140,142,78,0.38)', mark: '#5e6b3c', kind: 'scrub' },
+  IT: { overlay: 'rgba(173,143,74,0.45)', mark: '#67703b', kind: 'scrub' },
+  MT: { overlay: 'rgba(190,157,91,0.48)', mark: '#75633d', kind: 'rock' },
+  RG: { overlay: 'rgba(158,137,75,0.43)', mark: '#666a3b', kind: 'scrub' },
+  OT: { overlay: 'rgba(192,151,81,0.5)', mark: '#78613a', kind: 'arid' },
+  OM: { overlay: 'rgba(202,160,91,0.54)', mark: '#806643', kind: 'arid' },
+  AC: { overlay: 'rgba(53,115,70,0.48)', mark: '#286547', kind: 'tropical' },
+  BN: { overlay: 'rgba(48,112,65,0.5)', mark: '#255f43', kind: 'tropical' },
+  BU: { overlay: 'rgba(58,119,69,0.48)', mark: '#2c6845', kind: 'tropical' },
+  SM: { overlay: 'rgba(58,119,72,0.48)', mark: '#2b6848', kind: 'tropical' },
+  VN: { overlay: 'rgba(58,122,72,0.48)', mark: '#2b6a48', kind: 'tropical' },
+  CN: { overlay: 'rgba(84,126,73,0.42)', mark: '#3c6d45', kind: 'ridge' },
+  JP: { overlay: 'rgba(70,113,76,0.43)', mark: '#315f47', kind: 'pine' },
+  KR: { overlay: 'rgba(73,116,75,0.43)', mark: '#335f45', kind: 'pine' },
+};
 
 // 클릭으로 함선을 조준했을 때 화면상 판정 반경(논리 픽셀) — 배 스프라이트 크기가 작아도
 // 최소한 이 정도는 클릭이 맞아야 한다.
@@ -1391,7 +1416,14 @@ export class SeaScene {
   }
 
   _drawWater(ctx, w, h) {
-    const TILE = 10;
+    const waterGradient = ctx.createLinearGradient(0, 0, 0, h);
+    waterGradient.addColorStop(0, '#0a3548');
+    waterGradient.addColorStop(0.55, WATER_DEEP);
+    waterGradient.addColorStop(1, '#14576c');
+    ctx.fillStyle = waterGradient;
+    ctx.fillRect(0, 0, w, h);
+
+    const TILE = 18;
     const corners = [[0, 0], [w, 0], [0, h], [w, h]].map(([sx, sy]) => this.iso.toWorld(this.camera, sx, sy, w, h));
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (const c of corners) { minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x); minZ = Math.min(minZ, c.z); maxZ = Math.max(maxZ, c.z); }
@@ -1401,8 +1433,9 @@ export class SeaScene {
     const t = this.t;
     for (let wz = z0; wz < z1; wz += TILE) {
       for (let wx = x0; wx < x1; wx += TILE) {
-        const wave = Math.sin(wx * 0.05 + t * 0.8) + Math.sin(wz * 0.045 - t * 0.6);
-        ctx.fillStyle = wave > 0.25 ? WATER_LIGHT : WATER_DEEP;
+        const wave = Math.sin(wx * 0.042 + t * 0.75) + Math.sin(wz * 0.036 - t * 0.52);
+        if (wave < 0.18) continue;
+        ctx.fillStyle = wave > 1.15 ? 'rgba(50,132,153,0.24)' : 'rgba(30,105,130,0.15)';
         const p0 = this.iso.toScreen(this.camera, wx, wz, w, h);
         const p1 = this.iso.toScreen(this.camera, wx + TILE, wz, w, h);
         const p2 = this.iso.toScreen(this.camera, wx + TILE, wz + TILE, w, h);
@@ -1411,14 +1444,102 @@ export class SeaScene {
         ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
         ctx.closePath();
         ctx.fill();
+
+        // 파도 꼭대기의 짧은 흰 선은 타일 경계를 숨기고 수면 흐름을 한 방향으로 묶는다.
+        if (wave > 1.35 && ((Math.floor(wx / TILE) + Math.floor(wz / TILE)) & 1) === 0) {
+          const c0 = this.iso.toScreen(this.camera, wx + 3, wz + TILE * 0.5, w, h);
+          const c1 = this.iso.toScreen(this.camera, wx + TILE * 0.68, wz + TILE * 0.5 + 1.2, w, h);
+          ctx.strokeStyle = 'rgba(190,229,229,0.34)';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath(); ctx.moveTo(c0.x, c0.y); ctx.quadraticCurveTo((c0.x + c1.x) / 2, c0.y - 1.2, c1.x, c1.y); ctx.stroke();
+        }
       }
     }
   }
 
   _drawLand(ctx, w, h) {
+    const traceAllLand = () => {
+      ctx.beginPath();
+      for (const poly of LAND_POLYGONS) {
+        poly.forEach(([wx, wz], i) => {
+          const p = this.iso.toScreen(this.camera, wx, wz, w, h);
+          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        });
+        ctx.closePath();
+      }
+    };
+
+    traceAllLand();
     ctx.fillStyle = LAND_COLOR;
-    ctx.strokeStyle = LAND_EDGE;
-    ctx.lineWidth = 1.5;
+    ctx.fill();
+
+    // 도시 주변의 육지에 국가권별 기후색과 지형 기호를 입힌다. 실제 해안 폴리곤을
+    // 클리핑 마스크로 쓰므로 바다 위로 색이 번지거나 충돌 지형이 달라지지 않는다.
+    ctx.save();
+    traceAllLand();
+    ctx.clip();
+    for (let cityIndex = 0; cityIndex < CITIES.length; cityIndex++) {
+      const city = CITIES[cityIndex];
+      const terrain = SEA_TERRAIN_BY_COUNTRY[city.country] || SEA_TERRAIN_BY_COUNTRY.PT;
+      const center = this.iso.toScreen(this.camera, city.pos[0], city.pos[1], w, h);
+      const radiusPx = Math.min(260, 150 * this.iso.scaleY);
+      if (center.x < -radiusPx || center.x > w + radiusPx || center.y < -radiusPx || center.y > h + radiusPx) continue;
+      const gradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, radiusPx);
+      gradient.addColorStop(0, terrain.overlay);
+      gradient.addColorStop(0.55, terrain.overlay.replace(/0\.(\d+)\)/, '0.22)'));
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(center.x - radiusPx, center.y - radiusPx, radiusPx * 2, radiusPx * 2);
+
+      ctx.strokeStyle = terrain.mark;
+      ctx.fillStyle = terrain.mark;
+      ctx.globalAlpha = 0.38;
+      ctx.lineWidth = 0.85;
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * 2.399 + cityIndex * 0.73) % (Math.PI * 2);
+        const dist = 54 + ((cityIndex * 29 + i * 37) % 82);
+        const wx = city.pos[0] + Math.cos(angle) * dist;
+        const wz = city.pos[1] + Math.sin(angle) * dist;
+        const p = this.iso.toScreen(this.camera, wx, wz, w, h);
+        if (terrain.kind === 'tropical' || terrain.kind === 'pine') {
+          ctx.beginPath(); ctx.moveTo(p.x, p.y - 4); ctx.lineTo(p.x - 3, p.y + 3); ctx.lineTo(p.x + 3, p.y + 3); ctx.closePath(); ctx.fill();
+        } else if (terrain.kind === 'arid' || terrain.kind === 'rock') {
+          ctx.beginPath(); ctx.moveTo(p.x - 3, p.y + 2); ctx.lineTo(p.x, p.y - 2); ctx.lineTo(p.x + 4, p.y + 2); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.moveTo(p.x - 5, p.y + 1); ctx.quadraticCurveTo(p.x, p.y - 2.5, p.x + 5, p.y); ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // 항구 영향권 밖에서도 육지가 한 장의 초록 면으로 보이지 않도록, 월드 좌표에 고정된
+    // 넓은 명암 패치와 짧은 등고선을 더한다. 카메라 이동 때 무늬가 화면에 붙어 따라오지 않는다.
+    const viewCorners = [[0, 0], [w, 0], [0, h], [w, h]].map(([sx, sy]) => this.iso.toWorld(this.camera, sx, sy, w, h));
+    const minX = Math.min(...viewCorners.map((p) => p.x)) - 40;
+    const maxX = Math.max(...viewCorners.map((p) => p.x)) + 40;
+    const minZ = Math.min(...viewCorners.map((p) => p.z)) - 40;
+    const maxZ = Math.max(...viewCorners.map((p) => p.z)) + 40;
+    const STEP = 34;
+    for (let wz = Math.floor(minZ / STEP) * STEP; wz < maxZ; wz += STEP) {
+      for (let wx = Math.floor(minX / STEP) * STEP; wx < maxX; wx += STEP) {
+        const noise = Math.sin(wx * 0.021 + wz * 0.013) + Math.sin(wz * 0.027 - wx * 0.008);
+        ctx.fillStyle = noise > 0.25 ? 'rgba(232,214,139,0.055)' : 'rgba(31,77,46,0.055)';
+        const p0 = this.iso.toScreen(this.camera, wx, wz, w, h);
+        const p1 = this.iso.toScreen(this.camera, wx + STEP, wz, w, h);
+        const p2 = this.iso.toScreen(this.camera, wx + STEP, wz + STEP, w, h);
+        const p3 = this.iso.toScreen(this.camera, wx, wz + STEP, w, h);
+        ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.closePath(); ctx.fill();
+        if (noise > 0.9) {
+          const a = this.iso.toScreen(this.camera, wx + 6, wz + STEP * 0.55, w, h);
+          const b = this.iso.toScreen(this.camera, wx + STEP - 5, wz + STEP * 0.48, w, h);
+          ctx.strokeStyle = 'rgba(55,84,49,0.18)'; ctx.lineWidth = 0.7;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo((a.x + b.x) / 2, a.y - 2, b.x, b.y); ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+
+    // 젖은 암반선과 밝은 포말선을 이중으로 그려 해안선 깊이를 만든다.
     for (const poly of LAND_POLYGONS) {
       ctx.beginPath();
       poly.forEach(([wx, wz], i) => {
@@ -1426,7 +1547,11 @@ export class SeaScene {
         if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
       });
       ctx.closePath();
-      ctx.fill();
+      ctx.strokeStyle = '#3f6044';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(196,210,166,0.6)';
+      ctx.lineWidth = 0.9;
       ctx.stroke();
     }
   }
@@ -1437,21 +1562,36 @@ export class SeaScene {
   // 각각 화면 좌표로 옮긴 다각형으로 그린다).
   _drawHarborClearings(ctx, w, h) {
     const SEGMENTS = 28;
-    ctx.fillStyle = WATER_LIGHT;
     for (const city of CITIES) {
       const center = this.iso.toScreen(this.camera, city.pos[0], city.pos[1], w, h);
       const approxR = HARBOR_CLEAR_RADIUS * this.iso.scaleX;
       if (center.x < -approxR - 20 || center.x > w + approxR + 20 || center.y < -approxR - 20 || center.y > h + approxR + 20) continue;
-      ctx.beginPath();
-      for (let i = 0; i <= SEGMENTS; i++) {
-        const a = (i / SEGMENTS) * Math.PI * 2;
-        const wx = city.pos[0] + Math.sin(a) * HARBOR_CLEAR_RADIUS;
-        const wz = city.pos[1] + Math.cos(a) * HARBOR_CLEAR_RADIUS;
-        const p = this.iso.toScreen(this.camera, wx, wz, w, h);
-        if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      const drawDisc = (radius, fill, stroke = null) => {
+        ctx.fillStyle = fill;
+        if (stroke) ctx.strokeStyle = stroke;
+        ctx.beginPath();
+        for (let i = 0; i <= SEGMENTS; i++) {
+          const a = (i / SEGMENTS) * Math.PI * 2;
+          const wx = city.pos[0] + Math.sin(a) * radius;
+          const wz = city.pos[1] + Math.cos(a) * radius;
+          const p = this.iso.toScreen(this.camera, wx, wz, w, h);
+          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath(); ctx.fill();
+        if (stroke) { ctx.lineWidth = 1.1; ctx.stroke(); }
+      };
+      drawDisc(HARBOR_CLEAR_RADIUS + 10, '#165a70');
+      drawDisc(HARBOR_CLEAR_RADIUS, WATER_LIGHT, 'rgba(190,224,217,0.48)');
+
+      ctx.strokeStyle = 'rgba(190,230,228,0.42)';
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i < 4; i++) {
+        const wx = city.pos[0] - 28 + i * 17;
+        const wz = city.pos[1] + 13 + Math.sin(this.t + i) * 5;
+        const a = this.iso.toScreen(this.camera, wx, wz, w, h);
+        const b = this.iso.toScreen(this.camera, wx + 8, wz + 1, w, h);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       }
-      ctx.closePath();
-      ctx.fill();
     }
   }
 
@@ -1527,11 +1667,51 @@ export class SeaScene {
 
   _drawCityMarker(ctx, w, h, marker) {
     const p = this.iso.toScreen(this.camera, marker.pos.x, marker.pos.y, w, h);
-    if (p.x < -20 || p.x > w + 20 || p.y < -20 || p.y > h + 20) return;
+    const dockP = this.iso.toScreen(this.camera, marker.dockPos.x, marker.dockPos.y, w, h);
+    const dockRange = DOCK_RANGE + sumSkillEffect(this.ship.shipDef, 'dockRangeAdd', 0);
+    const dist = marker.dockPos.distanceTo(this.ship.pos);
+
+    // 확대된 실제 정박 판정 범위를 가까이 다가왔을 때 그대로 표시한다. 도시 아이콘과
+    // 정박 지점을 점선으로 연결해 넓어진 범위가 어디를 기준으로 하는지도 분명하게 보인다.
+    if (dist < dockRange + 150) {
+      const pulse = 0.5 + Math.sin(this.t * 2.1) * 0.12;
+      ctx.save();
+      ctx.fillStyle = `rgba(91,204,210,${(0.035 + pulse * 0.025).toFixed(3)})`;
+      ctx.strokeStyle = `rgba(135,231,224,${(0.48 + pulse * 0.24).toFixed(3)})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let i = 0; i <= 40; i++) {
+        const a = (i / 40) * Math.PI * 2;
+        const rp = this.iso.toScreen(this.camera, marker.dockPos.x + Math.sin(a) * dockRange, marker.dockPos.y + Math.cos(a) * dockRange, w, h);
+        if (i === 0) ctx.moveTo(rp.x, rp.y); else ctx.lineTo(rp.x, rp.y);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = 'rgba(226,218,167,0.58)';
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(dockP.x, dockP.y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#d9c06b'; ctx.beginPath(); ctx.arc(dockP.x, dockP.y, 2.7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    if (p.x < -40 || p.x > w + 40 || p.y < -50 || p.y > h + 40) return;
     const icon = cityIconSprite(marker.country);
     // 국가별 대도시는 바다에서도 아이콘을 더 크게 그려 눈에 띄게 한다.
     const s = marker.capital ? 1.9 : 1.3;
     ctx.drawImage(icon, p.x - (icon.width * s) / 2, p.y - icon.height * s + 6, icon.width * s, icon.height * s);
+
+    const city = CITIES.find((candidate) => candidate.id === marker.cityId);
+    if (city && (dist < 260 || marker.capital)) {
+      ctx.save();
+      ctx.font = marker.capital ? 'bold 9px sans-serif' : '8px sans-serif';
+      ctx.textAlign = 'center';
+      const label = marker.capital ? `★ ${city.name}` : city.name;
+      const tw = ctx.measureText(label).width;
+      const y = p.y - icon.height * s - 3;
+      ctx.fillStyle = 'rgba(8,24,29,0.76)'; ctx.fillRect(p.x - tw / 2 - 4, y - 8, tw + 8, 11);
+      ctx.fillStyle = marker.capital ? '#f2d889' : '#e9e2cc'; ctx.fillText(label, p.x, y);
+      ctx.restore();
+    }
   }
 
   _drawWake(ctx, w, h) {
