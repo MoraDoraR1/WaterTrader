@@ -288,11 +288,23 @@
   /* ---- 선박 정보 카드 ---- */
   #ship-info-panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
     background: rgba(3,10,15,0.82); backdrop-filter: blur(2px); }
-  #ship-info-card { width: 380px; max-width: 88vw; background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
+  #ship-info-card { width: 460px; max-width: 92vw; max-height: 90vh; overflow-y: auto;
+    background: rgba(12,22,30,0.95); border: 1px solid rgba(200,180,120,0.4);
     border-radius: 14px; padding: 1.2rem 1.4rem; box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
   #ship-info-header { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
   #ship-info-name { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; }
-  #ship-info-sub { font-size: 0.74rem; color: #9fb8c9; margin-top: 3px; letter-spacing: 0.03rem; }
+  #ship-info-visual { position: relative; aspect-ratio: 3 / 2; margin: 0.85rem 0 0.9rem; overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--ship-accent, #d6a84b) 58%, transparent); border-radius: 9px;
+    background: #041019; box-shadow: 0 9px 25px rgba(0,0,0,0.36); }
+  #ship-info-visual::after { content: ''; position: absolute; inset: 42% 0 0;
+    background: linear-gradient(transparent, rgba(4,16,25,0.92)); pointer-events: none; }
+  #ship-info-image { display: block; width: 100%; height: 100%; object-fit: cover; }
+  #ship-info-sub { position: absolute; z-index: 1; left: 0.75rem; right: 0.75rem; bottom: 0.55rem;
+    font-size: 0.74rem; color: #d7e5e8; letter-spacing: 0.04rem; text-shadow: 0 1px 5px #000; }
+  #ship-info-visual.image-missing { aspect-ratio: auto; min-height: 34px; }
+  #ship-info-visual.image-missing::after, #ship-info-visual.image-missing #ship-info-image { display: none; }
+  #ship-info-visual.image-missing #ship-info-sub { position: static; display: block; padding: 0.55rem 0.75rem;
+    color: #9fb8c9; text-shadow: none; }
   #ship-info-desc { font-size: 0.82rem; color: #dce8ef; line-height: 1.5; margin: 0.8rem 0 1.1rem; }
   #ship-info-combat-power { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem;
     padding: 0.55rem 0.8rem; margin-bottom: 0.9rem; border-radius: 6px;
@@ -342,6 +354,11 @@
   .sy-list { display: flex; flex-direction: column; gap: 0.5rem; }
   .sy-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;
     border: 1px solid rgba(200,180,120,0.25); border-radius: 8px; padding: 0.6rem 0.8rem; background: rgba(255,255,255,0.02); }
+  .sy-row-image-wrap { width: 132px; height: 88px; flex: 0 0 132px; overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--ship-accent, #d6a84b) 55%, transparent); border-radius: 7px;
+    background: #041019; box-shadow: 0 5px 14px rgba(0,0,0,0.28); }
+  .sy-row-image { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .2s ease; }
+  .sy-row:hover .sy-row-image { transform: scale(1.025); }
   .sy-row.highlight { border-color: rgba(111,200,224,0.5); background: rgba(111,200,224,0.06); }
   .sy-row-main { min-width: 0; flex: 1 1 auto; }
   .sy-row-name { font-size: 0.9rem; color: #f0e6d2; }
@@ -517,6 +534,7 @@
     background-size: auto, 640px 640px; border-color: var(--panel-border); box-shadow: var(--panel-shadow); }
   #world-map-book, #ship-info-card, #shipyard-card, #skill-card, #titles-card,
   #compendium-card, #quest-card, #market-card { position: relative; overflow: hidden; }
+  #ship-info-card { overflow-y: auto; }
   #world-map-book::before, #ship-info-card::before, #shipyard-card::before, #skill-card::before,
   #titles-card::before, #compendium-card::before, #quest-card::before, #market-card::before {
     content: ''; position: absolute; inset: 6px; border: 1px solid rgba(232,215,176,0.055);
@@ -553,6 +571,11 @@
     #buff-slots { display: none; }
     #action-hints { max-width: calc(100vw - 220px); justify-content: flex-start; overflow: hidden; max-height: 50px; }
     #world-map-book { max-width: 96vw; overflow: auto; }
+    #ship-info-card { width: min(460px, 92vw); padding: 1rem; }
+    .sy-row { align-items: flex-start; flex-wrap: wrap; }
+    .sy-row-image-wrap { width: 96px; height: 64px; flex-basis: 96px; }
+    .sy-row.has-image .sy-row-main { flex-basis: calc(100% - 116px); }
+    .sy-row.has-image .sy-row-side { margin-left: 116px; }
   }
   @media (max-height: 650px) {
     .title-shell { padding-top: 1.25rem; padding-bottom: 1rem; }
@@ -685,7 +708,10 @@
         <div id="ship-info-name">-</div>
         <span id="ship-info-role" class="role-badge"></span>
       </div>
-      <div id="ship-info-sub">-</div>
+      <figure id="ship-info-visual">
+        <img id="ship-info-image" alt="" decoding="async">
+        <figcaption id="ship-info-sub">-</figcaption>
+      </figure>
       <p id="ship-info-desc"></p>
       <div id="ship-info-combat-power">
         <span class="si-combat-label">전투력</span>

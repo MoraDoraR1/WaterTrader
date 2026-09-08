@@ -53,7 +53,7 @@ npx serve .   # 또는 python3 -m http.server
 
 ```
 web/
-  assets/              타이틀 원화와 공통 해도 텍스처
+  assets/              타이틀 원화·공통 해도 텍스처·선박 78종 WebP 카드
   docs/                선박 모델 및 UI 비주얼 가이드
   index.html           엔트리와 DOM HUD 스타일
   src/

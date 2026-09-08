@@ -29,14 +29,31 @@ function wmToPx(x, z, bounds, t) {
 }
 
 // 조선소/의뢰 게시판처럼 "행마다 이름·설명·가격표·버튼 하나"인 목록 패널의 공용 렌더러.
-// rows: [{ name, sub, badge?, badgeColor?, priceLabel?, actionLabel, disabled?, highlight?, onAction? }]
+// rows: [{ name, sub, imageSrc?, imageAlt?, imageAccent?, badge?, badgeColor?, priceLabel?, actionLabel, disabled?, highlight?, onAction? }]
 export function renderRowList(bodyEl, rows) {
   bodyEl.innerHTML = '';
   const list = document.createElement('div');
   list.className = 'sy-list';
   for (const r of rows) {
     const row = document.createElement('div');
-    row.className = 'sy-row' + (r.highlight ? ' highlight' : '');
+    row.className = 'sy-row' + (r.highlight ? ' highlight' : '') + (r.imageSrc ? ' has-image' : '');
+    if (r.imageAccent || r.badgeColor) row.style.setProperty('--ship-accent', r.imageAccent || r.badgeColor);
+    if (r.imageSrc) {
+      const visual = document.createElement('div');
+      visual.className = 'sy-row-image-wrap';
+      const img = document.createElement('img');
+      img.className = 'sy-row-image';
+      img.src = r.imageSrc;
+      img.alt = r.imageAlt || '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('error', () => {
+        visual.hidden = true;
+        row.classList.remove('has-image');
+      }, { once: true });
+      visual.appendChild(img);
+      row.appendChild(visual);
+    }
     const main = document.createElement('div');
     main.className = 'sy-row-main';
     const badge = r.badge ? `<span class="role-badge" style="background:${r.badgeColor || '#888'}">${r.badge}</span>` : '';
@@ -255,6 +272,13 @@ export const hud = {
     const roleBadge = $('ship-info-role');
     roleBadge.textContent = info.roleLabel;
     roleBadge.style.background = info.roleColor;
+    const visual = $('ship-info-visual');
+    const image = $('ship-info-image');
+    visual.classList.remove('image-missing');
+    visual.style.setProperty('--ship-accent', info.roleColor);
+    image.alt = info.imageAlt || `${info.name} 선박 이미지`;
+    image.onerror = () => visual.classList.add('image-missing');
+    image.src = info.imageSrc;
     $('ship-info-sub').textContent = info.sub;
     $('ship-info-desc').textContent = info.desc;
     $('si-val-combat').textContent = info.combatVal;

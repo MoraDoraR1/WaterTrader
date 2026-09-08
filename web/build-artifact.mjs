@@ -4,6 +4,7 @@ import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { SHIPS } from './src/data/ships.js';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(rootDir, 'dist');
@@ -21,11 +22,17 @@ const result = await build({
 });
 const bundleJs = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 
+const shipImageData = Object.fromEntries(SHIPS.map((ship) => {
+  const bytes = readFileSync(resolve(rootDir, 'assets', 'ships', `${ship.id}.webp`));
+  return [ship.id, `data:image/webp;base64,${bytes.toString('base64')}`];
+}));
+const shipImageScript = `<script>globalThis.__SHIP_IMAGE_DATA__=${JSON.stringify(shipImageData)};<\/script>`;
+
 let html = readFileSync(resolve(rootDir, 'index.html'), 'utf-8');
 html = html.replace(/<script type="importmap">[\s\S]*?<\/script>\s*/, '');
 html = html.replace(
   /<script type="module" src="\.\/src\/main\.js"><\/script>/,
-  () => `<script>\n${bundleJs}\n</script>`
+  () => `${shipImageScript}\n<script>\n${bundleJs}\n</script>`
 );
 
 const imageAssets = [
@@ -38,4 +45,9 @@ for (const [assetPath, mime] of imageAssets) {
 }
 
 writeFileSync(resolve(distDir, 'bada-sangin-standalone.html'), html);
-console.log('artifact built:', 'dist/bada-sangin-standalone.html', (bundleJs.length / 1024).toFixed(0) + 'KB JS', imageAssets.length + ' embedded images');
+console.log(
+  'artifact built:',
+  'dist/bada-sangin-standalone.html',
+  (bundleJs.length / 1024).toFixed(0) + 'KB JS',
+  `${imageAssets.length + SHIPS.length} embedded images (${SHIPS.length} ships)`,
+);

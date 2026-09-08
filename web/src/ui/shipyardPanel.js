@@ -9,6 +9,7 @@ import { getShipSkills } from '../data/shipSkills.js';
 import { getCombatPower } from '../systems/combatPower.js';
 import { getBuildMaterial } from '../data/buildMaterials.js';
 import { itemTip } from './tooltip.js';
+import { getShipImageProps } from './shipImage.js';
 import {
   buyShip, buildShip, repairShip, repairCost, tradeInValue, equipPart, unequipPart, getCurrentEffectiveShipDef,
   setActiveShip, sellFleetShip, FLEET_CAP, getCannonSlotCount, getCannonSlotMaxTier,
@@ -112,6 +113,7 @@ function renderBuyTab() {
     // 기본 방어력·정원(백병전력)은 이미 반영된다. 부품을 달면 더 오른다.
     const combatPower = getCombatPower(s, {}).score;
     return {
+      ...getShipImageProps(s), imageAccent: role.color,
       name: shipTip(s),
       badge: role.label, badgeColor: role.color,
       sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 전투력 ${combatPower}(구매 직후) · 스킬: ${skillNames}`,
@@ -196,6 +198,7 @@ function renderBuildTab() {
     const skillNames = getShipSkills(s).map((sk) => sk.name).join(', ');
     const combatPower = getCombatPower(s, {}).score;
     return {
+      ...getShipImageProps(s), imageAccent: role.color,
       name: shipTip(s),
       badge: role.label, badgeColor: role.color,
       sub: `${cls.label} · ${COUNTRY_NAMES[s.country]} · ${s.era} · 내구 ${s.hp} · 기본 방어 ${getBaseArmor(s)}% · 최대 화력 ${s.cannons}(부품 장착 필요) · 적재 ${s.cargo}t · 속도 ${s.speed} · 전투력 ${combatPower}(건조 직후) · 스킬: ${skillNames}`
@@ -225,6 +228,7 @@ function renderBuildTab() {
 function renderFleetTab() {
   const currentDef = getShip(state.currentShipId);
   const rows = [{
+    ...getShipImageProps(currentDef), imageAccent: SHIP_ROLES[currentDef.role]?.color,
     name: `⚑ ${currentDef.name} (기함)`,
     badge: '조종 중', badgeColor: '#f3d98a',
     sub: `내구 ${Math.round(state.shipHp)} / ${getCurrentEffectiveShipDef().hp} · 속도 ${getCurrentEffectiveShipDef().speed}`,
@@ -237,6 +241,7 @@ function renderFleetTab() {
     const effDef = getEffectiveShipDef(def, f.shipParts);
     const credit = Math.round(def.price * 0.4);
     rows.push({
+      ...getShipImageProps(def), imageAccent: SHIP_ROLES[def.role]?.color,
       name: def.name,
       badge: '예비', badgeColor: '#8fa8b8',
       sub: `내구 ${Math.round(f.shipHp)} / ${effDef.hp} · 속도 ${effDef.speed} · 항구에 정박 중`,
@@ -267,6 +272,7 @@ function renderRepairTab() {
   const cost = repairCost();
   const full = state.shipHp >= shipDef.hp;
   const rows = [{
+    ...getShipImageProps(getShip(state.currentShipId)), imageAccent: SHIP_ROLES[getShip(state.currentShipId).role]?.color,
     name: getShip(state.currentShipId).name,
     sub: `현재 내구도 ${Math.round(state.shipHp)} / ${shipDef.hp} · 목수를 고용해 전액 수리(자재 소모 없음)`,
     priceLabel: full ? '-' : `${fmt(cost)} 두캇`,

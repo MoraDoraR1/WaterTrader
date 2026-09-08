@@ -4,6 +4,7 @@ import { SeaScene } from './scenes/seaScene.js';
 import { CityScene } from './scenes/cityScene.js';
 import { state, setScreen, initShipHp, initCrewCount, subscribe, notify } from './state.js';
 import { hud } from './ui/hud.js';
+import { getShipImageSrc } from './ui/shipImage.js';
 import { wireShipyardTabs, openShipyard } from './ui/shipyardPanel.js';
 import { openQuestBoard } from './ui/questPanel.js';
 import { openMarket } from './ui/marketPanel.js';
@@ -330,6 +331,8 @@ function openShipInfo() {
   // 하나도 안 달았으면 화력 점수가 그대로 0으로 나온다.
   const combatPower = getCombatPower(baseShipDef, state.shipParts);
   hud.renderShipInfo({
+    imageSrc: getShipImageSrc(baseShipDef.id),
+    imageAlt: `${baseShipDef.name} 선박 이미지`,
     name: shipDef.name,
     roleLabel: role.label,
     roleColor: role.color,
