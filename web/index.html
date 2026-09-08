@@ -3,9 +3,25 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#041019" />
 <title>바다상인</title>
 <style>
   @font-face { font-family: 'system'; src: local('Apple SD Gothic Neo'), local('Malgun Gothic'); }
+  :root {
+    --atlantic-950: #041019;
+    --atlantic-900: #071a26;
+    --atlantic-800: #0d2a38;
+    --oxide: #2e6f75;
+    --parchment: #e8d7b0;
+    --brass: #d6a84b;
+    --seafoam: #77c4b8;
+    --coral: #d66a57;
+    --mist: #9fb5bf;
+    --panel-border: rgba(214,168,75,0.44);
+    --panel-shadow: 0 18px 54px rgba(0,0,0,0.56), inset 0 1px 0 rgba(255,255,255,0.045);
+    --title-art: url('./assets/title-harbor-hero.webp');
+    --panel-art: url('./assets/panel-nautical-texture.webp');
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #05131c;
     font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; color: #f0e6d2; }
@@ -19,29 +35,57 @@
   .hidden { display: none !important; }
 
   /* ---- Title screen ---- */
-  #title-screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: radial-gradient(ellipse at 50% 30%, #1a3a52 0%, #061520 70%, #020a10 100%); z-index: 50; text-align: center; }
-  #title-screen h1 { font-size: 4.2rem; letter-spacing: 0.4rem; margin: 0 0 0.3rem; color: #f3d98a;
-    text-shadow: 0 0 24px rgba(243,217,138,0.45), 0 4px 10px rgba(0,0,0,0.6); }
-  #title-screen p.subtitle { color: #a9c4d6; margin: 0 0 2.6rem; letter-spacing: 0.15rem; font-size: 1rem; }
-  .gender-select { display: flex; gap: 1.4rem; margin-bottom: 2.2rem; }
-  .gender-btn { width: 148px; padding: 1rem 0.6rem; border: 2px solid #4a6376; background: rgba(10,25,35,0.6);
-    color: #dce8ef; border-radius: 10px; cursor: pointer; font-size: 1rem; transition: all .15s; }
-  .gender-btn:hover { border-color: #f3d98a; background: rgba(243,217,138,0.08); }
-  .gender-btn.active { border-color: #f3d98a; background: rgba(243,217,138,0.18); box-shadow: 0 0 18px rgba(243,217,138,0.25); }
-  .gender-emblem { font-size: 2.2rem; display: block; margin-bottom: 0.4rem; }
-  #start-btn { padding: 0.9rem 3.2rem; font-size: 1.15rem; letter-spacing: 0.3rem; border-radius: 8px; border: none;
-    background: linear-gradient(180deg, #f3d98a, #c9a24a); color: #241a05; font-weight: 700; cursor: pointer;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
-  #start-btn:hover { filter: brightness(1.08); }
-  .title-actions { display: flex; align-items: center; gap: 1rem; }
+  #title-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: flex-start;
+    padding: clamp(2rem, 7vw, 7rem); z-index: 50; text-align: center; overflow: hidden; isolation: isolate;
+    background-image:
+      linear-gradient(90deg, rgba(4,16,25,0.93) 0%, rgba(4,16,25,0.7) 35%, rgba(4,16,25,0.08) 72%),
+      linear-gradient(0deg, rgba(4,16,25,0.56) 0%, rgba(4,16,25,0) 42%),
+      var(--title-art);
+    background-position: center; background-size: cover; }
+  #title-screen::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    box-shadow: inset 0 0 130px rgba(0,0,0,0.56), inset 0 -80px 120px rgba(2,9,14,0.48); }
+  .title-shell { width: min(440px, calc(100vw - 3rem)); padding: 2.1rem 2.25rem 1.7rem; position: relative;
+    background: linear-gradient(145deg, rgba(7,26,38,0.93), rgba(4,16,25,0.82));
+    border: 1px solid rgba(214,168,75,0.5); border-radius: 18px; box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(12px) saturate(0.9); }
+  .title-shell::before { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(232,215,176,0.09);
+    border-radius: 12px; pointer-events: none; }
+  .title-kicker { color: var(--seafoam); font-size: 0.67rem; letter-spacing: 0.28rem; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
+  .title-kicker::before, .title-kicker::after { content: ''; width: 38px; height: 1px; background: rgba(119,196,184,0.42); }
+  #title-screen h1 { font-family: Georgia, 'Noto Serif KR', 'Malgun Gothic', serif; font-size: clamp(3.2rem, 6vw, 4.5rem);
+    line-height: 1.05; letter-spacing: 0.38rem; margin: 0.7rem 0 0.35rem; color: var(--parchment);
+    text-shadow: 0 4px 22px rgba(0,0,0,0.76), 0 0 32px rgba(214,168,75,0.16); }
+  #title-screen p.subtitle { color: var(--brass); margin: 0 0 0.9rem; letter-spacing: 0.18rem; font-size: 0.76rem; }
+  .title-lede { max-width: 320px; margin: 0 auto 1.15rem; color: var(--mist); font-size: 0.76rem; line-height: 1.6; }
+  .gender-label { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.65rem; color: var(--parchment);
+    font-size: 0.72rem; letter-spacing: 0.12rem; }
+  .gender-label::before, .gender-label::after { content: ''; flex: 1; height: 1px; background: rgba(214,168,75,0.2); }
+  .gender-select { display: flex; gap: 0.7rem; margin-bottom: 1rem; }
+  .gender-btn { flex: 1; min-width: 0; padding: 0.72rem 0.55rem; border: 1px solid rgba(159,181,191,0.34);
+    background: rgba(13,42,56,0.56); color: #dce8ef; border-radius: 10px; cursor: pointer; font-size: 0.88rem;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease; position: relative; }
+  .gender-btn:hover { transform: translateY(-2px); border-color: rgba(232,215,176,0.72); background: rgba(46,111,117,0.28); }
+  .gender-btn.active { border-color: var(--brass); color: var(--parchment); background: rgba(214,168,75,0.16);
+    box-shadow: 0 0 0 1px rgba(214,168,75,0.12), inset 0 0 24px rgba(214,168,75,0.06); }
+  .gender-btn.active::after { content: '선택'; position: absolute; top: 5px; right: 6px; color: var(--brass);
+    font-size: 0.55rem; letter-spacing: 0.05rem; }
+  .gender-emblem { font-size: 1.45rem; display: inline-block; margin-right: 0.38rem; vertical-align: -0.12rem; filter: sepia(.35); }
+  #start-btn { min-height: 48px; padding: 0.8rem 1rem; font-size: 0.92rem; letter-spacing: 0.1rem; border-radius: 9px;
+    border: 1px solid #edce77; background: linear-gradient(180deg, #eed27d, #c99b38); color: #241a05; font-weight: 800;
+    cursor: pointer; box-shadow: 0 8px 22px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: transform .16s ease, filter .16s ease, box-shadow .16s ease; white-space: nowrap; }
+  #start-btn:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 11px 26px rgba(0,0,0,0.5); }
+  .title-actions { display: flex; align-items: flex-start; justify-content: center; gap: 0.7rem; }
+  .title-actions > * { flex: 1; min-width: 0; }
   #continue-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
   #continue-wrap.hidden { display: none; }
-  #continue-btn { padding: 0.85rem 2rem; font-size: 1.02rem; letter-spacing: 0.2rem; border-radius: 8px;
+  #continue-btn { width: 100%; min-height: 48px; padding: 0.8rem 1rem; font-size: 0.92rem; letter-spacing: 0.1rem; border-radius: 8px;
     border: 2px solid #f3d98a; background: rgba(243,217,138,0.08); color: #f3d98a; font-weight: 700; cursor: pointer; }
   #continue-btn:hover { background: rgba(243,217,138,0.2); }
-  #continue-summary { font-size: 0.72rem; color: #8fa6b4; }
-  #title-hint { margin-top: 1.6rem; font-size: 0.8rem; color: #7f9aac; }
+  #continue-summary { font-size: 0.63rem; line-height: 1.4; color: #8fa6b4; }
+  #title-hint { margin: 1rem 0 0; padding-top: 0.8rem; border-top: 1px solid rgba(214,168,75,0.16);
+    font-size: 0.68rem; line-height: 1.45; color: #839da8; }
 
   /* ---- Top bars ---- */
   #top-bar { position: fixed; top: 14px; right: 14px; z-index: 15; pointer-events: none;
@@ -416,6 +460,110 @@
   #market-body { max-height: 50vh; overflow-y: auto; }
   #market-title { font-size: 0.82rem; color: #9fb8c9; margin-bottom: 0.6rem; letter-spacing: 0.03rem; }
   #market-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
+
+  /* ---- 2026 visual polish: 공통 해양 UI 언어 ---- */
+  #canvas-wrap::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    box-shadow: inset 0 0 90px rgba(2,9,14,0.25); }
+
+  button { font-family: inherit; }
+  button:focus-visible, [role='button']:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  ::selection { background: rgba(214,168,75,0.32); color: #fff7e3; }
+  * { scrollbar-width: thin; scrollbar-color: rgba(214,168,75,0.45) rgba(4,16,25,0.45); }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-track { background: rgba(4,16,25,0.45); border-radius: 99px; }
+  *::-webkit-scrollbar-thumb { background: rgba(214,168,75,0.4); border-radius: 99px; border: 2px solid rgba(4,16,25,0.45); }
+
+  #loading { background:
+    linear-gradient(rgba(4,16,25,0.88), rgba(4,16,25,0.94)),
+    var(--title-art) center / cover no-repeat;
+    color: var(--parchment); font-family: Georgia, 'Noto Serif KR', 'Malgun Gothic', serif; }
+
+  #gold-box, #morale-box, #crew-box, #rank-box, #ship-hp-box, #target-hp-box,
+  #location-banner, #weather-badge, #supplies-badge, #compass, #wind-compass,
+  #wind-label, #throttle-mini, #minimap-wrap, #action-hints span, #interact-prompt {
+    background-color: rgba(7,26,38,0.9);
+    background-image: linear-gradient(rgba(7,26,38,0.91), rgba(4,16,25,0.94)), var(--panel-art);
+    background-size: auto, 420px 420px; border-color: rgba(214,168,75,0.4);
+    box-shadow: 0 7px 22px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.035);
+    backdrop-filter: blur(8px) saturate(0.86); }
+  #top-bar { gap: 7px; }
+  #top-bar > div { min-width: 136px; text-align: right; font-variant-numeric: tabular-nums; }
+  #gold-box { color: var(--parchment); border-color: rgba(214,168,75,0.55); font-weight: 700; }
+  #gold-amount { color: #f0d582; }
+  #ship-hp-box { left: 64px; width: 178px; }
+  #ship-hp-top { font-size: 0.78rem; color: var(--parchment); }
+  #mute-btn { border-color: rgba(214,168,75,0.46); background: rgba(7,26,38,0.9);
+    box-shadow: 0 7px 20px rgba(0,0,0,0.34); backdrop-filter: blur(8px); }
+  #location-banner { color: var(--parchment); border-left: 3px solid var(--brass); }
+  #location-banner .sub, #world-map-subtitle { color: var(--mist); }
+  #supplies-badge { border-left: 3px solid var(--seafoam); }
+  #minimap-wrap { padding: 5px; }
+  #minimap-canvas { outline: 1px solid rgba(119,196,184,0.16); }
+  #action-hints { gap: 0.42rem 0.55rem; max-width: min(820px, 68vw); bottom: 12px; }
+  #action-hints span { padding: 4px 8px; color: #b7cbd2; border: 1px solid rgba(159,181,191,0.14); }
+  #buff-slots { top: 88px; width: 174px; gap: 4px; }
+  .buff-slot { background: rgba(7,26,38,0.88); border-color: rgba(159,181,191,0.22);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.22); backdrop-filter: blur(6px); }
+  .buff-slot.buff-active, .buff-slot.buff-ready { border-color: rgba(119,196,184,0.6); }
+
+  #world-map-panel, #ship-info-panel, #shipyard-panel, #skill-panel, #titles-panel,
+  #compendium-panel, #quest-panel, #market-panel {
+    background: radial-gradient(circle at 50% 44%, rgba(13,42,56,0.34), rgba(2,9,14,0.9) 70%);
+    backdrop-filter: blur(5px) saturate(0.75); }
+  #world-map-book, #ship-info-card, #shipyard-card, #skill-card, #titles-card,
+  #compendium-card, #quest-card, #market-card, #inventory-panel, #dialogue-box, #interaction-menu {
+    background-color: rgba(7,26,38,0.96);
+    background-image: linear-gradient(145deg, rgba(7,26,38,0.92), rgba(4,16,25,0.97)), var(--panel-art);
+    background-size: auto, 640px 640px; border-color: var(--panel-border); box-shadow: var(--panel-shadow); }
+  #world-map-book, #ship-info-card, #shipyard-card, #skill-card, #titles-card,
+  #compendium-card, #quest-card, #market-card { position: relative; overflow: hidden; }
+  #world-map-book::before, #ship-info-card::before, #shipyard-card::before, #skill-card::before,
+  #titles-card::before, #compendium-card::before, #quest-card::before, #market-card::before {
+    content: ''; position: absolute; inset: 6px; border: 1px solid rgba(232,215,176,0.055);
+    border-radius: 9px; pointer-events: none; }
+  #world-map-title, #ship-info-name, #shipyard-header-title, #skill-header-title,
+  #titles-header-title, #compendium-header-title, #quest-header-title, #market-header-title,
+  #inventory-panel h3 { color: var(--parchment); font-family: Georgia, 'Noto Serif KR', 'Malgun Gothic', serif;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.42); }
+  #shipyard-header, #market-header, #ship-info-header { padding-bottom: 0.65rem; border-bottom: 1px solid rgba(214,168,75,0.2); }
+  #skill-header-title, #titles-header-title, #compendium-header-title, #quest-header-title,
+  #inventory-panel h3 { padding-bottom: 0.7rem; border-bottom: 1px solid rgba(214,168,75,0.2); }
+  .sy-row, .inv-slot, .qslot { border-color: rgba(159,181,191,0.18); background: rgba(13,42,56,0.38);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.025); transition: border-color .15s ease, background .15s ease; }
+  .sy-row:hover, .inv-slot:hover, .qslot:hover { border-color: rgba(214,168,75,0.42); background: rgba(46,111,117,0.2); }
+  .sy-tab, .buy-filter-chip, .wm-arrow, .sy-btn { transition: transform .14s ease, background .14s ease, border-color .14s ease; }
+  .sy-tab:hover, .buy-filter-chip:hover, .wm-arrow:hover, .sy-btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .sy-tab.active, .buy-filter-chip.active { box-shadow: inset 0 -2px 0 var(--brass); }
+  #world-map-canvas { border-color: rgba(214,168,75,0.42); box-shadow: 0 9px 26px rgba(0,0,0,0.32); }
+  .close-hint { color: var(--mist) !important; letter-spacing: 0.04rem; }
+  #toast .toast-item { background: rgba(7,26,38,0.94); border-color: rgba(214,168,75,0.5);
+    box-shadow: 0 8px 26px rgba(0,0,0,0.42); backdrop-filter: blur(8px); }
+
+  @media (max-width: 760px) {
+    #title-screen { justify-content: center; padding: 1rem;
+      background-image: linear-gradient(rgba(4,16,25,0.67), rgba(4,16,25,0.84)), var(--title-art);
+      background-position: 64% center; }
+    .title-shell { padding: 1.65rem 1.25rem 1.2rem; }
+    #title-screen h1 { font-size: clamp(2.8rem, 15vw, 3.8rem); }
+    .title-lede { display: none; }
+    #ship-hp-box { top: 10px; left: 58px; width: 150px; }
+    #mute-btn { top: 10px; left: 10px; }
+    #top-bar { top: 10px; right: 10px; }
+    #top-bar > div { min-width: 118px; }
+    #buff-slots { display: none; }
+    #action-hints { max-width: calc(100vw - 220px); justify-content: flex-start; overflow: hidden; max-height: 50px; }
+    #world-map-book { max-width: 96vw; overflow: auto; }
+  }
+  @media (max-height: 650px) {
+    .title-shell { padding-top: 1.25rem; padding-bottom: 1rem; }
+    #title-screen h1 { font-size: 3rem; margin-top: 0.4rem; }
+    .title-lede { display: none; }
+    #title-hint { margin-top: 0.7rem; padding-top: 0.6rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+  }
 </style>
 </head>
 <body>
@@ -424,20 +572,25 @@
   <button id="mute-btn" title="음소거">🔊</button>
 
   <div id="title-screen">
-    <h1>바다 상인</h1>
-    <p class="subtitle">SEA MERCHANT — 대항해의 시대</p>
-    <div class="gender-select">
-      <button class="gender-btn active" data-gender="male"><span class="gender-emblem">⚓</span>남 항해사</button>
-      <button class="gender-btn" data-gender="female"><span class="gender-emblem">⚓</span>여 항해사</button>
-    </div>
-    <div class="title-actions">
-      <div id="continue-wrap" class="hidden">
-        <button id="continue-btn">이어하기</button>
-        <span id="continue-summary"></span>
+    <main class="title-shell" aria-labelledby="game-title">
+      <div class="title-kicker">Captain's log · 1522</div>
+      <h1 id="game-title">바다 상인</h1>
+      <p class="subtitle">SEA MERCHANT — 대항해의 시대</p>
+      <p class="title-lede">바람을 읽고, 항로를 개척하고, 세계의 항구를 잇는 당신만의 무역 항해를 시작하세요.</p>
+      <div class="gender-label">선장 선택</div>
+      <div class="gender-select" aria-label="선장 선택">
+        <button class="gender-btn active" data-gender="male" aria-pressed="true"><span class="gender-emblem" aria-hidden="true">⚓</span>남 항해사</button>
+        <button class="gender-btn" data-gender="female" aria-pressed="false"><span class="gender-emblem" aria-hidden="true">⚓</span>여 항해사</button>
       </div>
-      <button id="start-btn">항해를 시작한다</button>
-    </div>
-    <p id="title-hint">화면을 드래그하면 시점이 회전합니다 · 클릭은 상호작용/포격</p>
+      <div class="title-actions">
+        <div id="continue-wrap" class="hidden">
+          <button id="continue-btn">이어하기</button>
+          <span id="continue-summary"></span>
+        </div>
+        <button id="start-btn">항해를 시작한다</button>
+      </div>
+      <p id="title-hint">드래그: 시점 회전 · 클릭: 상호작용 / 포격 · M: 전체 지도</p>
+    </main>
   </div>
 
   <div id="top-bar" class="hidden">

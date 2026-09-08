@@ -360,8 +360,11 @@ function closeShipInfo() { hud.showShipInfo(false); }
 
 document.querySelectorAll('.gender-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.gender-btn').forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
+    document.querySelectorAll('.gender-btn').forEach((b) => {
+      const selected = b === btn;
+      b.classList.toggle('active', selected);
+      b.setAttribute('aria-pressed', String(selected));
+    });
     state.gender = btn.dataset.gender;
   });
 });
@@ -400,7 +403,11 @@ if (savedGame) {
 document.getElementById('continue-btn').addEventListener('click', () => {
   applySave(savedGame);
   syncUnlockedRoutes();
-  document.querySelectorAll('.gender-btn').forEach((b) => b.classList.toggle('active', b.dataset.gender === state.gender));
+  document.querySelectorAll('.gender-btn').forEach((b) => {
+    const selected = b.dataset.gender === state.gender;
+    b.classList.toggle('active', selected);
+    b.setAttribute('aria-pressed', String(selected));
+  });
   const muteBtn = document.getElementById('mute-btn');
   muteBtn.textContent = state.audioMuted ? '🔇' : '🔊';
   muteBtn.classList.toggle('muted', !!state.audioMuted);
