@@ -40,7 +40,8 @@ commands:
   start: open dist/bada-sangin-standalone.html or serve web/
   verify: npm run verify
 verification:
-  suites: [render-smoothing, legacy-pixel-removal, character-assets, browser-visual-regression]
+  suites: [render-smoothing, legacy-pixel-removal, character-assets]
+  supplementalSuites: [browser-visual-regression]
   completeRun: qa/verification.json#completeRun
   evidenceIndex: qa/verification.json#checkpoints
 ```

@@ -1,0 +1,91 @@
+{
+  "sourceCommit": "03ca4a5530658004c806adabee587ce697dd9f90",
+  "runtime": {
+    "browser": "Google Chrome 152.0.7977.77",
+    "viewportInitial": "1440x900",
+    "viewportSecondary": "1280x720",
+    "entry": "docs/index.html",
+    "httpStatus": 200
+  },
+  "initialSea": {
+    "screen": "sea",
+    "surface": {
+      "width": 1440,
+      "height": 900,
+      "logicalW": 480,
+      "logicalH": 270
+    },
+    "ship": {
+      "x": -1750,
+      "z": 910
+    },
+    "canvas": {
+      "width": 1440,
+      "height": 900,
+      "css": "auto"
+    }
+  },
+  "completeRun": {
+    "moveBefore": {
+      "x": -1750,
+      "z": 910,
+      "notch": 0
+    },
+    "moveAfter": {
+      "x": -1750,
+      "z": 911.9948591799997,
+      "notch": 1
+    },
+    "harbor": {
+      "hovered": "lisboa",
+      "dist": 1.2175398000005089,
+      "surface": {
+        "width": 1440,
+        "height": 900,
+        "logicalW": 480,
+        "logicalH": 270
+      }
+    },
+    "docked": {
+      "screen": "city",
+      "city": "lisboa"
+    },
+    "frames": {
+      "count": 95,
+      "p50": 16.69999999999709,
+      "p95": 16.80000000000291,
+      "worst": 16.80000000000291
+    },
+    "smallViewport": {
+      "surface": {
+        "width": 1280,
+        "height": 720,
+        "logicalW": 480,
+        "logicalH": 270
+      },
+      "canvasRect": {
+        "w": 1280,
+        "h": 720
+      },
+      "bodyScroll": {
+        "w": 1280,
+        "h": 720
+      }
+    },
+    "restarted": {
+      "screen": "title",
+      "titleVisible": true,
+      "surface": {
+        "width": 1280,
+        "height": 720,
+        "logicalW": 480,
+        "logicalH": 270
+      }
+    },
+    "errors": [],
+    "bad": []
+  },
+  "assetCount": 12,
+  "consoleErrors": [],
+  "failedResponses": []
+}

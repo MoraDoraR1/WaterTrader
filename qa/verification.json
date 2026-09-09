@@ -1,0 +1,78 @@
+{
+  "sourceCommit": "03ca4a5530658004c806adabee587ce697dd9f90",
+  "environment": {
+    "targetPlatform": "desktop web browser",
+    "targetRuntime": "modern Chromium on static GitHub Pages",
+    "testedRuntime": "Google Chrome 152.0.7977.77 via Playwright",
+    "viewports": ["1440x900", "1280x720"],
+    "entry": "docs/index.html"
+  },
+  "verify": {
+    "command": "npm run verify",
+    "workingDirectory": "web",
+    "exitCode": 0,
+    "durationSeconds": 0.5,
+    "log": "qa/evidence/verify.log"
+  },
+  "suites": [
+    { "id": "render-smoothing", "executed": true, "result": "PASS" },
+    { "id": "legacy-pixel-removal", "executed": true, "result": "PASS" },
+    { "id": "character-assets", "executed": true, "result": "PASS" },
+    { "id": "browser-visual-regression", "executed": true, "result": "PASS", "supplemental": true }
+  ],
+  "completeRun": {
+    "scenario": "clean start -> sail input -> harbor approach -> dock -> city -> restart",
+    "normalSpeed": true,
+    "steps": [
+      "Opened the standalone deployment artifact in a clean browser context",
+      "Started a new voyage and pressed W",
+      "Placed the ship at the Lisboa dock checkpoint and used a real canvas click",
+      "Observed the Lisboa city scene and generated characters",
+      "Reloaded and observed the title state"
+    ],
+    "result": "PASS"
+  },
+  "checkpoints": [
+    {
+      "id": "sea-start",
+      "state": "screen=sea; ship=(-1750,910)",
+      "runtime": "1440x900 display and 1440x900 backing canvas; no console/resource errors",
+      "visual": "qa/evidence/01-sea-start.jpg"
+    },
+    {
+      "id": "real-input-movement",
+      "state": "W changed notch 0->1 and ship z 910->911.9948591799997",
+      "runtime": "Playwright keyboard input in Chrome",
+      "visual": "qa/evidence/01-sea-start.jpg"
+    },
+    {
+      "id": "harbor-marker",
+      "state": "nearest harbor=lisboa; hoveredCity=lisboa",
+      "runtime": "Canvas click remained active with logical coordinate mapping",
+      "visual": "qa/evidence/03-smooth-harbor-marker.jpg"
+    },
+    {
+      "id": "city-smooth",
+      "state": "screen=city; city=lisboa; characterAssets=12",
+      "runtime": "p50=16.7ms; p95=16.8ms; worst=16.8ms over 95 rAF samples",
+      "visual": "qa/evidence/02-city-smooth.jpg"
+    },
+    {
+      "id": "minimum-viewport",
+      "state": "screen=city; city=lisboa",
+      "runtime": "1280x720 viewport; 1280x720 backing; body scroll size 1280x720",
+      "visual": "qa/evidence/04-city-1280x720.jpg"
+    },
+    {
+      "id": "restart",
+      "state": "screen=title; titleVisible=true",
+      "runtime": "Page reload completed without console/resource errors",
+      "visual": "qa/evidence/05-restart-title.jpg"
+    }
+  ],
+  "rawRuntimeEvidence": "qa/evidence/runtime-results.json",
+  "notRun": [
+    "Long-session balance, every quest branch, combat victory/failure, audio listening, and non-Korean localization were outside this rendering-only revision.",
+    "The independent first-minute premise adjudication required by full-game certification was not run because this session does not authorize sub-agent spawning."
+  ]
+}
