@@ -134,7 +134,7 @@ export const SHIPS = [
     country: 'IT', era: '1571', speed: 8, turnRate: 42, hp: 900, cargo: 70, cannons: 20, cannonSlotTiers: [2, 2, 2, 2], skills: ['multi_cannon', 'rapid_reload', 'damage_control'], crew: 300, price: 3200,
     desc: '갤리와 범선을 절충한 베네치아의 대형 노젓는 군함. 이물 함포에 더해 현측에도 포열을 갖춰 레판토 해전에서 위력을 떨쳤다. 선회는 느리지만 화력은 일반 갤리를 압도.' },
   { id: 'galeazza_reale', name: '갈레아짜 레알레 (Galeazza Reale)', class: 'xlarge', role: 'combat', type: 'galley',
-    country: 'ES', era: '1588', speed: 7, turnRate: 30, hp: 1300, cargo: 90, cannons: 30, cannonSlotTiers: [2, 2, 2, 2, 2, 2], skills: ['multi_cannon', 'rapid_reload', 'ironclad_defense', 'damage_control'], crew: 400, price: 5200,
+    country: 'ES', era: '1588', speed: 7, turnRate: 30, hp: 1300, cargo: 90, cannons: 30, cannonSlotTiers: [2, 2, 2, 2, 2, 2], skills: ['multi_cannon', 'rapid_reload', 'ironclad_defense', 'damage_control'], crew: 400, price: 10400,
     desc: '스페인 무적함대에 편성된 최대급 갈레아스 기함. 노와 돛을 겸용하는 함종 중 사상 최대 규모로, 강력한 화력을 자랑하지만 그만큼 둔중하다.' },
 
   // ── 중형선 (교역/균형형) ──
@@ -198,7 +198,7 @@ export const SHIPS = [
     country: 'EN', era: '1868', speed: 19, turnRate: 34, hp: 1100, cargo: 300, cannons: 8, cannonSlotTiers: [1, 1, 1, 1], skills: ['fair_wind_sailing', 'nimble_helm', 'new_route_pioneer'], crew: 40, price: 9500,
     desc: '역사상 가장 빠른 범선 중 하나로 꼽히는 대형 클리퍼.' },
   { id: 'sobraon', name: '소브라온 (Sobraon)', class: 'xlarge', role: 'trade', type: 'clipper',
-    country: 'EN', era: '1866', speed: 17, turnRate: 26, hp: 1500, cargo: 480, cannons: 12, cannonSlotTiers: [1, 1, 1, 1, 1, 1], skills: ['frugal_voyage', 'skilled_carpenter', 'material_expertise', 'storm_hardened'], crew: 45, price: 12500,
+    country: 'EN', era: '1866', speed: 17, turnRate: 26, hp: 1500, cargo: 480, cannons: 12, cannonSlotTiers: [1, 1, 1, 1, 1, 1], skills: ['frugal_voyage', 'skilled_carpenter', 'material_expertise', 'storm_hardened'], crew: 45, price: 25000,
     desc: '역대 최대급 복합선체 클리퍼. 이민·양모 수송에 쓰인 초대형 쾌속 상선으로, 클리퍼 중에서도 압도적인 크기를 자랑한다.' },
 
   // ── 초대형 갤리 (화약 이전 시대, 고대 지중해 노젓는 대형 전함) ──
@@ -207,29 +207,29 @@ export const SHIPS = [
   // 선회력을 전 함선 통틀어 최고치로, 속도도 클리퍼 계열(속도 특화 선종)을 제외한 모든
   // 배보다 높게 잡았다 — 포격전은 못 하지만 맷집과 기동성으로 밀어붙여 들이받는 배.
   { id: 'roman_deceres', name: '로마 데케레스 (Roman Deceres)', class: 'xlarge', role: 'combat', type: 'galley',
-    country: 'IT', era: '기원전 1세기', speed: 15, turnRate: 95, hp: 3400, cargo: 40, cannons: 0, cannonSlotTiers: [], skills: ['reinforced_ram', 'boarding_mastery', 'ironclad_defense', 'assault_speed'], crew: 450, price: 6000,
+    country: 'IT', era: '기원전 1세기', speed: 15, turnRate: 95, hp: 3400, cargo: 40, cannons: 0, cannonSlotTiers: [], skills: ['reinforced_ram', 'boarding_mastery', 'ironclad_defense', 'assault_speed'], crew: 450, price: 12000,
     desc: '악티움 해전급 로마 최대 등급 다단 노선(데케레스). 청동 충각과 압도적인 노잡이·해병 승선 인원으로 들이받고 백병전을 벌이는 고대 해전의 정점(대포 슬롯 없음). 화력이 없는 대신 전 함선 중 최고의 내구도·선회력을 갖춰 들이받고 버티는 데 특화됐다.' },
 
   // ── 초대형선 (기함급 전열함) ──
   { id: 'henry_grace_a_dieu', name: '헨리 그레이스 어 듀 (Henry Grace à Dieu)', class: 'xlarge', role: 'combat', type: 'shipline',
-    country: 'EN', era: '1514', speed: 7, turnRate: 20, hp: 2600, cargo: 700, cannons: 79, cannonSlotTiers: [4, 3, 3, 2, 2, 2], skills: ['multi_cannon', 'precision_fire', 'ironclad_defense', 'damage_control'], crew: 180, price: 15000,
-    acquire: 'build', buildCost: { gold: 15000, oakTimber: 15, ironcladPlating: 2 },
+    country: 'EN', era: '1514', speed: 7, turnRate: 20, hp: 2600, cargo: 700, cannons: 79, cannonSlotTiers: [4, 3, 3, 2, 2, 2], skills: ['multi_cannon', 'precision_fire', 'ironclad_defense', 'damage_control'], crew: 180, price: 30000,
+    acquire: 'build', buildCost: { gold: 30000, oakTimber: 15, ironcladPlating: 2 },
     desc: '"그레이트 해리"라 불린 잉글랜드 최대의 초대형 캐럭 전함 — 조선소에서 직접 건조해야 하는 최상급 기함.' },
   { id: 'vasa', name: '바사 (Vasa)', class: 'xlarge', role: 'combat', type: 'shipline',
-    country: 'SE', era: '1628', speed: 7, turnRate: 18, hp: 2400, cargo: 500, cannons: 63, cannonSlotTiers: [3, 3, 3, 2, 2, 2], skills: ['rapid_reload', 'multi_cannon', 'battle_morale', 'veteran_helmsman'], crew: 150, price: 14000,
-    acquire: 'build', buildCost: { gold: 14000, oakTimber: 14, ironcladPlating: 2 },
+    country: 'SE', era: '1628', speed: 7, turnRate: 18, hp: 2400, cargo: 500, cannons: 63, cannonSlotTiers: [3, 3, 3, 2, 2, 2], skills: ['rapid_reload', 'multi_cannon', 'battle_morale', 'veteran_helmsman'], crew: 150, price: 28000,
+    acquire: 'build', buildCost: { gold: 28000, oakTimber: 14, ironcladPlating: 2 },
     desc: '스웨덴 왕실이 건조한 화려한 장식의 초대형 전함 — 조선소에서 직접 건조해야 하는 최상급 기함.' },
   { id: 'sovereign_of_the_seas', name: '소버린 오브 더 시즈 (Sovereign of the Seas)', class: 'xlarge', role: 'combat', type: 'shipline',
-    country: 'EN', era: '1637', speed: 8, turnRate: 22, hp: 2800, cargo: 600, cannons: 102, cannonSlotTiers: [4, 4, 4, 1, 1, 1], skills: ['multi_cannon', 'rapid_reload', 'precision_fire', 'ironclad_defense'], crew: 200, price: 18000,
-    acquire: 'build', buildCost: { gold: 18000, oakTimber: 18, ironcladPlating: 3 },
+    country: 'EN', era: '1637', speed: 8, turnRate: 22, hp: 2800, cargo: 600, cannons: 102, cannonSlotTiers: [4, 4, 4, 1, 1, 1], skills: ['multi_cannon', 'rapid_reload', 'precision_fire', 'ironclad_defense'], crew: 200, price: 36000,
+    acquire: 'build', buildCost: { gold: 36000, oakTimber: 18, ironcladPlating: 3 },
     desc: '3층 포열을 갖춘 당대 최강의 잉글랜드 초대형 전열함 — 조선소에서 직접 건조해야 하는 최상급 기함.' },
   { id: 'santisima_trinidad', name: '산티시마 트리니다드 (Santísima Trinidad)', class: 'xlarge', role: 'combat', type: 'shipline',
-    country: 'ES', era: '1769', speed: 7, turnRate: 16, hp: 3200, cargo: 550, cannons: 138, cannonSlotTiers: [4, 4, 4, 4, 2, 2], skills: ['multi_cannon', 'precision_fire', 'rapid_reload', 'damage_control'], crew: 220, price: 22000,
-    acquire: 'build', buildCost: { gold: 22000, oakTimber: 22, ironcladPlating: 4 },
+    country: 'ES', era: '1769', speed: 7, turnRate: 16, hp: 3200, cargo: 550, cannons: 138, cannonSlotTiers: [4, 4, 4, 4, 2, 2], skills: ['multi_cannon', 'precision_fire', 'rapid_reload', 'damage_control'], crew: 220, price: 44000,
+    acquire: 'build', buildCost: { gold: 44000, oakTimber: 22, ironcladPlating: 4 },
     desc: '스페인 해군이 자랑한 사상 최대급 4층 포열 전함 — 조선소에서 직접 건조해야 하는 최상급 기함.' },
   { id: 'soleil_royal', name: '솔레유 루아얄 (Soleil Royal)', class: 'xlarge', role: 'combat', type: 'shipline',
-    country: 'FR', era: '1670', speed: 7, turnRate: 19, hp: 2900, cargo: 520, cannons: 103, cannonSlotTiers: [4, 4, 3, 3, 2, 1], skills: ['precision_fire', 'boarding_mastery', 'capture_expert', 'battle_morale'], crew: 210, price: 19500,
-    acquire: 'build', buildCost: { gold: 19500, oakTimber: 20, ironcladPlating: 3 },
+    country: 'FR', era: '1670', speed: 7, turnRate: 19, hp: 2900, cargo: 520, cannons: 103, cannonSlotTiers: [4, 4, 3, 3, 2, 1], skills: ['precision_fire', 'boarding_mastery', 'capture_expert', 'battle_morale'], crew: 210, price: 39000,
+    acquire: 'build', buildCost: { gold: 39000, oakTimber: 20, ironcladPlating: 3 },
     desc: '태양왕 루이 14세를 상징하는 프랑스 왕실 기함 — 조선소에서 직접 건조해야 하는 최상급 기함.' },
 
   // ── 엔드 컨텐츠 전용: "바르톨로뮤" 계열 3종 ──
@@ -239,16 +239,16 @@ export const SHIPS = [
   // 성능을 줘, "이 배를 짓기 위해 최종 보스를 잡는다"는 목표가 되도록 설계했다. 잔해에서
   // 이어받은 배라 국적은 여전히 해적(PR)이다.
   { id: 'bartholomew_reckoning', name: '바르톨로뮤의 심판호 (Bartholomew\'s Reckoning)', class: 'xlarge', role: 'combat', type: 'roberts_warship',
-    country: 'PR', era: '1722~ (전설의 유산)', speed: 8, turnRate: 20, hp: 3500, cargo: 500, cannons: 149, cannonSlotTiers: [4, 4, 4, 4, 3, 2], skills: ['multi_cannon', 'precision_fire', 'rapid_reload', 'ironclad_defense'], crew: 230, price: 26000,
-    acquire: 'build', buildCost: { gold: 26000, oakTimber: 25, ironcladPlating: 6, robertsRelic: 1 },
+    country: 'PR', era: '1722~ (전설의 유산)', speed: 8, turnRate: 20, hp: 3500, cargo: 500, cannons: 149, cannonSlotTiers: [4, 4, 4, 4, 3, 2], skills: ['multi_cannon', 'precision_fire', 'rapid_reload', 'ironclad_defense'], crew: 230, price: 52000,
+    acquire: 'build', buildCost: { gold: 52000, oakTimber: 25, ironcladPlating: 6, robertsRelic: 1 },
     desc: '로열 포춘호의 잔해로 다시 지은 전열함 — 지금 바다에 뜬 어떤 초대형 전함보다도 내구도·화력이 앞선다. 레전더리 해적을 잡아야만 얻는 "로열 포춘호의 파편" 없이는 건조 자체가 불가능한, 전투 축의 진짜 최종 목표.' },
   { id: 'bartholomew_horizon', name: '바르톨로뮤의 지평선호 (Bartholomew\'s Horizon)', class: 'xlarge', role: 'adventure', type: 'roberts_clipper',
-    country: 'PR', era: '1722~ (전설의 유산)', speed: 20, turnRate: 40, hp: 1900, cargo: 400, cannons: 17, cannonSlotTiers: [2, 2, 2, 1], skills: ['fair_wind_sailing', 'nimble_helm', 'new_route_pioneer', 'storm_sailing'], crew: 75, price: 21000,
-    acquire: 'build', buildCost: { gold: 21000, oakTimber: 20, ironcladPlating: 4, robertsRelic: 1 },
+    country: 'PR', era: '1722~ (전설의 유산)', speed: 20, turnRate: 40, hp: 1900, cargo: 400, cannons: 17, cannonSlotTiers: [2, 2, 2, 1], skills: ['fair_wind_sailing', 'nimble_helm', 'new_route_pioneer', 'storm_sailing'], crew: 75, price: 42000,
+    acquire: 'build', buildCost: { gold: 42000, oakTimber: 20, ironcladPlating: 4, robertsRelic: 1 },
     desc: '초대형 선체는 느리다는 통념을 깬 최초의 초대형 탐험선 — 로열 포춘호의 파편으로 보강한 늑골 덕에 어떤 클리퍼보다도 빠르면서 초대형급 내구도까지 갖췄다. 모험 축의 진짜 최종 목표.' },
   { id: 'bartholomew_treasury', name: '바르톨로뮤의 보고호 (Bartholomew\'s Treasury)', class: 'xlarge', role: 'trade', type: 'roberts_galleon',
-    country: 'PR', era: '1722~ (전설의 유산)', speed: 9, turnRate: 22, hp: 2800, cargo: 820, cannons: 39, cannonSlotTiers: [3, 3, 2, 1], skills: ['bulk_buyer', 'long_haul_logistics', 'skilled_carpenter', 'port_friendly'], crew: 260, price: 25000,
-    acquire: 'build', buildCost: { gold: 25000, oakTimber: 24, ironcladPlating: 5, robertsRelic: 1 },
+    country: 'PR', era: '1722~ (전설의 유산)', speed: 9, turnRate: 22, hp: 2800, cargo: 820, cannons: 39, cannonSlotTiers: [3, 3, 2, 1], skills: ['bulk_buyer', 'long_haul_logistics', 'skilled_carpenter', 'port_friendly'], crew: 260, price: 50000,
+    acquire: 'build', buildCost: { gold: 50000, oakTimber: 24, ironcladPlating: 5, robertsRelic: 1 },
     desc: '로열 포춘호의 화물창을 본떠 지은 초대형 보고선 — 전 함선 통틀어 최대 적재량에, 웬만한 습격은 자체 화력으로 물리칠 방어력까지 갖췄다. 교역 축의 진짜 최종 목표.' },
 
   // ── 조선(KR) ──
@@ -257,8 +257,8 @@ export const SHIPS = [
     acquire: 'build', buildCost: { gold: 2800, materials: 16, oakTimber: 3 },
     desc: '평저선 특유의 안정된 선체를 포격 플랫폼으로 삼은 조선 수군의 주력 전선. 천자총통 등 대형 화포를 실을 수 있었다 — 조선소에서 직접 건조해야 하는 상위 전투함.' },
   { id: 'geobukseon', name: '거북선 (龜船)', class: 'xlarge', role: 'combat', type: 'geobukseon',
-    country: 'KR', era: '1592', speed: 8, turnRate: 34, hp: 2700, cargo: 450, cannons: 92, cannonSlotTiers: [4, 4, 3, 2, 2, 1], skills: ['reinforced_ram', 'ironclad_defense', 'agile_maneuvers', 'damage_control'], crew: 190, price: 17000,
-    acquire: 'build', buildCost: { gold: 17000, oakTimber: 17, ironcladPlating: 3 },
+    country: 'KR', era: '1592', speed: 8, turnRate: 34, hp: 2700, cargo: 450, cannons: 92, cannonSlotTiers: [4, 4, 3, 2, 2, 1], skills: ['reinforced_ram', 'ironclad_defense', 'agile_maneuvers', 'damage_control'], crew: 190, price: 34000,
+    acquire: 'build', buildCost: { gold: 34000, oakTimber: 17, ironcladPlating: 3 },
     desc: '쇠못 박힌 덮개와 용머리 충각을 갖춘 조선 수군의 전설적 철갑 전함. 임진왜란 해전에서 왜선 사이를 종횡무진하며 격파했다 — 실제 규모보다 훨씬 강력하게, 여느 초대형 전열함과 어깨를 나란히 하도록 재현했다. 돈으로 살 수 없고 조선소에서 직접 건조해야 하는 전설급 기함.' },
   { id: 'joseon_cargo', name: '조운선 (漕運船)', class: 'medium', role: 'trade', type: 'joseon_cargo',
     country: 'KR', era: '1400~1800s', speed: 9, turnRate: 46, hp: 650, cargo: 260, cannons: 7, cannonSlotTiers: [2, 1], skills: ['bulk_buyer', 'careful_voyage'], crew: 34, price: 2300,
@@ -273,7 +273,7 @@ export const SHIPS = [
     acquire: 'build', buildCost: { gold: 6800, oakTimber: 8 },
     desc: '명나라 해군의 주력 대형 정크선. 높은 선루와 두꺼운 선체로 왜구·서양 해적선에 맞섰다 — 조선소에서 직접 건조해야 하는 상위 전투함.' },
   { id: 'zheng_he_treasure_ship', name: '정화보선 (鄭和寶船)', class: 'xlarge', role: 'trade', type: 'treasure_ship',
-    country: 'CN', era: '1405~1433', speed: 6, turnRate: 14, hp: 2200, cargo: 750, cannons: 18, cannonSlotTiers: [2, 2, 1, 1, 1, 1], skills: ['long_haul_logistics', 'skilled_carpenter', 'standing_supply', 'port_friendly'], crew: 250, price: 20000,
+    country: 'CN', era: '1405~1433', speed: 6, turnRate: 14, hp: 2200, cargo: 750, cannons: 18, cannonSlotTiers: [2, 2, 1, 1, 1, 1], skills: ['long_haul_logistics', 'skilled_carpenter', 'standing_supply', 'port_friendly'], crew: 250, price: 40000,
     desc: '명나라 정화 함대의 기함. 당대 세계 최대 규모의 목조선으로, 조공 무역과 위세 과시를 위해 건조되었다 — 전 함선 통틀어 최대의 적재량을 자랑하지만 선회는 가장 둔하다.' },
 
   // ── 일본(JP) ──
@@ -281,8 +281,8 @@ export const SHIPS = [
     country: 'JP', era: '1560~1630s', speed: 8, turnRate: 28, hp: 1300, cargo: 320, cannons: 17, cannonSlotTiers: [2, 2, 2, 1], skills: ['boarding_mastery', 'battle_morale', 'agile_maneuvers'], crew: 130, price: 6200,
     desc: '다층 누각(야구라)을 얹은 일본 수군의 주력 대형 전함. 화력보다 다수의 무사를 태운 백병전에 강하다.' },
   { id: 'oda_tekkosen', name: '철갑 아타케부네 (鉄甲船)', class: 'xlarge', role: 'combat', type: 'tekkosen',
-    country: 'JP', era: '1578', speed: 6, turnRate: 15, hp: 3000, cargo: 400, cannons: 49, cannonSlotTiers: [3, 3, 2, 2, 2, 1], skills: ['ironclad_defense', 'damage_control', 'reinforced_ram', 'battle_morale'], crew: 200, price: 18500,
-    acquire: 'build', buildCost: { gold: 18500, oakTimber: 19, ironcladPlating: 3 },
+    country: 'JP', era: '1578', speed: 6, turnRate: 15, hp: 3000, cargo: 400, cannons: 49, cannonSlotTiers: [3, 3, 2, 2, 2, 1], skills: ['ironclad_defense', 'damage_control', 'reinforced_ram', 'battle_morale'], crew: 200, price: 37000,
+    acquire: 'build', buildCost: { gold: 37000, oakTimber: 19, ironcladPlating: 3 },
     desc: '오다 노부나가가 모리 수군의 화공선에 맞서 건조시킨 쇠판 장갑 대형 아타케부네. 압도적인 방어력으로 적의 화공과 포격을 무력화한다 — 전 함선 중 최고의 내구도를 지녔다. 조선소에서 직접 건조해야 하는 최상급 기함.' },
   { id: 'sekibune', name: '세키부네 (関船)', class: 'medium', role: 'combat', type: 'sekibune',
     country: 'JP', era: '1467~1800s', speed: 11, turnRate: 58, hp: 560, cargo: 130, cannons: 7, cannonSlotTiers: [2, 1], skills: ['rapid_reload', 'agile_maneuvers'], crew: 45, price: 2600,
@@ -313,8 +313,8 @@ export const SHIPS = [
     country: 'OT', era: '1500~1700s', speed: 11, turnRate: 70, hp: 520, cargo: 60, cannons: 7, cannonSlotTiers: [2, 1], skills: ['rapid_reload', 'reinforced_ram'], crew: 160, price: 2000,
     desc: '오스만 해군의 표준 갤리선. 지중해 전역에서 베네치아·스페인 함대와 맞섰다.' },
   { id: 'barbarossa_flagship', name: '바르바로사의 기함 하이레딘호', class: 'xlarge', role: 'combat', type: 'ottoman_flagship',
-    country: 'OT', era: '1530~1540s', speed: 8, turnRate: 26, hp: 2500, cargo: 380, cannons: 46, cannonSlotTiers: [3, 3, 2, 2, 1, 1], skills: ['boarding_mastery', 'battle_morale', 'rapid_reload', 'reinforced_ram'], crew: 180, price: 16500,
-    acquire: 'build', buildCost: { gold: 16500, oakTimber: 17, ironcladPlating: 3 },
+    country: 'OT', era: '1530~1540s', speed: 8, turnRate: 26, hp: 2500, cargo: 380, cannons: 46, cannonSlotTiers: [3, 3, 2, 2, 1, 1], skills: ['boarding_mastery', 'battle_morale', 'rapid_reload', 'reinforced_ram'], crew: 180, price: 33000,
+    acquire: 'build', buildCost: { gold: 33000, oakTimber: 17, ironcladPlating: 3 },
     desc: '지중해의 공포로 군림한 오스만 대제독 하이레딘 바르바로사의 기함. 갤리 함대를 이끌고 프레베자 해전에서 신성동맹 함대를 격파했다. 조선소에서 직접 건조해야 하는 최상급 기함.' },
 
   // ── 오만 술탄국(OM) ──
@@ -343,8 +343,8 @@ export const SHIPS = [
 
   // ── 스코틀랜드(SC) ──
   { id: 'great_michael', name: '그레이트 마이클호 (Great Michael)', class: 'xlarge', role: 'combat', type: 'scottish_carrack',
-    country: 'SC', era: '1511', speed: 6, turnRate: 14, hp: 2900, cargo: 480, cannons: 73, cannonSlotTiers: [4, 3, 3, 2, 1, 1], skills: ['ironclad_defense', 'damage_control', 'battle_morale', 'multi_cannon'], crew: 300, price: 17500,
-    acquire: 'build', buildCost: { gold: 17500, oakTimber: 18, ironcladPlating: 3 },
+    country: 'SC', era: '1511', speed: 6, turnRate: 14, hp: 2900, cargo: 480, cannons: 73, cannonSlotTiers: [4, 3, 3, 2, 1, 1], skills: ['ironclad_defense', 'damage_control', 'battle_morale', 'multi_cannon'], crew: 300, price: 35000,
+    acquire: 'build', buildCost: { gold: 35000, oakTimber: 18, ironcladPlating: 3 },
     desc: '1511년 진수 당시 유럽 최대의 군함이었던 스코틀랜드 왕실 전함. 건조에 스코틀랜드 전역의 목재를 거의 다 썼다는 전설이 남아 있다. 조선소에서 직접 건조해야 하는 최상급 기함.' },
 
   // ── 베트남(VN) ──

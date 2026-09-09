@@ -339,11 +339,14 @@
   #shipyard-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; }
   #shipyard-gold { font-size: 0.85rem; color: #cfe0ea; }
   #shipyard-tabs, #market-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
-  .sy-tab { flex: 1; min-width: 0; background: rgba(230,193,90,0.08); border: 1px solid rgba(230,193,90,0.35); color: #cfe0ea;
-    padding: 0.5rem; border-radius: 7px; cursor: pointer; font-size: 0.85rem; letter-spacing: 0.05rem;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sy-tab:hover { background: rgba(230,193,90,0.18); }
-  .sy-tab.active { background: rgba(230,193,90,0.32); border-color: #f3d98a; color: #f3d98a; }
+  .sy-tab { flex: 1; min-width: 0; background: linear-gradient(180deg, rgba(230,193,90,0.1), rgba(230,193,90,0.03));
+    border: 1px solid rgba(230,193,90,0.35); color: #b9cdd8;
+    padding: 0.55rem; border-radius: 7px; cursor: pointer; font-size: 0.85rem; letter-spacing: 0.05rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 40px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+  .sy-tab:hover { background: linear-gradient(180deg, rgba(230,193,90,0.22), rgba(230,193,90,0.08)); color: #e6ede8; }
+  .sy-tab.active { background: linear-gradient(180deg, #eed27d, #c99b38); border-color: #f6e2a0; color: #241a05;
+    font-weight: 700; box-shadow: 0 3px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.5); }
   #shipyard-body { max-height: 46vh; overflow-y: auto; }
   #shipyard-title { font-size: 0.82rem; color: #9fb8c9; margin-bottom: 0.6rem; letter-spacing: 0.03rem; }
   #buy-filter-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.7rem; }
@@ -365,12 +368,19 @@
   .sy-row-sub { font-size: 0.72rem; color: #9fb8c9; margin-top: 3px; line-height: 1.4; }
   .sy-row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; max-width: 44%; }
   .sy-price { font-size: 0.78rem; color: #e6c15a; white-space: normal; text-align: right; }
-  .sy-btn { background: rgba(230,193,90,0.16); border: 1px solid rgba(230,193,90,0.5); color: #f0e6d2;
-    padding: 0.35rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; white-space: nowrap; }
-  .sy-btn:hover:not(:disabled) { background: rgba(230,193,90,0.32); }
-  .sy-btn:disabled { opacity: 0.55; cursor: default; }
-  .sy-btn-secondary { background: rgba(224,100,90,0.12); border-color: rgba(224,100,90,0.45); }
-  .sy-btn-secondary:hover:not(:disabled) { background: rgba(224,100,90,0.28); }
+  .sy-btn { background: linear-gradient(180deg, rgba(230,193,90,0.34), rgba(230,193,90,0.14));
+    border: 1px solid rgba(230,193,90,0.6); color: #fff2d4;
+    padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.82rem; white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 2px 6px rgba(0,0,0,0.22);
+    transition: background .14s ease, border-color .14s ease, box-shadow .14s ease, transform .14s ease; }
+  .sy-btn:hover:not(:disabled) { background: linear-gradient(180deg, rgba(238,210,125,0.55), rgba(201,155,56,0.32));
+    border-color: #f6e2a0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 12px rgba(0,0,0,0.3); }
+  .sy-btn:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 1px 4px rgba(0,0,0,0.3); }
+  .sy-btn:disabled { opacity: 0.5; cursor: default; filter: grayscale(0.4); }
+  .sy-btn-secondary { background: linear-gradient(180deg, rgba(224,100,90,0.28), rgba(224,100,90,0.1));
+    border-color: rgba(224,100,90,0.55); color: #ffe4de; }
+  .sy-btn-secondary:hover:not(:disabled) { background: linear-gradient(180deg, rgba(240,130,110,0.42), rgba(190,70,55,0.26));
+    border-color: rgba(240,140,120,0.8); }
   #shipyard-panel .close-hint { text-align: center; margin-top: 0.8rem; font-size: 0.72rem; color: #8fa6b4; }
   .sy-row-side-actions { display: flex; flex-direction: row; gap: 5px; }
 
@@ -530,25 +540,48 @@
   #world-map-book, #ship-info-card, #shipyard-card, #skill-card, #titles-card,
   #compendium-card, #quest-card, #market-card, #inventory-panel, #dialogue-box, #interaction-menu {
     background-color: rgba(7,26,38,0.96);
-    background-image: linear-gradient(145deg, rgba(7,26,38,0.92), rgba(4,16,25,0.97)), var(--panel-art);
-    background-size: auto, 640px 640px; border-color: var(--panel-border); box-shadow: var(--panel-shadow); }
+    background-image: linear-gradient(145deg, rgba(7,26,38,0.85), rgba(4,16,25,0.93)), var(--panel-art);
+    background-blend-mode: normal, luminosity;
+    background-size: auto, 460px 460px; border-color: var(--panel-border); box-shadow: var(--panel-shadow); }
   #world-map-book, #ship-info-card, #shipyard-card, #skill-card, #titles-card,
   #compendium-card, #quest-card, #market-card { position: relative; overflow: hidden; }
   #ship-info-card { overflow-y: auto; }
   #world-map-book::before, #ship-info-card::before, #shipyard-card::before, #skill-card::before,
   #titles-card::before, #compendium-card::before, #quest-card::before, #market-card::before {
-    content: ''; position: absolute; inset: 6px; border: 1px solid rgba(232,215,176,0.055);
-    border-radius: 9px; pointer-events: none; }
+    content: ''; position: absolute; inset: 6px; border: 1px solid rgba(232,215,176,0.16);
+    border-radius: 9px; pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(4,16,25,0.4), inset 0 1px 0 rgba(255,255,255,0.05); }
+  #world-map-book::after, #ship-info-card::after, #shipyard-card::after, #skill-card::after,
+  #titles-card::after, #compendium-card::after, #quest-card::after, #market-card::after {
+    content: ''; position: absolute; inset: 10px; pointer-events: none;
+    background-image:
+      radial-gradient(circle, rgba(214,168,75,0.8) 0 1.5px, transparent 2px),
+      radial-gradient(circle, rgba(214,168,75,0.8) 0 1.5px, transparent 2px),
+      radial-gradient(circle, rgba(214,168,75,0.8) 0 1.5px, transparent 2px),
+      radial-gradient(circle, rgba(214,168,75,0.8) 0 1.5px, transparent 2px);
+    background-size: 5px 5px;
+    background-position: top left, top right, bottom left, bottom right;
+    background-repeat: no-repeat;
+    opacity: 0.65; }
   #world-map-title, #ship-info-name, #shipyard-header-title, #skill-header-title,
   #titles-header-title, #compendium-header-title, #quest-header-title, #market-header-title,
   #inventory-panel h3 { color: var(--parchment); font-family: Georgia, 'Noto Serif KR', 'Malgun Gothic', serif;
     text-shadow: 0 2px 12px rgba(0,0,0,0.42); }
-  #shipyard-header, #market-header, #ship-info-header { padding-bottom: 0.65rem; border-bottom: 1px solid rgba(214,168,75,0.2); }
+  #shipyard-header, #market-header, #ship-info-header,
   #skill-header-title, #titles-header-title, #compendium-header-title, #quest-header-title,
-  #inventory-panel h3 { padding-bottom: 0.7rem; border-bottom: 1px solid rgba(214,168,75,0.2); }
+  #inventory-panel h3 {
+    position: relative; padding: 0.55rem 0.7rem 0.65rem; margin: -0.2rem -0.2rem 0.6rem;
+    background: linear-gradient(180deg, rgba(214,168,75,0.14), rgba(214,168,75,0.02) 70%);
+    border-bottom: 1px solid rgba(214,168,75,0.4);
+    border-radius: 8px 8px 0 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
   .sy-row, .inv-slot, .qslot { border-color: rgba(159,181,191,0.18); background: rgba(13,42,56,0.38);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.025); transition: border-color .15s ease, background .15s ease; }
-  .sy-row:hover, .inv-slot:hover, .qslot:hover { border-color: rgba(214,168,75,0.42); background: rgba(46,111,117,0.2); }
+    border-left: 3px solid rgba(159,181,191,0.28);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.025), 0 3px 8px rgba(0,0,0,0.22);
+    transition: border-color .15s ease, background .15s ease, transform .15s ease, box-shadow .15s ease; }
+  .sy-row:hover, .inv-slot:hover, .qslot:hover { border-color: rgba(214,168,75,0.42); border-left-color: var(--brass);
+    background: rgba(46,111,117,0.2); transform: translateX(1px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 5px 14px rgba(0,0,0,0.3); }
   .sy-tab, .buy-filter-chip, .wm-arrow, .sy-btn { transition: transform .14s ease, background .14s ease, border-color .14s ease; }
   .sy-tab:hover, .buy-filter-chip:hover, .wm-arrow:hover, .sy-btn:hover:not(:disabled) { transform: translateY(-1px); }
   .sy-tab.active, .buy-filter-chip.active { box-shadow: inset 0 -2px 0 var(--brass); }

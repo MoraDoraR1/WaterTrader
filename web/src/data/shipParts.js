@@ -24,54 +24,55 @@ export const PART_SLOTS = {
 };
 
 // 대포 부품 가격 사다리 — "하위 단계 가격의 1.6배 / 2.4배 / 3배"로 순차 배수 적용
-// (500 -> 800 -> 1920 -> 5760). 예전엔 최고 등급이 +9문뿐이라, 슬롯을 여러 개 가진
-// 대형선에서조차 화력 증가폭이 미미했다(9문짜리를 여러 개 꽂아야 했음) — 그 대신 상위 두
-// 단계를 +16/+32로 크게 올려, 슬롯 몇 개만으로도 큰 함선다운 화력 도약이 나도록 했다.
+// (1000 -> 1600 -> 3840 -> 11520, 전체 부품 가격을 2배로 증폭한 값). 예전엔 최고 등급이
+// +9문뿐이라, 슬롯을 여러 개 가진 대형선에서조차 화력 증가폭이 미미했다(9문짜리를 여러 개
+// 꽂아야 했음) — 그 대신 상위 두 단계를 +16/+32로 크게 올려, 슬롯 몇 개만으로도 큰 함선다운
+// 화력 도약이 나도록 했다.
 export const SHIP_PARTS = [
   // ── 대포: 슬롯 하나당 이 중 하나를 장착 — 슬롯 수는 배 등급이 정한다(소형 1 ~ 초대형 6) ──
-  { id: 'cannon_swivel', slot: 'cannon', tier: 1, name: '회전식 소형포', price: 500,
+  { id: 'cannon_swivel', slot: 'cannon', tier: 1, name: '회전식 소형포', price: 1000,
     effects: { cannonsAdd: 2 },
     desc: '갑판 난간에 다는 소형 선회포. 가벼워 다른 능력치에 영향이 없다.' },
-  { id: 'cannon_culverin', slot: 'cannon', tier: 2, name: '컬버린 함포', price: 800,
+  { id: 'cannon_culverin', slot: 'cannon', tier: 2, name: '컬버린 함포', price: 1600,
     effects: { cannonsAdd: 5 },
     desc: '사거리와 관통력을 겸비한 표준 함포. 현측 포열을 실질적으로 증강한다.' },
-  { id: 'cannon_longrange', slot: 'cannon', tier: 3, name: '장사정 캐논 포열', price: 1920,
+  { id: 'cannon_longrange', slot: 'cannon', tier: 3, name: '장사정 캐논 포열', price: 3840,
     effects: { cannonsAdd: 16, turnRateMul: 0.95 },
     desc: '사거리와 파괴력을 크게 늘린 중포열. 무게 탓에 선회가 살짝 둔해진다.' },
-  { id: 'cannon_decisive', slot: 'cannon', tier: 4, name: '결전 캐논 포열', price: 5760,
+  { id: 'cannon_decisive', slot: 'cannon', tier: 4, name: '결전 캐논 포열', price: 11520,
     effects: { cannonsAdd: 32, turnRateMul: 0.90 },
     desc: '함대전의 승패를 가르는 최중량 포열. 압도적 화력이지만 선회가 눈에 띄게 둔해진다.' },
 
   // ── 장갑판: 맞는 피해 자체를 % 로 깎아주는 진짜 방어력. 무게로 기동성을 깎는다 ──
-  { id: 'armor_oak_planking', slot: 'armor', tier: 1, name: '참나무 보강판', price: 700,
+  { id: 'armor_oak_planking', slot: 'armor', tier: 1, name: '참나무 보강판', price: 1400,
     effects: { armorAdd: 8 },
     desc: '선체 외판에 참나무를 덧댄다. 큰 부담 없이 피격 데미지를 8% 줄인다.' },
-  { id: 'armor_iron_strap', slot: 'armor', tier: 2, name: '철대 보강 장갑', price: 1800,
+  { id: 'armor_iron_strap', slot: 'armor', tier: 2, name: '철대 보강 장갑', price: 3600,
     effects: { armorAdd: 18, speedMul: 0.94, turnRateMul: 0.95 },
     desc: '철제 띠로 선체를 둘러 보강한다. 피격 데미지를 18% 줄이지만 무거워진다.' },
-  { id: 'armor_composite_plate', slot: 'armor', tier: 3, name: '복합 장갑판', price: 4200,
+  { id: 'armor_composite_plate', slot: 'armor', tier: 3, name: '복합 장갑판', price: 8400,
     effects: { armorAdd: 32, speedMul: 0.90, turnRateMul: 0.90 },
     desc: '목재와 철판을 겹친 최고급 장갑. 피격 데미지를 32% 줄이지만 상당히 둔중해진다.' },
 
   // ── 돛: 속도를 끌어올리되 클수록 선회에 살짝 불리하다 ──
-  { id: 'sail_reinforced_canvas', slot: 'sail', tier: 1, name: '보강 범포', price: 600,
+  { id: 'sail_reinforced_canvas', slot: 'sail', tier: 1, name: '보강 범포', price: 1200,
     effects: { speedMul: 1.05 },
     desc: '질긴 범포로 돛을 교체한다. 부담 없이 속도를 조금 끌어올린다.' },
-  { id: 'sail_extra_jib', slot: 'sail', tier: 2, name: '추가 지브세일', price: 1600,
+  { id: 'sail_extra_jib', slot: 'sail', tier: 2, name: '추가 지브세일', price: 3200,
     effects: { speedMul: 1.10, turnRateMul: 0.98 },
     desc: '이물에 지브세일을 추가로 단다. 속도가 눈에 띄게 붙는다.' },
-  { id: 'sail_full_clipper_rig', slot: 'sail', tier: 3, name: '클리퍼식 전체돛', price: 3600,
+  { id: 'sail_full_clipper_rig', slot: 'sail', tier: 3, name: '클리퍼식 전체돛', price: 7200,
     effects: { speedMul: 1.18, turnRateMul: 0.95 },
     desc: '클리퍼에 준하는 전체 돛 개장. 최고 속도를 크게 끌어올리는 대신 다루기는 까다로워진다.' },
 
   // ── 선체 보강: 적재량을 늘리는 화물 개장 계열 ──
-  { id: 'hull_cargo_racks', slot: 'hull', tier: 1, name: '화물 선반 증설', price: 500,
+  { id: 'hull_cargo_racks', slot: 'hull', tier: 1, name: '화물 선반 증설', price: 1000,
     effects: { cargoAdd: 40 },
     desc: '화물칸에 선반을 짜 넣어 적재 공간을 늘린다.' },
-  { id: 'hull_double_deck', slot: 'hull', tier: 2, name: '이중 갑판', price: 1400,
+  { id: 'hull_double_deck', slot: 'hull', tier: 2, name: '이중 갑판', price: 2800,
     effects: { cargoAdd: 110, hpAdd: 100, speedMul: 0.98 },
     desc: '갑판을 한 층 더 올려 적재량과 내구도를 함께 보강한다. 그만큼 무거워져 속도가 살짝 준다.' },
-  { id: 'hull_reinforced_keel', slot: 'hull', tier: 3, name: '강화 용골', price: 3200,
+  { id: 'hull_reinforced_keel', slot: 'hull', tier: 3, name: '강화 용골', price: 6400,
     effects: { cargoAdd: 220, hpAdd: 250, speedMul: 0.97 },
     desc: '용골 자체를 강화해 대폭 늘어난 적재량과 내구도를 지탱한다. 다소 둔중해진다.' },
 
