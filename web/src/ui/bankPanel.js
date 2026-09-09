@@ -49,5 +49,6 @@ function renderBank(cityId) {
 
 export function openBank(cityId) {
   renderBank(cityId);
+  hud.showMarketTabs(false);
   hud.showMarket(true);
 }

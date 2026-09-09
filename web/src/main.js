@@ -7,7 +7,7 @@ import { hud } from './ui/hud.js';
 import { getShipImageSrc } from './ui/shipImage.js';
 import { wireShipyardTabs, openShipyard } from './ui/shipyardPanel.js';
 import { openQuestBoard } from './ui/questPanel.js';
-import { openMarket } from './ui/marketPanel.js';
+import { openMarket, wireMarketTabs } from './ui/marketPanel.js';
 import { openSupplies } from './ui/suppliesPanel.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, project } from './data/coastline.js';
@@ -269,6 +269,7 @@ document.getElementById('world-map-prev').addEventListener('click', () => cycleW
 document.getElementById('world-map-next').addEventListener('click', () => cycleWorldMap(1));
 
 wireShipyardTabs();
+wireMarketTabs();
 wireCompendiumTabs();
 wireSkillTabs();
 

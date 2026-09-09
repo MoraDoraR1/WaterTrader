@@ -50,5 +50,6 @@ function renderSupplies(cityId) {
 
 export function openSupplies(cityId) {
   renderSupplies(cityId);
+  hud.showMarketTabs(false);
   hud.showMarket(true);
 }

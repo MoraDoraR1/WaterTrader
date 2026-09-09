@@ -60,5 +60,6 @@ function renderCrew(cityId) {
 
 export function openCrew(cityId) {
   renderCrew(cityId);
+  hud.showMarketTabs(false);
   hud.showMarket(true);
 }

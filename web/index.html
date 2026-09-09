@@ -338,7 +338,7 @@
   #shipyard-header { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.7rem; }
   #shipyard-header-title { font-size: 1.1rem; color: #f3d98a; letter-spacing: 0.03rem; }
   #shipyard-gold { font-size: 0.85rem; color: #cfe0ea; }
-  #shipyard-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+  #shipyard-tabs, #market-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
   .sy-tab { flex: 1; min-width: 0; background: rgba(230,193,90,0.08); border: 1px solid rgba(230,193,90,0.35); color: #cfe0ea;
     padding: 0.5rem; border-radius: 7px; cursor: pointer; font-size: 0.85rem; letter-spacing: 0.05rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -811,6 +811,10 @@
         <div id="market-gold">💰 <span id="market-gold-amount">0</span> 두캇</div>
       </div>
       <div id="market-cargo-row"><span id="market-cargo-label">적재</span> <span id="market-cargo">0/0t</span></div>
+      <div id="market-tabs" class="hidden">
+        <button type="button" class="sy-tab" data-market-tab="buy">구매</button>
+        <button type="button" class="sy-tab" data-market-tab="sell">판매</button>
+      </div>
       <div id="market-title"></div>
       <div id="market-body"></div>
       <div class="close-hint">ESC 로 닫기</div>

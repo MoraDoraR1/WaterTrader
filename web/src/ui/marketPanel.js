@@ -10,6 +10,8 @@ import { itemTip } from './tooltip.js';
 
 const STEP = 10;
 let barterGiveGood = null;
+let currentMarketCityId = null;
+let marketTab = 'buy';
 
 // 교역품 이름 툴팁 — "효과" 자리에는 분류(향신료/사치품/일반 물자)를, "획득처" 자리에는
 // 이 품목이 실제로 가장 싼(=원산지) 항구를 동적으로 계산해 보여준다(데이터 하드코딩 없이
@@ -24,41 +26,62 @@ function goodTip(good) {
   });
 }
 
-function renderMarket(cityId) {
-  const city = getCity(cityId);
-  // 한국 주식창처럼 상승은 빨강, 하락은 파랑으로 — 원래 설정된(도시별 기본) 가격을 100%로 두고
-  // 항해일자 5일 사이클로 지금 몇 %인지를 그대로 보여준다(systems/market.js의 pct).
-  const trendColor = { up: '#e0645a', down: '#6fc8e0', flat: '#9fb8c9' };
-  const trendArrow = { up: '▲', down: '▼', flat: '' };
-  const rows = getMarketRows(cityId).map(({ good, price, heldQty, trend, pct, stock, canBuy }) => {
-    const marginPct = Math.round((price.sell / good.basePrice - 1) * 100);
-    const marginLabel = ` · 기준가대비 ${marginPct >= 0 ? '+' : ''}${marginPct}%`;
-    const cycleLabel = ` · <span style="color:${trendColor[trend]}">시세 ${pct}% ${trendArrow[trend]}</span>`;
-    const stockLabel = stock.qty > 0
-      ? ` · <span style="color:${stock.qty <= 15 ? '#e0645a' : '#9fb8c9'}">재고 ${stock.qty}t</span>`
-      : ` · <span style="color:#e0645a">품절 (${stock.resetInDays}일 후 재입고)</span>`;
-    // 원산지가 아닌 항구에서는 이 품목을 살 수 없다 — 플레이어가 실어온 걸 파는(sellGood) 건
-    // 어디서든 그대로 되지만, 매입(buyGood)만 원산지 권역 항구로 제한한다.
-    const originLabel = canBuy ? '' : ` · <span style="color:#9a8a6a">원산지 아님(구매 불가)</span>`;
+// 한국 주식창처럼 상승은 빨강, 하락은 파랑으로 — 원래 설정된(도시별 기본) 가격을 100%로 두고
+// 항해일자 5일 사이클로 지금 몇 %인지를 그대로 보여준다(systems/market.js의 pct).
+const TREND_COLOR = { up: '#e0645a', down: '#6fc8e0', flat: '#9fb8c9' };
+const TREND_ARROW = { up: '▲', down: '▼', flat: '' };
+
+// 구매/판매 페이지가 공통으로 쓰는 가격·시세·재고 정보 한 줄 — canBuy/원산지 문구는 각
+// 페이지가 필요할 때만 따로 붙인다(구매 페이지는 이미 원산지 품목만 걸러서 보여주므로 불필요).
+function priceInfoLabel({ price, heldQty, trend, pct, stock }, good) {
+  const marginPct = Math.round((price.sell / good.basePrice - 1) * 100);
+  const marginLabel = ` · 기준가대비 ${marginPct >= 0 ? '+' : ''}${marginPct}%`;
+  const cycleLabel = ` · <span style="color:${TREND_COLOR[trend]}">시세 ${pct}% ${TREND_ARROW[trend]}</span>`;
+  const stockLabel = stock.qty > 0
+    ? ` · <span style="color:${stock.qty <= 15 ? '#e0645a' : '#9fb8c9'}">재고 ${stock.qty}t</span>`
+    : ` · <span style="color:#e0645a">품절 (${stock.resetInDays}일 후 재입고)</span>`;
+  return `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${cycleLabel}${marginLabel}${stockLabel}`;
+}
+
+// ---- 구매 페이지 — 이 항구가 실제로 원산지인 품목만 보여준다(원산지 아닌 품목은 아예
+// 목록에서 빠진다 — 비활성 버튼으로 걸어두는 게 아니라 "지정된 항목"만 노출). ----
+function renderBuyPage(cityId) {
+  const rows = getMarketRows(cityId).filter((r) => r.canBuy).map((r) => {
+    const { good, price, stock } = r;
     return {
       name: goodTip(good),
-      sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${cycleLabel}${marginLabel}${stockLabel}${originLabel}`,
-      actions: [
-        {
-          label: canBuy ? `${STEP}t 구매` : '원산지 아님',
-          disabled: !canBuy || stock.qty <= 0,
-          onAction: () => {
-            const res = buyGood(cityId, good.id, STEP);
-            if (res.ok) { hud.toast(`${good.name} ${res.qty}t 구매 (-${res.cost.toLocaleString('ko-KR')} 두캇)`); renderMarket(cityId); }
-            else hud.toast(res.reason);
-          },
+      sub: priceInfoLabel(r, good),
+      actions: [{
+        label: `${STEP}t 구매`,
+        disabled: stock.qty <= 0,
+        onAction: () => {
+          const res = buyGood(cityId, good.id, STEP);
+          if (res.ok) { hud.toast(`${good.name} ${res.qty}t 구매 (-${res.cost.toLocaleString('ko-KR')} 두캇)`); renderBuyPage(cityId); }
+          else hud.toast(res.reason);
         },
+      }],
+    };
+  });
+  if (rows.length === 0) {
+    rows.push({ name: '구매 가능한 품목이 없습니다', sub: '이 항구는 어떤 교역품의 원산지도 아닙니다 — 다른 곳에서 사 온 물건을 여기서 파세요.', actions: [] });
+  }
+  renderMarketFrame(cityId, rows);
+}
+
+// ---- 판매 페이지 — 지금 화물칸에 실제로 들고 있는 품목만 보여준다. ----
+function renderSellPage(cityId) {
+  const rows = getMarketRows(cityId).filter((r) => r.heldQty > 0).map((r) => {
+    const { good, heldQty } = r;
+    return {
+      name: goodTip(good),
+      sub: priceInfoLabel(r, good),
+      actions: [
         {
           label: `${STEP}t 판매`,
           disabled: heldQty <= 0,
           onAction: () => {
             const res = sellGood(cityId, good.id, STEP);
-            if (res.ok) { hud.toast(`${good.name} ${res.qty}t 판매 (+${res.revenue.toLocaleString('ko-KR')} 두캇)`); renderMarket(cityId); }
+            if (res.ok) { hud.toast(`${good.name} ${res.qty}t 판매 (+${res.revenue.toLocaleString('ko-KR')} 두캇)`); renderSellPage(cityId); }
             else hud.toast(res.reason);
           },
         },
@@ -69,20 +92,47 @@ function renderMarket(cityId) {
           disabled: heldQty <= 0,
           onAction: () => {
             const res = sellGood(cityId, good.id, heldQty);
-            if (res.ok) { hud.toast(`${good.name} ${res.qty}t 판매 (+${res.revenue.toLocaleString('ko-KR')} 두캇)`); renderMarket(cityId); }
+            if (res.ok) { hud.toast(`${good.name} ${res.qty}t 판매 (+${res.revenue.toLocaleString('ko-KR')} 두캇)`); renderSellPage(cityId); }
             else hud.toast(res.reason);
           },
         },
       ],
     };
   });
+  if (rows.length === 0) {
+    rows.push({ name: '판매할 물품이 없습니다', sub: '화물칸에 이 항구가 취급하는 교역품을 싣고 오세요.', actions: [] });
+  }
+  renderMarketFrame(cityId, rows);
+}
+
+function renderMarketFrame(cityId, rows) {
+  const city = getCity(cityId);
   const rep = getReputation(city.country);
   const eventBadge = formatCityEventBadge(cityId);
+  const tabLabel = marketTab === 'buy' ? '구매' : '판매';
   hud.renderMarket({
-    title: `${city.name} 시장 · ${COUNTRY_NAMES[city.country] || city.country} 우호도 ${rep >= 0 ? '+' : ''}${rep}${eventBadge ? ' · ' + eventBadge : ''}`,
+    title: `${city.name} 시장 · ${tabLabel} · ${COUNTRY_NAMES[city.country] || city.country} 우호도 ${rep >= 0 ? '+' : ''}${rep}${eventBadge ? ' · ' + eventBadge : ''}`,
     gold: state.gold,
     cargo: `${getCargoUsed()} / ${getCargoCapacity()} t`,
     rows,
+  });
+}
+
+function renderMarket(cityId) {
+  currentMarketCityId = cityId;
+  hud.showMarketTabs(true);
+  hud.setMarketActiveTab(marketTab);
+  if (marketTab === 'sell') renderSellPage(cityId);
+  else renderBuyPage(cityId);
+}
+
+// 구매/판매 탭 버튼(index.html #market-tabs) 클릭 배선 — main.js에서 앱 시작 시 한 번 호출한다.
+export function wireMarketTabs() {
+  document.querySelectorAll('#market-tabs .sy-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      marketTab = btn.dataset.marketTab;
+      if (currentMarketCityId) renderMarket(currentMarketCityId);
+    });
   });
 }
 
@@ -137,8 +187,10 @@ function renderBarter(cityId) {
 export function openMarket(cityId) {
   if (isBarterCity(cityId)) {
     barterGiveGood = null;
+    hud.showMarketTabs(false);
     renderBarter(cityId);
   } else {
+    marketTab = 'buy'; // 항구를 새로 열 때마다 구매 탭부터 보여준다
     renderMarket(cityId);
   }
   hud.showMarket(true);

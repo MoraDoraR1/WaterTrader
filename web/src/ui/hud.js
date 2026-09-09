@@ -406,6 +406,13 @@ export const hud = {
   hideMarket() { $('market-panel').classList.add('hidden'); },
   isMarketOpen() { return !$('market-panel').classList.contains('hidden'); },
 
+  // 상인 현금 시장에서만 쓰는 구매/판매 탭 — 은행·선원고용·보급창고·물물교환은 같은
+  // renderMarket()을 재사용하지만 탭 없이 단일 목록으로 남는다.
+  showMarketTabs(v) { $('market-tabs').classList.toggle('hidden', !v); },
+  setMarketActiveTab(tab) {
+    document.querySelectorAll('#market-tabs .sy-tab').forEach((b) => b.classList.toggle('active', b.dataset.marketTab === tab));
+  },
+
   // rows: [{ name, sub, actions: [{ label, disabled?, onAction }] }]
   // headerTitle/cargoLabel: 시장(기본값) 외에 은행 등 같은 패널을 재사용하는 화면에서 문구를 바꿔 쓴다.
   renderMarket({ title, gold, cargo, rows, headerTitle, cargoLabel }) {
