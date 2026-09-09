@@ -162,7 +162,7 @@ export const CITY_MARKET = {
     cinnamon: { buy: 46, sell: 34 },
     clove: { buy: 98, sell: 73 },
     nutmeg: { buy: 124, sell: 93 },
-    wine: { buy: 12, sell: 9 },
+    wine: { buy: 11, sell: 9 }, // 포르투갈도 엄연한 유럽 굴지의 포도주 생산국 — 리스본이 원산지 취급을 받는 유일한 품목이다
     silver: { buy: 85, sell: 74 },
     sugar: { buy: 55, sell: 48 },
     fur: { buy: 62, sell: 55 },
@@ -319,7 +319,7 @@ export const CITY_MARKET = {
     mace: { buy: 100, sell: 76 },
   },
   nagasaki: {
-    silver: { buy: 30, sell: 22 },
+    silver: { buy: 24, sell: 22 }, // 이와미 은광 등 일본은 16~17세기 세계 최대급 은 산출국이었다 — 나가사키가 그 수출항
     tea: { buy: 35, sell: 27 },
     porcelain: { buy: 49, sell: 36 },
   },
@@ -461,8 +461,8 @@ export const CITY_MARKET = {
   // 이 buy가가 원산지 판별(findOrigin)에도 그대로 들어가 다른 항구의 거리 프리미엄에 반영된다.
   busan: { ginseng: { buy: 22, sell: 17 }, porcelain: { buy: 46, sell: 35 }, silk: { buy: 95, sell: 72 } },
   incheon: { ginseng: { buy: 26, sell: 20 }, silk: { buy: 89, sell: 68 }, porcelain: { buy: 58, sell: 44 } }, // 고려청자 — 중국과는 또 다른 독자적인 도자기 전통
-  osaka: { silver: { buy: 27, sell: 20 }, tea: { buy: 33, sell: 25 }, cotton: { buy: 28, sell: 22 } }, // 에도시대 오사카는 "천하의 부엌"이라 불리며 목화 유통의 중심지이기도 했다
-  hakata: { porcelain: { buy: 42, sell: 32 }, tea: { buy: 30, sell: 23 }, silk: { buy: 100, sell: 76 } }, // 하카타오리(博多織) 비단 직조 전통
+  osaka: { silver: { buy: 24, sell: 20 }, tea: { buy: 33, sell: 25 }, cotton: { buy: 28, sell: 22 } }, // 에도시대 오사카는 "천하의 부엌"이라 불리며 이쿠노 은광 유통·목화 집산의 중심지였다
+  hakata: { porcelain: { buy: 40, sell: 32 }, tea: { buy: 30, sell: 23 }, silk: { buy: 100, sell: 76 } }, // 인근 아리타·이마리 도자기가 하카타 항을 통해 수출된 실제 산지 항로
   guangzhou: { silk: { buy: 49, sell: 37 }, tea: { buy: 20, sell: 15 }, porcelain: { buy: 32, sell: 24 },
     lacquerware: { buy: 38, sell: 29 }, opium: { buy: 95, sell: 74 }, sandalwood: { buy: 64, sell: 50 },
     ginseng: { buy: 78, sell: 61 } }, // 조선 인삼은 중국 황실·사대부 사이에서 만병통치약으로 취급돼 원산지의 세 배 가까이 거래됐다
@@ -482,7 +482,7 @@ export const CITY_MARKET = {
     copper: { buy: 13, sell: 10 }, rope: { buy: 8, sell: 6 }, pitch_tar: { buy: 6, sell: 5 } },
   cadiz: { silver: { buy: 24, sell: 18 }, wine: { buy: 11, sell: 9 }, salt: { buy: 3, sell: 2 }, indigo: { buy: 42, sell: 33 } },
   valletta: { olive_oil: { buy: 10, sell: 7 }, glass: { buy: 62, sell: 48 }, salt: { buy: 4, sell: 3 }, coral: { buy: 48, sell: 36 } },
-  dubrovnik: { wine: { buy: 16, sell: 13 }, silk: { buy: 92, sell: 70 }, coral: { buy: 66, sell: 52 } },
+  dubrovnik: { wine: { buy: 16, sell: 13 }, silk: { buy: 92, sell: 70 }, coral: { buy: 58, sell: 52 } }, // 라구사 공화국은 알제·나폴리와 함께 아드리아해 산호 어장을 낀 실제 산호 교역항이었다
   zanzibar: { clove: { buy: 30, sell: 23 }, ivory: { buy: 68, sell: 52 }, coconut: { buy: 10, sell: 8 } },
   alexandria: { pepper: { buy: 26, sell: 20 }, glass: { buy: 58, sell: 45 },
     carpet: { buy: 55, sell: 42 }, coffee: { buy: 26, sell: 20 }, cotton_cloth: { buy: 22, sell: 17 } },
@@ -497,10 +497,10 @@ export const CITY_MARKET = {
     leather: { buy: 9, sell: 7 }, tallow: { buy: 4, sell: 3 }, dried_meat: { buy: 7, sell: 5 } },
   port_royal: { silver: { buy: 25, sell: 19 }, sugar: { buy: 20, sell: 15 }, rum: { buy: 7, sell: 5 }, rope: { buy: 14, sell: 11 } },
   bordeaux: { wine: { buy: 9, sell: 7 }, sugar: { buy: 32, sell: 25 }, coffee: { buy: 44, sell: 35 } }, // 18세기 보르도의 부는 상당 부분 프랑스령 카리브해(생도맹그) 설탕·커피 재수출 무역에서 나왔다
-  azores: { wine: { buy: 14, sell: 11 }, sugar: { buy: 36, sell: 29 }, salt: { buy: 7, sell: 5 } },
-  canarias: { sugar: { buy: 25, sell: 20 }, wine: { buy: 15, sell: 12 }, salt: { buy: 8, sell: 6 } },
-  elmina: { gold: { buy: 62, sell: 46 }, pepper: { buy: 20, sell: 15 }, ivory: { buy: 66, sell: 51 } }, // 황금해안 이웃(오늘날 코트디부아르="상아 해안")의 상아 무역
-  new_amsterdam: { fur: { buy: 19, sell: 14 }, wool: { buy: 30, sell: 26 }, grain: { buy: 10, sell: 8 } }, // 훗날 "빵 식민지"라 불릴 만큼 허드슨강 유역 밀농사가 성했다
+  azores: { wine: { buy: 11, sell: 9 }, sugar: { buy: 36, sell: 29 }, salt: { buy: 7, sell: 5 } }, // 피쿠 섬 포도밭 — 15세기부터 이어진 아소르스 자체 포도주 산지
+  canarias: { sugar: { buy: 21, sell: 17 }, wine: { buy: 15, sell: 12 }, salt: { buy: 8, sell: 6 } }, // 브라질이 패권을 쥐기 전, 카나리아 제도가 대서양 최초의 설탕 플랜테이션 산지였다
+  elmina: { gold: { buy: 48, sell: 46 }, pepper: { buy: 20, sell: 15 }, ivory: { buy: 66, sell: 51 } }, // "엘미나(La Mina, 광산)"라는 지명 자체가 황금해안 금 무역의 실제 거점이었음을 가리킨다 — 인근 상아 무역도 겸했다
+  new_amsterdam: { fur: { buy: 16, sell: 14 }, wool: { buy: 30, sell: 26 }, grain: { buy: 10, sell: 8 } }, // 뉴네덜란드 경제 자체가 허드슨강 유역 비버 모피 무역으로 세워졌다 — 훗날 "빵 식민지"라 불릴 만큼 밀농사도 성했다
   tanger: { silver: { buy: 31, sell: 24 }, olive_oil: { buy: 12, sell: 9 }, sugar: { buy: 30, sell: 24 } }, // 사드 왕조 시절 모로코는 카리브해·브라질에 앞서 유럽에 설탕을 수출하던 산지였다
   luanda: { gold: { buy: 54, sell: 42 }, ivory: { buy: 72, sell: 56 }, dried_meat: { buy: 9, sell: 7 } },
   colombo: { cinnamon: { buy: 19, sell: 14 }, ginger: { buy: 11, sell: 8 }, pearl: { buy: 85, sell: 66 } }, // 마나르만 진주 어장 — 페르시아만과 함께 인도양 양대 진주 산지

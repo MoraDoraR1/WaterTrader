@@ -6,20 +6,20 @@
 import { ARCHAEOLOGY_SITES, GEOGRAPHY_SITES, ASTRONOMY_ENTRIES, rewardFor } from './compendium.js';
 
 const STATIC_QUESTS = [
-  { id: 'del_lisboa_sevilla', type: 'delivery', cityId: 'lisboa', destCityId: 'sevilla', goodId: 'pepper', qty: 20, reward: 930,
-    title: '후추 20t → 세비야', desc: '세비야 상관에서 후추가 급하다 합니다. 20t을 구해 옮겨주십시오.' },
-  { id: 'del_sevilla_lisboa', type: 'delivery', cityId: 'sevilla', destCityId: 'lisboa', goodId: 'silver', qty: 15, reward: 860,
+  { id: 'del_lisboa_sevilla', type: 'delivery', cityId: 'lisboa', destCityId: 'sevilla', goodId: 'wine', qty: 20, reward: 930,
+    title: '포도주 20t → 세비야', desc: '세비야 상관에서 포르투갈산 포도주가 급하다 합니다. 20t을 구해 옮겨주십시오.' },
+  { id: 'del_sevilla_lisboa', type: 'delivery', cityId: 'cadiz', destCityId: 'lisboa', goodId: 'silver', qty: 15, reward: 860,
     title: '은괴 15t → 리스본', desc: '리스본 조폐소에 신대륙 은이 필요합니다.' },
   { id: 'del_london_amsterdam', type: 'delivery', cityId: 'london', destCityId: 'amsterdam', goodId: 'wool', qty: 25, reward: 640,
     title: '모직물 25t → 암스테르담', desc: '암스테르담 직물 공방에 잉글랜드산 모직물을 대야 합니다.' },
-  { id: 'del_amsterdam_london', type: 'delivery', cityId: 'amsterdam', destCityId: 'london', goodId: 'porcelain', qty: 10, reward: 740,
-    title: '도자기 10t → 런던', desc: '런던 귀족 저택에 들일 도자기가 필요하답니다.' },
-  { id: 'del_hamburg_venezia', type: 'delivery', cityId: 'hamburg', destCityId: 'venezia', goodId: 'amber', qty: 12, reward: 1060,
+  { id: 'del_amsterdam_london', type: 'delivery', cityId: 'amsterdam', destCityId: 'london', goodId: 'linen', qty: 10, reward: 740,
+    title: '린넨 10t → 런던', desc: '런던 귀족 저택에 들일 네덜란드산 린넨이 필요하답니다.' },
+  { id: 'del_hamburg_venezia', type: 'delivery', cityId: 'danzig', destCityId: 'venezia', goodId: 'amber', qty: 12, reward: 1060,
     title: '호박 12t → 베네치아', desc: '베네치아 세공사들이 발트해산 호박을 찾습니다.' },
   { id: 'del_marseille_genova', type: 'delivery', cityId: 'marseille', destCityId: 'genova', goodId: 'olive_oil', qty: 30, reward: 670,
     title: '올리브유 30t → 제노바', desc: '제노바 시장에 프로방스산 올리브유를 대주십시오.' },
-  { id: 'del_genova_marseille', type: 'delivery', cityId: 'genova', destCityId: 'marseille', goodId: 'silk', qty: 8, reward: 1090,
-    title: '비단 8t → 마르세유', desc: '마르세유 의상실에서 제노바 비단을 찾습니다.' },
+  { id: 'del_genova_marseille', type: 'delivery', cityId: 'napoli', destCityId: 'marseille', goodId: 'coral', qty: 8, reward: 1090,
+    title: '산호공예품 8t → 마르세유', desc: '마르세유 보석상에서 나폴리산 산호를 찾습니다.' },
   { id: 'del_venezia_hamburg', type: 'delivery', cityId: 'venezia', destCityId: 'hamburg', goodId: 'glass', qty: 10, reward: 990,
     title: '유리공예품 10t → 함부르크', desc: '함부르크 상인이 무라노 유리를 수집하고 있습니다.' },
 
@@ -28,11 +28,11 @@ const STATIC_QUESTS = [
     title: '포도주 15t → 엘미나', desc: '황금해안 요새 수비대가 본국의 포도주를 그리워한답니다.' },
   { id: 'del_elmina_lisboa', type: 'delivery', cityId: 'elmina', destCityId: 'lisboa', goodId: 'gold', qty: 8, reward: 2400,
     title: '금 8t → 리스본', desc: '왕실 조폐국에 엘미나산 금을 보내야 합니다.' },
-  { id: 'del_sevilla_havana', type: 'delivery', cityId: 'sevilla', destCityId: 'havana', goodId: 'wine', qty: 20, reward: 2200,
+  { id: 'del_sevilla_havana', type: 'delivery', cityId: 'cadiz', destCityId: 'havana', goodId: 'wine', qty: 20, reward: 2200,
     title: '포도주 20t → 아바나', desc: '신대륙 이주민들이 본국의 포도주를 애타게 기다립니다.' },
-  { id: 'del_havana_sevilla', type: 'delivery', cityId: 'havana', destCityId: 'sevilla', goodId: 'silver', qty: 25, reward: 2600,
+  { id: 'del_havana_sevilla', type: 'delivery', cityId: 'veracruz', destCityId: 'sevilla', goodId: 'silver', qty: 25, reward: 2600,
     title: '은괴 25t → 세비야', desc: '통상원이 신대륙 은 함대의 화물을 기다리고 있습니다.' },
-  { id: 'del_amsterdam_new_amsterdam', type: 'delivery', cityId: 'amsterdam', destCityId: 'new_amsterdam', goodId: 'wool', qty: 20, reward: 2100,
+  { id: 'del_amsterdam_new_amsterdam', type: 'delivery', cityId: 'antwerp', destCityId: 'new_amsterdam', goodId: 'wool', qty: 20, reward: 2100,
     title: '모직물 20t → 뉴암스테르담', desc: '서인도회사 식민지에 겨울 대비 모직물이 필요합니다.' },
   { id: 'del_new_amsterdam_amsterdam', type: 'delivery', cityId: 'new_amsterdam', destCityId: 'amsterdam', goodId: 'fur', qty: 18, reward: 2000,
     title: '모피 18t → 암스테르담', desc: '본사가 신대륙 모피의 최신 물량을 기다립니다.' },
@@ -40,7 +40,7 @@ const STATIC_QUESTS = [
     title: '올리브유 20t → 이스탄불', desc: '술탄의 궁정 주방이 프로방스 올리브유를 주문했습니다.' },
   { id: 'del_venezia_malacca', type: 'delivery', cityId: 'venezia', destCityId: 'malacca', goodId: 'glass', qty: 10, reward: 3400,
     title: '유리공예품 10t → 믈라카', desc: '해협의 부유한 상인이 베네치아 유리공예품을 원합니다.' },
-  { id: 'del_goa_lisboa', type: 'delivery', cityId: 'goa', destCityId: 'lisboa', goodId: 'pepper', qty: 30, reward: 2600,
+  { id: 'del_goa_lisboa', type: 'delivery', cityId: 'calicut', destCityId: 'lisboa', goodId: 'pepper', qty: 30, reward: 2600,
     title: '후추 30t → 리스본', desc: '본국이 인도산 후추의 정기 물량을 기다립니다.' },
   { id: 'del_nagasaki_goa', type: 'delivery', cityId: 'nagasaki', destCityId: 'goa', goodId: 'silver', qty: 15, reward: 2900,
     title: '은괴 15t → 고아', desc: '총독부가 일본산 은을 유럽행 선단에 실어야 합니다.' },
@@ -66,10 +66,10 @@ const STATIC_QUESTS = [
   // 있어야(routePrereq) 1부가 뜬다 — 희망봉을 돌아가는 실제 항로 순서를 반영한다.
 
   // -- 1) 아프리카 항로: 세비야 ↔ 리스본 포도주 보급 → 바르바리 해적 사령선 토벌 → 카나리아 제도 항해
-  { id: 'chain_africa_delivery', type: 'delivery', cityId: 'sevilla', destCityId: 'lisboa', goodId: 'wine', qty: 15, reward: 750,
+  { id: 'chain_africa_delivery', type: 'delivery', cityId: 'porto', destCityId: 'lisboa', goodId: 'wine', qty: 15, reward: 750,
     minRankIndex: 1,
     title: '[항로 개척 1/3] 포도주 15t → 리스본', desc: '리스본 함대 사령부가 남방 항해에 나설 선단에 보급할 포도주를 모으고 있습니다. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
-    acceptLine: '세비야 항구 관리인이 말합니다. "리스본 함대 사령부에서 전갈이 왔네. 남쪽 바다로 나갈 채비를 하는데 포도주가 급하다더군. 여기서 15t을 구해 리스본으로 가져다 주게."' },
+    acceptLine: '포르투 항구 관리인이 말합니다. "리스본 함대 사령부에서 전갈이 왔네. 남쪽 바다로 나갈 채비를 하는데 포도주가 급하다더군. 여기서 15t을 구해 리스본으로 가져다 주게."' },
   { id: 'chain_africa_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_barbary_elite', reward: 1300,
     requires: 'chain_africa_delivery',
     title: '[항로 개척 2/3] 바르바리 해적 사령선 토벌', desc: '보급은 끝났지만, 남쪽 항로 어귀에 바르바리 해적 사령선이 버티고 있어 선단이 나설 수 없습니다. 먼저 처치해주십시오.',
@@ -81,10 +81,10 @@ const STATIC_QUESTS = [
     arriveLine: '거친 파도를 넘어 마침내 카나리아 제도, 라스팔마스 항에 닻을 내렸습니다. 뒤돌아본 수평선 너머로 유럽 해안선은 이미 보이지 않습니다 — 이제부터는 미지의 바다입니다.' },
 
   // -- 2) 신대륙 항로: 런던 ↔ 리스본 주석 보급 → 카리브의 유령호 토벌 → 아조레스 제도 항해
-  { id: 'chain_newworld_delivery', type: 'delivery', cityId: 'london', destCityId: 'lisboa', goodId: 'tin', qty: 12, reward: 700,
+  { id: 'chain_newworld_delivery', type: 'delivery', cityId: 'bristol', destCityId: 'lisboa', goodId: 'tin', qty: 12, reward: 700,
     minRankIndex: 2,
     title: '[항로 개척 1/3] 주석 12t → 리스본', desc: '리스본 조선소가 대서양 횡단 선단의 선체 보강용 주석을 기다리고 있습니다. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
-    acceptLine: '런던 항구 관리인이 말합니다. "리스본에서 전갈이 왔네. 대서양을 건널 선단의 선체 보강에 주석이 필요하다더군. 여기서 12t을 구해 리스본으로 가져다 주게."' },
+    acceptLine: '브리스톨 항구 관리인이 말합니다. "리스본에서 전갈이 왔네. 대서양을 건널 선단의 선체 보강에 주석이 필요하다더군. 여기서 12t을 구해 리스본으로 가져다 주게."' },
   { id: 'chain_newworld_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_caribbean', reward: 1000,
     requires: 'chain_newworld_delivery',
     title: '[항로 개척 2/3] 해적선 카리브의 유령호 토벌', desc: '카리브해에 출몰하는 해적선 카리브의 유령호가 신대륙 항로 어귀를 떠돌고 있다는 첩보입니다. 처치해주십시오.',
@@ -139,10 +139,10 @@ const STATIC_QUESTS = [
   // routePrereq로 그 항로가 먼저 열려 있을 것을 요구한다(도착지 자체가 그 항로 안에 있다).
 
   // -- 4) 바스코 다가마 헌정 원정: 포르투 ↔ 리스본 정향 보급 → 말라바르 해협의 검은돛대호 토벌 → 캘리컷 항해
-  { id: 'chain_dagama_delivery', type: 'delivery', cityId: 'sevilla', destCityId: 'lisboa', goodId: 'clove', qty: 10, reward: 800,
+  { id: 'chain_dagama_delivery', type: 'delivery', cityId: 'zanzibar', destCityId: 'lisboa', goodId: 'clove', qty: 10, reward: 800,
     minRankIndex: 3, routePrereq: 'indian_ocean',
     title: '[명사 의뢰 1/3] 정향 10t → 리스본', desc: '늙은 항해가 바스코 다가마 제독이 처음 캘리컷에 닿았던 항로를 다시 한번 밟아보고 싶어합니다. 원정 물자로 정향을 모아주십시오. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
-    acceptLine: '세비야 항구 관리인이 말합니다. "리스본에 계신 다가마 제독께서 마지막으로 캘리컷 항로를 다시 밟고 싶다 하시더군. 원정에 쓸 정향을 좀 구해다 드리게."' },
+    acceptLine: '잔지바르 항구 관리인이 말합니다. "리스본에 계신 다가마 제독께서 마지막으로 캘리컷 항로를 다시 밟고 싶다 하시더군. 원정에 쓸 정향을 좀 구해다 드리게."' },
   { id: 'chain_dagama_bounty', type: 'bounty', cityId: 'lisboa', targetId: 'pirate_elite_malabar_route', reward: 1400,
     requires: 'chain_dagama_delivery',
     title: '[명사 의뢰 2/3] 말라바르 해협의 검은돛대호 토벌', desc: '캘리컷 앞바다에 눌러앉은 해적선이 다가마 제독의 원정로를 위협하고 있습니다. 제독의 안전을 위해 먼저 처치해주십시오.',
@@ -154,10 +154,10 @@ const STATIC_QUESTS = [
     arriveLine: '캘리컷 해안에 닻을 내리자 뱃사람들 사이에서 짧은 함성이 터져나옵니다. 다가마 제독이 처음 이곳에 닿은 지 오랜 세월이 지났지만, 그가 열어젖힌 항로는 오늘도 여전히 살아 있습니다.' },
 
   // -- 5) 프랑스 왕실함대 헌정 원정: 보르도 ↔ 마르세유 설탕 보급 → 대서양의 사략선 검은백합호 토벌 → 퀘벡 항해
-  { id: 'chain_soleil_delivery', type: 'delivery', cityId: 'bordeaux', destCityId: 'marseille', goodId: 'sugar', qty: 18, reward: 850,
+  { id: 'chain_soleil_delivery', type: 'delivery', cityId: 'bordeaux', destCityId: 'marseille', goodId: 'wine', qty: 18, reward: 850,
     minRankIndex: 3, routePrereq: 'new_world',
-    title: '[명사 의뢰 1/3] 설탕 18t → 마르세유', desc: '마르세유에 정박한 왕실함대 솔레유 루아얄호가 신대륙 원정을 준비하며 물자를 모으고 있습니다. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
-    acceptLine: '보르도 항구 관리인이 말합니다. "마르세유의 왕실함대에서 전갈이 왔네. 태양왕의 이름으로 신대륙까지 원정을 떠난다는데, 그 채비에 설탕이 필요하다더군."' },
+    title: '[명사 의뢰 1/3] 포도주 18t → 마르세유', desc: '마르세유에 정박한 왕실함대 솔레유 루아얄호가 신대륙 원정을 준비하며 물자를 모으고 있습니다. (화물칸이 부족하다면 가진 교역품을 먼저 처분하십시오)',
+    acceptLine: '보르도 항구 관리인이 말합니다. "마르세유의 왕실함대에서 전갈이 왔네. 태양왕의 이름으로 신대륙까지 원정을 떠난다는데, 그 채비에 포도주가 필요하다더군."' },
   { id: 'chain_soleil_bounty', type: 'bounty', cityId: 'marseille', targetId: 'pirate_elite_atlantic_crossing', reward: 1500,
     requires: 'chain_soleil_delivery',
     title: '[명사 의뢰 2/3] 대서양의 사략선 검은백합호 토벌', desc: '대서양 항로 한복판에 왕실함대의 원정을 노리는 사략선이 도사리고 있습니다. 함대가 출항하기 전에 처치해주십시오.',

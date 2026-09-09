@@ -333,6 +333,36 @@ export function findOrigin(goodId) {
   return bestCity;
 }
 
+// ---- 원산지 기준 구매 제한 ----
+// 리스본 같은 중계 무역항이 향신료 원산지도 아니면서 싸게 "파는"(=플레이어가 사는) 문제가
+// 있었다 — 실제로는 인도양·동남아 등 진짜 산지에서 사서 유럽으로 실어 날라야 이문이 남는
+// 구조였는데, 모든 큰 항구가 웬만한 품목을 다 취급해 버리니 "멀리 가서 사 온다"는 핵심 무역
+// 루프가 무의미해졌다. 이제 각 품목마다 실제로 가장 싼(=원산지) 가격의 +30% 이내인 항구만
+// "이 품목의 원산지 권역"으로 인정해 구매를 허용한다(한 품목에 여러 실제 산지가 있었던
+// 경우 — 후추의 아체/캘리컷처럼 — 를 반영하기 위한 여유폭). 이 범위 밖 항구는 그 품목을
+// 매입가로 사들일 수 없고, 판매(플레이어가 실어온 걸 파는 것)는 어디서든 그대로 가능하다 —
+// "원산지에서 사서 먼 곳에 판다"는 거리 프리미엄의 핵심 루프는 그대로 유지된다.
+const ORIGIN_BUY_TOLERANCE = 0.30;
+let originSetCache = null;
+function originCitySet(goodId) {
+  if (!originSetCache) originSetCache = {};
+  if (goodId in originSetCache) return originSetCache[goodId];
+  let bestBuy = Infinity;
+  const listings = [];
+  for (const [cid, market] of Object.entries(CITY_MARKET)) {
+    const p = market[goodId];
+    if (p) { listings.push([cid, p.buy]); if (p.buy < bestBuy) bestBuy = p.buy; }
+  }
+  const threshold = bestBuy * (1 + ORIGIN_BUY_TOLERANCE);
+  const set = new Set(listings.filter(([, buy]) => buy <= threshold).map(([cid]) => cid));
+  originSetCache[goodId] = set;
+  return set;
+}
+
+export function isOriginCity(cityId, goodId) {
+  return originCitySet(goodId).has(cityId);
+}
+
 function distancePremium(cityId, goodId) {
   const origin = findOrigin(goodId);
   if (!origin || origin === cityId) return 0;
@@ -377,12 +407,16 @@ export function getMarketRows(cityId) {
     const pct = Math.round(dynMul * 100);
     const trend = pct > 100 ? 'up' : pct < 100 ? 'down' : 'flat';
     const stock = getStockInfo(cityId, goodId);
-    return { good: getGood(goodId), price: { buy: effBuy, sell: effSell }, heldQty: held ? held.qty : 0, trend, pct, stock };
+    return { good: getGood(goodId), price: { buy: effBuy, sell: effSell }, heldQty: held ? held.qty : 0, trend, pct, stock, canBuy: isOriginCity(cityId, goodId) };
   });
 }
 
 export function buyGood(cityId, goodId, qty) {
   if (!CITY_MARKET[cityId]?.[goodId]) return { ok: false, reason: '이 도시에서는 거래할 수 없는 품목입니다.' };
+  if (!isOriginCity(cityId, goodId)) {
+    const originCity = getCity(findOrigin(goodId));
+    return { ok: false, reason: `이곳은 ${getGood(goodId).name}의 원산지가 아닙니다.${originCity ? ` (원산지: ${originCity.name})` : ''}` };
+  }
   let remaining = Math.max(0, qty);
   let totalQty = 0, totalCost = 0;
   while (remaining > 0) {

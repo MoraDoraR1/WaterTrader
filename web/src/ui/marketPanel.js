@@ -4,7 +4,7 @@ import { hud } from './hud.js';
 import { getCity } from '../data/cities.js';
 import { COUNTRY_NAMES } from '../data/ships.js';
 import { CITY_MARKET, getGood, GOOD_CATEGORY_LABELS } from '../data/goods.js';
-import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed, isBarterCity, barterGoods, goodValue, formatCityEventBadge, findOrigin } from '../systems/market.js';
+import { getMarketRows, buyGood, sellGood, getCargoCapacity, getCargoUsed, isBarterCity, barterGoods, goodValue, formatCityEventBadge, findOrigin, isOriginCity } from '../systems/market.js';
 import { getReputation } from '../systems/quests.js';
 import { itemTip } from './tooltip.js';
 
@@ -30,20 +30,23 @@ function renderMarket(cityId) {
   // 항해일자 5일 사이클로 지금 몇 %인지를 그대로 보여준다(systems/market.js의 pct).
   const trendColor = { up: '#e0645a', down: '#6fc8e0', flat: '#9fb8c9' };
   const trendArrow = { up: '▲', down: '▼', flat: '' };
-  const rows = getMarketRows(cityId).map(({ good, price, heldQty, trend, pct, stock }) => {
+  const rows = getMarketRows(cityId).map(({ good, price, heldQty, trend, pct, stock, canBuy }) => {
     const marginPct = Math.round((price.sell / good.basePrice - 1) * 100);
     const marginLabel = ` · 기준가대비 ${marginPct >= 0 ? '+' : ''}${marginPct}%`;
     const cycleLabel = ` · <span style="color:${trendColor[trend]}">시세 ${pct}% ${trendArrow[trend]}</span>`;
     const stockLabel = stock.qty > 0
       ? ` · <span style="color:${stock.qty <= 15 ? '#e0645a' : '#9fb8c9'}">재고 ${stock.qty}t</span>`
       : ` · <span style="color:#e0645a">품절 (${stock.resetInDays}일 후 재입고)</span>`;
+    // 원산지가 아닌 항구에서는 이 품목을 살 수 없다 — 플레이어가 실어온 걸 파는(sellGood) 건
+    // 어디서든 그대로 되지만, 매입(buyGood)만 원산지 권역 항구로 제한한다.
+    const originLabel = canBuy ? '' : ` · <span style="color:#9a8a6a">원산지 아님(구매 불가)</span>`;
     return {
       name: goodTip(good),
-      sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${cycleLabel}${marginLabel}${stockLabel}`,
+      sub: `매입가 ${price.buy} · 매도가 ${price.sell} 두캇/t · 보유 ${heldQty}t${cycleLabel}${marginLabel}${stockLabel}${originLabel}`,
       actions: [
         {
-          label: `${STEP}t 구매`,
-          disabled: stock.qty <= 0,
+          label: canBuy ? `${STEP}t 구매` : '원산지 아님',
+          disabled: !canBuy || stock.qty <= 0,
           onAction: () => {
             const res = buyGood(cityId, good.id, STEP);
             if (res.ok) { hud.toast(`${good.name} ${res.qty}t 구매 (-${res.cost.toLocaleString('ko-KR')} 두캇)`); renderMarket(cityId); }
@@ -109,6 +112,7 @@ function renderBarter(cityId) {
   }];
   for (const goodId of Object.keys(market)) {
     if (goodId === barterGiveGood) continue;
+    if (!isOriginCity(cityId, goodId)) continue; // 물물교환도 결국 이 항구 상인에게서 "사는" 것 — 원산지 품목만 내어준다
     const good = getGood(goodId);
     const qty = Math.min(STEP, heldQty);
     const receiveQty = Math.floor((qty * goodValue(barterGiveGood)) / goodValue(goodId));
