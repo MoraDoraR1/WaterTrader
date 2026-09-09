@@ -317,8 +317,23 @@ export function getCargoUsed() {
 // 후추·포도주 같은 값싼 벌크 상품의 마진률(300%대)이 정향·육두구 같은 진짜 귀중품(60~130%대)
 // 보다 오히려 커지는 역전 현상이 실측으로 확인됐다(가격 밸런스 폴리싱의 의도와 정반대).
 // 배율 기반으로 바꾸면 "비싼 물건일수록 멀리 실어 날랐을 때 절대 이문도 크다"가 자연히 성립한다.
-const DISTANCE_PREMIUM_K = 1.8; // 배율 = K * sqrt(거리) / 100
-const DISTANCE_PREMIUM_MAX_MUL = 3.0; // 아무리 멀어도 원산지 매입가의 이 배수를 넘지 않는다
+//
+// [전체 경제 재점검] 위 배율 자체는 옳았지만, 실제로 매도가를 결정하는 건 그 배율을 "얼마에
+// 곱하느냐"였다 — 예전엔 각 도시의 CITY_MARKET.sell 값(도시별로 따로 손으로 매긴 절대
+// 가격)에 프리미엄을 그냥 더하기만 했다. 이 sell 값 자체는 원산지에서 실제로 얼마나
+// 떨어져 있는지와 무관하게 저장돼 있어서, "카디스에서 산 은을 배로 몇 분 거리인 리스본에
+// 가서 팔면 리스본 자체 시세(74~85) 덕에 t당 순이익 50이 넘는다" 같은 사례가 실측으로
+// 확인됐다(왕복 5분에 시간당 12,000두캇 — 초대형선 값을 한 시간 안에 번다). 원인은 프리미엄
+// 배율이 "그 품목의 절대 최저가 원산지"까지의 거리로만 계산돼, 카디스처럼 원산지 허용
+// 범위(원산지 기준 구매 제한, ORIGIN_BUY_TOLERANCE) 안에 들면서도 소비 도시 바로 옆에 있는
+// "지역 원산지"가 있으면 그 근접성이 전혀 반영되지 않았기 때문이다. 이제 매도가 상한선을
+// "이 도시에서 가장 가까운 원산지(권역 전체 중 최단 거리)"의 매입가 × 거리 배율로 다시
+// 정의해, 원산지가 지척이면(카디스↔리스본처럼) 배율이 거의 1에 머물러 그 자리에서 되파는
+// 것과 다를 바 없어지고, 진짜 먼 항구(원산지 권역 전체가 대륙 밖에 있는 경우)만 배율이
+// 최대치까지 오른다. 도시별 손으로 매긴 sell 값은 이 상한선보다 낮을 때는 그대로 존중되고
+// (기존에 공들여 붙인 지역색은 유지), 상한선을 넘을 때만 깎인다.
+const DISTANCE_PREMIUM_SPAN = 4500; // 이 거리(유닛)의 2배에서 배율이 최댓값에 도달한다(선형)
+const DISTANCE_PREMIUM_MAX_MUL = 3.0; // 아무리 멀어도 "가장 가까운 원산지" 매입가의 이 배수를 넘지 않는다
 
 let originCache = null;
 export function findOrigin(goodId) {
@@ -363,15 +378,43 @@ export function isOriginCity(cityId, goodId) {
   return originCitySet(goodId).has(cityId);
 }
 
-function distancePremium(cityId, goodId) {
-  const origin = findOrigin(goodId);
-  if (!origin || origin === cityId) return 0;
-  const a = getCity(cityId)?.pos, b = getCity(origin)?.pos;
-  if (!a || !b) return 0;
-  const dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
-  const originBuy = CITY_MARKET[origin]?.[goodId]?.buy || 1;
-  const mul = Math.min(DISTANCE_PREMIUM_MAX_MUL, (DISTANCE_PREMIUM_K * Math.sqrt(dist)) / 100);
-  return Math.round(originBuy * mul);
+// 이 도시에서 그 품목의 "가장 가까운 원산지"(원산지 권역 전체 중 최단 거리)를 찾는다 —
+// 단일 최저가 원산지(findOrigin)만 기준으로 삼으면, 지역 원산지가 바로 옆에 있어도
+// 지구 반대편 원산지까지의 거리로 계산돼 근접성이 무시되는 문제가 생긴다.
+let nearestOriginCache = null;
+function nearestOrigin(cityId, goodId) {
+  if (!nearestOriginCache) nearestOriginCache = {};
+  const key = `${cityId}:${goodId}`;
+  if (key in nearestOriginCache) return nearestOriginCache[key];
+  const a = getCity(cityId)?.pos;
+  let result = null;
+  if (a) {
+    if (originCitySet(goodId).has(cityId)) {
+      result = { id: cityId, dist: 0 };
+    } else {
+      let bestId = null, bestDist = Infinity;
+      for (const oid of originCitySet(goodId)) {
+        const b = getCity(oid)?.pos;
+        if (!b) continue;
+        const dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        if (dist < bestDist) { bestDist = dist; bestId = oid; }
+      }
+      if (bestId) result = { id: bestId, dist: bestDist };
+    }
+  }
+  nearestOriginCache[key] = result;
+  return result;
+}
+
+// 매도가 상한선 — "가장 가까운 원산지"의 매입가에, 그 거리만큼의 배율(최대 3배)을 곱한 값.
+// 도시별로 손으로 매긴 CITY_MARKET.sell이 이 상한선보다 낮으면 그대로 두고, 넘으면 깎는다.
+function distanceSellCeiling(cityId, goodId) {
+  const nearest = nearestOrigin(cityId, goodId);
+  if (!nearest) return Infinity;
+  const originBuy = CITY_MARKET[nearest.id]?.[goodId]?.buy;
+  if (originBuy == null) return Infinity;
+  const mul = 1 + Math.min(DISTANCE_PREMIUM_MAX_MUL - 1, nearest.dist / DISTANCE_PREMIUM_SPAN);
+  return originBuy * mul;
 }
 
 export function getMarketRows(cityId) {
@@ -384,16 +427,30 @@ export function getMarketRows(cityId) {
     const dynMul = decayedSupplyMul(cityId, goodId) * cycleMul(cityId, goodId) * eventMul;
     const effBuy = Math.max(1, Math.round(price.buy * (1 - f * REP_PRICE_EFFECT_MAX) * dynMul));
     const myShipDef = getShip(state.currentShipId);
-    // 장거리 물류/신항로 개척 스킬은 거리 프리미엄 자체를 키워준다(멀리서 실어온 물건일수록
-    // 이 배로는 더 큰 웃돈이 붙는다). 능숙한 흥정 스킬은 매도가 전체에 고정 배율로 붙는다.
-    // 신항로 정보통(선장 개인 액티브 스킬)이 켜져 있으면 거리 프리미엄에 추가로 곱해진다.
-    const premium = distancePremium(cityId, goodId) * mulSkillEffect(myShipDef, 'distancePremiumMul', 1)
-      * buffMul('distancePremiumMul', 1);
-    // 거리 프리미엄도 dynMul(공급/수요 압박 + 항해일자 사이클)에 함께 물린다 — 예전엔 프리미엄을
-    // dynMul 적용 "이후"에 더해서 아무리 대량으로 팔아 시세를 짓눌러도 프리미엄만큼은 절대 안
-    // 깎이는 구멍이 있었다(실측: 팔면 팔수록 마진률이 바닥을 쳐야 하는데 79→67로 15%밖에 안 빠짐).
+    // 도시별로 손으로 매긴 매도가(price.sell)를 "가장 가까운 원산지" 기준 거리 상한선으로
+    // 눌러준다 — 원산지가 지척이면 상한선이 매입가에 거의 붙어 그 자리에서 되파는 것과
+    // 다를 바 없어지고(카디스↔리스본 은괴처럼 짧은 왕복으로 초대형선 값을 몇 판 만에 버는
+    // 문제를 원천 차단), 원산지 권역 전체가 정말 멀면 상한선도 그만큼 높아 기존의 지역색
+    // 있는 시세를 그대로 존중한다. 장거리 물류/신항로 개척 스킬은 이 상한선의 "원산지
+    // 매입가를 웃도는 부분"만 키워준다(멀리서 실어온 물건일수록 이 배로는 더 큰 웃돈이
+    // 붙되, 원산지 코앞에서까지 그 보너스가 발동하진 않는다).
+    const ceiling = distanceSellCeiling(cityId, goodId);
+    let cappedSell = Math.min(price.sell, ceiling);
+    if (Number.isFinite(ceiling)) {
+      const nearest = nearestOrigin(cityId, goodId);
+      const originBuy = nearest ? CITY_MARKET[nearest.id]?.[goodId]?.buy : null;
+      if (originBuy != null && ceiling > originBuy) {
+        const boostedCeiling = originBuy + (ceiling - originBuy)
+          * mulSkillEffect(myShipDef, 'distancePremiumMul', 1) * buffMul('distancePremiumMul', 1);
+        cappedSell = Math.min(price.sell, boostedCeiling);
+      }
+    }
+    // dynMul(공급/수요 압박 + 항해일자 사이클)은 이 상한선 적용 "이후"의 값에 곱해야 한다 —
+    // 예전엔 프리미엄을 dynMul 적용 이후에 더해서, 아무리 대량으로 팔아 시세를 짓눌러도
+    // 프리미엄만큼은 절대 안 깎이는 구멍이 있었다(실측: 팔면 팔수록 마진률이 바닥을 쳐야
+    // 하는데 79→67로 15%밖에 안 빠짐).
     // 흥정술(선장 개인 액티브 스킬)이 켜져 있으면 매도가 전체에 추가로 곱해진다.
-    const rawSell = Math.max(1, Math.round((price.sell + premium) * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul
+    const rawSell = Math.max(1, Math.round(cappedSell * (1 + f * REP_PRICE_EFFECT_MAX) * dynMul
       * mulSkillEffect(myShipDef, 'sellPriceMul', 1) * buffMul('sellPriceMul', 1)));
     // 원산지에서 먼 도시일수록 거리 프리미엄이 매도가에 크게 붙는데, 평판 보너스·흥정 계열
     // 스킬·칭호까지 겹치면 그 프리미엄이 "이 도시 자신의" 매입가마저 넘어서는 경우가 생겼다
