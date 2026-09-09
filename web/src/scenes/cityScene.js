@@ -1,6 +1,5 @@
 import { Vec2, clamp } from '../util/math2d.js';
 import { Camera2D, IsoProjection } from '../render/canvas2d.js';
-import { characterSprite } from '../render/pixelSprites.js';
 import { getCharacterImage } from '../render/characterAssets.js';
 import { CharacterController } from '../entities/characterController.js';
 import { getCity, NPC_ROLE_COLORS, NPC_ROLE_LABELS } from '../data/cities.js';
@@ -717,6 +716,40 @@ export class CityScene {
     for (const d of drawables) d.draw();
   }
 
+  _drawFallbackCharacter(ctx, p, height, outfit, gender) {
+    // 생성 이미지가 첫 프레임에 아직 디코딩되지 않았을 때만 보이는 벡터 폴백.
+    // 작은 비트맵을 확대하지 않고 현재 고해상도 컨텍스트에서 곡선으로 직접 그린다.
+    const s = height / 39;
+    const footY = p.y + 2 * s;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#3a2b23';
+    ctx.lineWidth = 2.1 * s;
+    ctx.beginPath();
+    ctx.moveTo(p.x - 2.2 * s, footY - 10 * s); ctx.lineTo(p.x - 2.8 * s, footY);
+    ctx.moveTo(p.x + 2.2 * s, footY - 10 * s); ctx.lineTo(p.x + 2.8 * s, footY);
+    ctx.stroke();
+
+    ctx.fillStyle = outfit || '#315d78';
+    ctx.beginPath();
+    ctx.moveTo(p.x - 5.5 * s, footY - 25 * s);
+    ctx.quadraticCurveTo(p.x, footY - 29 * s, p.x + 5.5 * s, footY - 25 * s);
+    ctx.lineTo(p.x + (gender === 'female' ? 7 : 5) * s, footY - 9 * s);
+    ctx.quadraticCurveTo(p.x, footY - 6 * s, p.x - (gender === 'female' ? 7 : 5) * s, footY - 9 * s);
+    ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle = '#c89472'; ctx.lineWidth = 2 * s;
+    ctx.beginPath(); ctx.moveTo(p.x - 4.8 * s, footY - 23 * s); ctx.lineTo(p.x - 7 * s, footY - 13 * s);
+    ctx.moveTo(p.x + 4.8 * s, footY - 23 * s); ctx.lineTo(p.x + 7 * s, footY - 13 * s); ctx.stroke();
+
+    const skin = ctx.createRadialGradient(p.x - 1.5 * s, footY - 33 * s, 0, p.x, footY - 31 * s, 6 * s);
+    skin.addColorStop(0, '#efc4a0'); skin.addColorStop(1, '#b87958');
+    ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(p.x, footY - 31 * s, 5.2 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a211d';
+    ctx.beginPath(); ctx.arc(p.x, footY - 33 * s, 5.4 * s, Math.PI, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   _drawNpc(ctx, w, h, o) {
     const p = this.iso.toScreen(this.camera, o.pos.x, o.pos.y, w, h);
     const roleColor = NPC_ROLE_COLORS[o.npc.role] || '#999';
@@ -731,10 +764,8 @@ export class CityScene {
       const spriteWidth = spriteHeight * (generated.naturalWidth / generated.naturalHeight);
       ctx.drawImage(generated, p.x - spriteWidth / 2, p.y - spriteHeight + 4 * this.camera.zoom, spriteWidth, spriteHeight);
     } else {
-      const sprite = characterSprite(o.gender, roleColor, this.layout.hanok, o.npc.role);
-      const scale = this.camera.zoom * 2.25;
-      spriteHeight = sprite.height * scale;
-      ctx.drawImage(sprite, p.x - (sprite.width * scale) / 2, p.y - spriteHeight + 4, sprite.width * scale, spriteHeight);
+      spriteHeight = 36 * this.camera.zoom;
+      this._drawFallbackCharacter(ctx, p, spriteHeight, roleColor, o.gender);
     }
     ctx.fillStyle = 'rgba(20,14,8,0.75)';
     ctx.font = '8px sans-serif';
@@ -764,9 +795,7 @@ export class CityScene {
       ctx.drawImage(generated, -spriteWidth / 2, cp.y - spriteHeight + 4 * this.camera.zoom, spriteWidth, spriteHeight);
       ctx.restore();
     } else {
-      const sprite = characterSprite(state.gender, null, this.layout.hanok);
-      const scale = this.camera.zoom * 2.35;
-      ctx.drawImage(sprite, cp.x - sprite.width * scale / 2, cp.y - sprite.height * scale + 4, sprite.width * scale, sprite.height * scale);
+      this._drawFallbackCharacter(ctx, cp, 39 * this.camera.zoom, state.gender === 'female' ? '#713f5d' : '#315d78', state.gender);
     }
   }
 }

@@ -3,7 +3,7 @@
 ## Art direction
 
 - **Period:** late 16th to early 17th century maritime trade. Materials should feel handmade, weathered, and local rather than modern or industrial.
-- **Readability:** retain the current 480×270 logical canvas and isometric camera. Silhouettes, value contrast, and role colours must remain readable at game scale.
+- **Readability:** retain the current 480×270 logical coordinate system and isometric camera, but render into a display-resolution backing canvas with high-quality smoothing. Silhouettes, value contrast, and role colours must remain readable at game scale.
 - **Detail hierarchy:** large regional colour blocks first, architecture and shoreline second, props and material marks last. Decorative detail must not obscure navigation or interaction prompts.
 
 ## Sea and land
@@ -32,13 +32,13 @@ City layouts keep their gameplay positions but gain deterministic roads, paving,
 ## Characters
 
 - Replace the 10×12 procedural figures with transparent illustrated sprites drawn at **at least four-head-tall proportions** (comfortably above the requested three heads).
-- Full body, neutral standing pose, three-quarter isometric view, crisp hand-painted/pixel-inspired finish, transparent background, no cast shadow, no lettering.
+- Full body, neutral standing pose, three-quarter isometric view, smooth hand-painted finish, transparent background, no cast shadow, no lettering.
 - Two genders for each visual family: player captain, European, Mediterranean/Arabian, East Asian, Korean, and tropical/Southeast Asian.
 - NPC profession remains readable through the existing role-colour ground ring and label. Player orientation uses horizontal mirroring instead of rotating the upright body.
 
 ### Generation prompt set
 
-All 12 cutouts share this base: one full-body character, neutral standing pose, three-quarter isometric view facing slightly right, complete body visible, four heads tall or taller, non-chibi, crisp hand-painted pixel-inspired finish, soft top-left light, transparent background, no floor/shadow/scenery/UI/text/watermark.
+All 12 cutouts share this base: one full-body character, neutral standing pose, three-quarter isometric view facing slightly right, complete body visible, four heads tall or taller, non-chibi, crisp hand-painted finish, soft top-left light, transparent background, no floor/shadow/scenery/UI/text/watermark. Runtime rendering must preserve smooth alpha edges and must not apply nearest-neighbour pixel scaling.
 
 The subject variants are `player_male`, `player_female`, `european_male`, `european_female`, `mediterranean_male`, `mediterranean_female`, `east_asian_male`, `east_asian_female`, `korean_male`, `korean_female`, `tropical_male`, and `tropical_female`. Their clothing descriptions specify historically grounded late-16th/early-17th-century Iberian captain, North Sea guild, Ottoman port, Ming/Japanese port, Joseon, and Southeast Asian maritime dress respectively.
 

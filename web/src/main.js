@@ -1,4 +1,4 @@
-import { LOGICAL_W, LOGICAL_H, PixelSurface } from './render/canvas2d.js';
+import { LOGICAL_W, LOGICAL_H, HighResolutionSurface } from './render/canvas2d.js';
 import { consumeJustPressed, clearFrame } from './controls/keys.js';
 import { SeaScene } from './scenes/seaScene.js';
 import { CityScene } from './scenes/cityScene.js';
@@ -58,12 +58,13 @@ const displayCanvas = document.createElement('canvas');
 displayCanvas.id = 'game-canvas';
 wrap.appendChild(displayCanvas);
 const displayCtx = displayCanvas.getContext('2d');
-const surface = new PixelSurface(LOGICAL_W, LOGICAL_H);
+const surface = new HighResolutionSurface(LOGICAL_W, LOGICAL_H);
 
 function resizeCanvas() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   displayCanvas.width = Math.round(window.innerWidth * dpr);
   displayCanvas.height = Math.round(window.innerHeight * dpr);
+  surface.resizeForDisplay(displayCanvas.width, displayCanvas.height);
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -531,6 +532,7 @@ requestAnimationFrame(animate);
 window.__debug = {
   get seaScene() { return seaScene; },
   get citySceneObj() { return citySceneObj; },
+  get renderSurface() { return { width: surface.canvas.width, height: surface.canvas.height, logicalW: LOGICAL_W, logicalH: LOGICAL_H }; },
   state, notify,
   acceptQuest, turnInDelivery, checkBountyKill, checkVoyageArrival, getQuestStatus, isQuestChainReady,
   checkDiscoveryEvents, checkQuestRespawns, addReputation, openQuestBoard, buyGood, sellGood, getStockInfo, getMarketRows,

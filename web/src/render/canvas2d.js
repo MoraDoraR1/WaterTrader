@@ -1,26 +1,9 @@
-// 2D 픽셀아트 렌더링 공용 인프라.
-// - makeSprite: 작은 오프스크린 캔버스에 한 번만 그려두고 매 프레임 재사용하는 스프라이트 캐시.
+// 고해상도 Canvas2D 렌더링 공용 인프라.
 // - Camera2D: 플레이어를 따라가는 탑뷰 카메라(위치 + 줌). 회전 없음(항상 북쪽이 위).
-// - PixelSurface: "논리 해상도"로 그린 뒤 화면 크기로 확대 블릿해 도트 특유의 계단현상을 낸다.
+// - HighResolutionSurface: 게임 좌표계는 유지하면서 실제 디스플레이 해상도로 렌더링한다.
 
 export const LOGICAL_W = 480;
 export const LOGICAL_H = 270;
-
-export function makeSprite(w, h, draw) {
-  const canvas = document.createElement('canvas');
-  canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  draw(ctx, w, h);
-  return canvas;
-}
-
-const spriteCache = new Map();
-export function cachedSprite(key, w, h, draw) {
-  let s = spriteCache.get(key);
-  if (!s) { s = makeSprite(w, h, draw); spriteCache.set(key, s); }
-  return s;
-}
 
 export class Camera2D {
   constructor() {
@@ -36,20 +19,43 @@ export class Camera2D {
   snapTo(x, y) { this.x = x; this.y = y; }
 }
 
-// 논리 해상도 캔버스를 만들고, 실제 화면 캔버스로 확대(스무딩 없이) 그려주는 헬퍼.
-export class PixelSurface {
+// 480×270 논리 좌표계를 유지하되 백킹 캔버스는 실제 디스플레이 픽셀에 맞춘다.
+// 따라서 게임의 시야·충돌·입력 좌표는 그대로이고, 선·곡선·텍스트·이미지만 고해상도로 그려진다.
+export class HighResolutionSurface {
   constructor(logicalW, logicalH) {
     this.logicalW = logicalW;
     this.logicalH = logicalH;
     this.canvas = document.createElement('canvas');
-    this.canvas.width = logicalW;
-    this.canvas.height = logicalH;
-    this.ctx = this.canvas.getContext('2d');
-    this.ctx.imageSmoothingEnabled = false;
+    this.ctx = null;
+    this.resizeForDisplay(logicalW, logicalH);
   }
+
+  resizeForDisplay(displayW, displayH) {
+    // 초고해상도 모니터에서도 두 캔버스가 과도한 메모리를 점유하지 않도록 약 4K 픽셀 수로 제한한다.
+    const safeW = Math.max(this.logicalW, Math.round(displayW));
+    const safeH = Math.max(this.logicalH, Math.round(displayH));
+    const maxPixels = 3840 * 2160;
+    const fit = Math.min(1, Math.sqrt(maxPixels / (safeW * safeH)));
+    const backingW = Math.max(this.logicalW, Math.round(safeW * fit));
+    const backingH = Math.max(this.logicalH, Math.round(safeH * fit));
+    if (this.canvas.width === backingW && this.canvas.height === backingH && this.ctx) return;
+
+    this.canvas.width = backingW;
+    this.canvas.height = backingH;
+    this.ctx = this.canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = 'high';
+    this.ctx.setTransform(backingW / this.logicalW, 0, 0, backingH / this.logicalH, 0, 0);
+  }
+
   blitTo(displayCtx, dw, dh) {
-    displayCtx.imageSmoothingEnabled = false;
-    displayCtx.drawImage(this.canvas, 0, 0, this.logicalW, this.logicalH, 0, 0, dw, dh);
+    displayCtx.save();
+    displayCtx.setTransform(1, 0, 0, 1, 0, 0);
+    displayCtx.clearRect(0, 0, dw, dh);
+    displayCtx.imageSmoothingEnabled = true;
+    displayCtx.imageSmoothingQuality = 'high';
+    displayCtx.drawImage(this.canvas, 0, 0, this.canvas.width, this.canvas.height, 0, 0, dw, dh);
+    displayCtx.restore();
   }
 }
 
@@ -86,7 +92,7 @@ export class IsoProjection {
     return { x: dx + camera.x, z: dz + camera.y };
   }
   // 월드 heading(순수 탑뷰 기준 회전각)을 이 투영에서 실제로 보이는 화면상 각도로 근사 변환한다.
-  // 스프라이트 자체를 찌그러뜨리지 않고 "회전"만 시켜 근사하는 픽셀아트 아이소메트릭 관례.
+  // 스프라이트 자체를 찌그러뜨리지 않고 회전만 시켜 아이소메트릭 방향을 근사한다.
   facingAngle(heading) {
     const wx = Math.sin(heading), wz = Math.cos(heading);
     const fx = (wx - wz) * this.scaleX;

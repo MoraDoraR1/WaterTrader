@@ -1,6 +1,5 @@
 import { Vec2, clamp, lerp } from '../util/math2d.js';
 import { Camera2D, IsoProjection } from '../render/canvas2d.js';
-import { cityIconSprite } from '../render/pixelSprites.js';
 import { drawShipIso } from '../render/shipIso.js';
 import { ShipController } from '../entities/shipController.js';
 import { worldSizeFor } from '../entities/shipSize.js';
@@ -1665,6 +1664,48 @@ export class SeaScene {
     for (const s of GEOGRAPHY_SITES) draw(s, 'geography', '🗺️');
   }
 
+  _drawHarborBeacon(ctx, p, marker, scale) {
+    const flagColor = COUNTRY_COLORS[marker.country] || '#8f9ba0';
+    ctx.save();
+    ctx.translate(p.x, p.y + 5);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = 'rgba(3,12,17,0.38)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 11, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+
+    const pier = ctx.createLinearGradient(-10, -5, 10, 1);
+    pier.addColorStop(0, '#594a37'); pier.addColorStop(1, '#8a7557');
+    ctx.fillStyle = pier;
+    ctx.beginPath();
+    ctx.moveTo(-11, 0); ctx.lineTo(11, 0); ctx.lineTo(7, -7); ctx.lineTo(-7, -7); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(44,38,29,0.78)'; ctx.lineWidth = 0.9; ctx.stroke();
+
+    const tower = ctx.createLinearGradient(-6, -24, 6, -7);
+    tower.addColorStop(0, '#d8d0bc'); tower.addColorStop(0.5, '#f4efe2'); tower.addColorStop(1, '#b9ab91');
+    ctx.fillStyle = tower;
+    ctx.beginPath();
+    ctx.moveTo(-4.4, -17); ctx.quadraticCurveTo(-5.2, -12, -6.4, -7);
+    ctx.lineTo(6.4, -7); ctx.quadraticCurveTo(5.2, -12, 4.4, -17); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#9e927d'; ctx.stroke();
+
+    ctx.fillStyle = flagColor;
+    ctx.beginPath(); ctx.moveTo(-5.1, -12.5); ctx.lineTo(5.1, -12.5); ctx.lineTo(5.6, -9.2); ctx.lineTo(-5.6, -9.2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#a94837'; ctx.fillRect(-4.8, -19.5, 9.6, 3.2);
+
+    ctx.fillStyle = '#293036'; ctx.beginPath(); ctx.roundRect(-4.7, -24.5, 9.4, 5.4, 1.2); ctx.fill();
+    ctx.shadowColor = '#ffd66c'; ctx.shadowBlur = 8;
+    ctx.fillStyle = '#ffd66c'; ctx.beginPath(); ctx.arc(0, -21.8, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#4d4235';
+    ctx.beginPath(); ctx.moveTo(-6, -24.5); ctx.quadraticCurveTo(0, -30, 6, -24.5); ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle = '#4a3b2d'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(0, -29); ctx.lineTo(0, -34); ctx.lineTo(7, -31.5); ctx.stroke();
+    ctx.fillStyle = flagColor;
+    ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(7, -31.5); ctx.lineTo(0, -29.5); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
   _drawCityMarker(ctx, w, h, marker) {
     const p = this.iso.toScreen(this.camera, marker.pos.x, marker.pos.y, w, h);
     const dockP = this.iso.toScreen(this.camera, marker.dockPos.x, marker.dockPos.y, w, h);
@@ -1695,10 +1736,9 @@ export class SeaScene {
     }
 
     if (p.x < -40 || p.x > w + 40 || p.y < -50 || p.y > h + 40) return;
-    const icon = cityIconSprite(marker.country);
-    // 국가별 대도시는 바다에서도 아이콘을 더 크게 그려 눈에 띄게 한다.
-    const s = marker.capital ? 1.9 : 1.3;
-    ctx.drawImage(icon, p.x - (icon.width * s) / 2, p.y - icon.height * s + 6, icon.width * s, icon.height * s);
+    // 오프스크린 저해상도 비트맵 대신 현재 고해상도 컨텍스트에 등대를 직접 그린다.
+    const s = marker.capital ? 1.35 : 1.05;
+    this._drawHarborBeacon(ctx, p, marker, s);
 
     const city = CITIES.find((candidate) => candidate.id === marker.cityId);
     if (city && (dist < 260 || marker.capital)) {
@@ -1707,7 +1747,7 @@ export class SeaScene {
       ctx.textAlign = 'center';
       const label = marker.capital ? `★ ${city.name}` : city.name;
       const tw = ctx.measureText(label).width;
-      const y = p.y - icon.height * s - 3;
+      const y = p.y - 34 * s;
       ctx.fillStyle = 'rgba(8,24,29,0.76)'; ctx.fillRect(p.x - tw / 2 - 4, y - 8, tw + 8, 11);
       ctx.fillStyle = marker.capital ? '#f2d889' : '#e9e2cc'; ctx.fillText(label, p.x, y);
       ctx.restore();
