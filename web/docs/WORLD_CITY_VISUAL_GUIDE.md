@@ -11,7 +11,9 @@
 - Use three water depths: dark offshore water, saturated mid-water, and pale turquoise shoals around ports. Break up the old checkerboard with moving wave bands, foam dashes, and small sun glints.
 - Coastlines receive a dark wet edge and a light surf edge. Land uses climate-aware overlays: temperate green, Mediterranean ochre/olive, arid sand, tropical deep green, and northern cool moss.
 - The terrain around every visible port inherits its country profile. Small contour marks, scrub, rock, pine, or palm clusters communicate geography without changing collision geometry.
-- Harbor entrances remain visibly open. The usable docking radius increases from 55 to 95 world units and is shown with a soft pulsing harbor halo when the player is close.
+- Harbor entrances remain visibly open. The usable docking radius is 95 world units and is shown with a soft pulsing halo around the water-side docking basin.
+- A city is never represented by a lighthouse or buoy. Its buildings sit on a 30-unit land footprint; a narrow 12-unit half-width channel leads to a separate 22-unit water basin. This replaces the former circular water clearing that visually erased the city land.
+- All 69 city markers are audited against the coastline. Coastal coordinates are nudged to nearby natural land when the low-resolution Natural Earth outline misses the shore; the four small-island omissions receive a local land footprint at their real coordinates.
 
 ## City culture groups
 
@@ -29,12 +31,19 @@
 
 City layouts keep their gameplay positions but gain deterministic roads, paving, façade windows and doors, barrels, crates, stalls, wells/fountains, vegetation, seawalls, layered piers, and harbor water animation. Capitals use denser architecture and richer civic decoration.
 
+Sea-mode city silhouettes use the same eight culture groups. Iberian civic towers, North Sea gables, Mediterranean square towers, Ottoman domes/minarets, tropical raised halls, Chinese red gate roofs, Japanese layered keeps, and Korean hanok eaves provide non-colour recognition at navigation scale.
+
 ## Characters
 
 - Replace the 10×12 procedural figures with transparent illustrated sprites drawn at **at least four-head-tall proportions** (comfortably above the requested three heads).
 - Full body, neutral standing pose, three-quarter isometric view, smooth hand-painted finish, transparent background, no cast shadow, no lettering.
 - Two genders for each visual family: player captain, European, Mediterranean/Arabian, East Asian, Korean, and tropical/Southeast Asian.
 - NPC profession remains readable through the existing role-colour ground ring and label. Player orientation uses horizontal mirroring instead of rotating the upright body.
+- Player movement speed is 10 world units/second (2.17× the former 4.6). Actual displacement drives an alternating lower-body stride, foot lift, bob, and restrained lean; the sprite returns to a whole standing pose after movement stops. Reduced-motion preference disables the extra motion.
+
+## Mouse-operable panels
+
+Dialogue, inventory, world map, ship information, shipyard, skills, titles, compendium, market-family, and quest windows share a persistent 32×32 top-right `×` button with an accessible Korean label. Keyboard shortcuts and Escape remain available.
 
 ### Generation prompt set
 
@@ -50,4 +59,7 @@ Production sprites are normalized to a transparent 144×216 canvas and stored un
 - Sea and land no longer read as flat two-colour tiles, while coast collision remains unchanged.
 - Docking prompt works inside the new 95-unit base radius.
 - NPC and player bodies visibly read as 4-head-tall people at normal zoom and remain upright while moving.
+- The player moves at least twice as fast as the former 4.6 value, visibly cycles through a walk motion during displacement, and stops animating at rest.
+- Lisbon and every other city render as a culture-appropriate settlement on land, with the docking point remaining in water.
+- Every major panel can be closed with a real pointer click on the visible `×` control.
 - Generated character files are embedded in the standalone build; the game still falls back to procedural sprites if an image has not loaded.

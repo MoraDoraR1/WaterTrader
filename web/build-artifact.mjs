@@ -17,7 +17,9 @@ const CHARACTER_IDS = [
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(rootDir, 'dist');
+const pagesDir = resolve(rootDir, '..', 'docs');
 mkdirSync(distDir, { recursive: true });
+mkdirSync(pagesDir, { recursive: true });
 
 const result = await build({
   absWorkingDir: rootDir,
@@ -59,9 +61,11 @@ for (const [assetPath, mime] of imageAssets) {
 }
 
 writeFileSync(resolve(distDir, 'bada-sangin-standalone.html'), html);
+writeFileSync(resolve(pagesDir, 'index.html'), html);
 console.log(
   'artifact built:',
   'dist/bada-sangin-standalone.html',
+  'and docs/index.html',
   (bundleJs.length / 1024).toFixed(0) + 'KB JS',
   `${imageAssets.length + SHIPS.length + CHARACTER_IDS.length} embedded images (${SHIPS.length} ships, ${CHARACTER_IDS.length} characters)`,
 );

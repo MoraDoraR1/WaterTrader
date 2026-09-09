@@ -474,6 +474,10 @@ export const hud = {
     for (const c of cities) {
       const [px, py] = mmToPx(c.x, c.z, w, h);
       if (px < -6 || px > w + 6 || py < -6 || py > h + 6) continue;
+      if (c.syntheticLand) {
+        ctx.fillStyle = '#647950';
+        ctx.beginPath(); ctx.ellipse(px, py, 5.2, 3.8, 0, 0, Math.PI * 2); ctx.fill();
+      }
       ctx.fillStyle = c.color || '#e6c15a';
       ctx.beginPath(); ctx.arc(px, py, 2.8, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.6; ctx.stroke();
@@ -655,11 +659,31 @@ export const hud = {
       if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
       // 국가별 대도시는 마커·글자를 한 단계 키워 지도에서도 눈에 띄게 한다.
       const rOuter = c.capital ? 10 : 7, rInner = c.capital ? 7.5 : 5;
+      // 소축척 해안선에서 생략된 작은 섬은 도시 마커 아래에 지역 지반을 복원한다. 바다 위에
+      // 점 하나만 뜨는 대신, 항구도시가 실제 섬/해안에 놓였다는 관계가 지도에서도 유지된다.
+      if (c.syntheticLand) {
+        ctx.beginPath(); ctx.ellipse(px, py + 1, rOuter + 5, rOuter * 0.72 + 3, -0.08, 0, Math.PI * 2);
+        ctx.fillStyle = '#667d52'; ctx.fill();
+        ctx.strokeStyle = '#91a874'; ctx.lineWidth = 1; ctx.stroke();
+      }
       ctx.beginPath(); ctx.arc(px, py, rOuter, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(10,8,4,0.55)'; ctx.fill();
-      ctx.beginPath(); ctx.arc(px, py, rInner, 0, Math.PI * 2);
-      ctx.fillStyle = c.color || '#e6c15a'; ctx.fill();
-      ctx.strokeStyle = '#f0e6d2'; ctx.lineWidth = c.capital ? 2 : 1.4; ctx.stroke();
+      // 원형 부표 대신 성벽·지붕 실루엣을 사용해 "도시"라는 의미를 형태로도 중복한다.
+      ctx.fillStyle = c.color || '#e6c15a';
+      ctx.beginPath();
+      ctx.moveTo(px - rInner, py + rInner * 0.72);
+      ctx.lineTo(px - rInner, py - rInner * 0.15);
+      ctx.lineTo(px - rInner * 0.62, py - rInner * 0.15);
+      ctx.lineTo(px - rInner * 0.62, py - rInner * 0.72);
+      ctx.lineTo(px - rInner * 0.18, py - rInner * 0.72);
+      ctx.lineTo(px, py - rInner * 1.18);
+      ctx.lineTo(px + rInner * 0.18, py - rInner * 0.72);
+      ctx.lineTo(px + rInner * 0.62, py - rInner * 0.72);
+      ctx.lineTo(px + rInner * 0.62, py - rInner * 0.15);
+      ctx.lineTo(px + rInner, py - rInner * 0.15);
+      ctx.lineTo(px + rInner, py + rInner * 0.72);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#f0e6d2'; ctx.lineWidth = c.capital ? 1.8 : 1.2; ctx.stroke();
       // 대호황(주황 발광 고리)/대폭락(파랑 발광 고리) 도시는 전체지도에서부터 눈에 띄게 —
       // 도킹하지 않고도 "저기 지금 대박이다" 하는 걸 알아채고 항로를 바꿀 수 있게 한다.
       if (c.event && c.event.active) {

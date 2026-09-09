@@ -30,14 +30,6 @@ import { REAL_COASTLINE_LONLAT } from './realCoastlineData.js';
 
 export const LAND_POLYGONS = REAL_COASTLINE_LONLAT.map(projectAll);
 
-// 모든 도시 주변에 배가 항상 안전하게 접근할 수 있는 원형 개방 수역을 보장하는 반경 —
-// 실제 해안선(Natural Earth)을 그대로 쓰면 강 하구 항구(리스본의 테주강 하구 등)는 게임
-// 축척에서 진입로가 배 한 척 겨우 지날 폭으로 좁아진다(지리적으로는 사실이지만 게임플레이로는
-// "육지가 항구를 막고 있다"는 느낌만 준다). 폴리곤 좌표 자체를 깎는 대신(복잡한 만 지형에서
-// 변이 스스로 교차하는 등 부작용 위험이 크다) seaScene.js가 이 반경 안을 충돌 판정·렌더링
-// 양쪽에서 통째로 "항상 바다"로 취급해 도시마다 확실히 열린 만을 보장한다.
-export const HARBOR_CLEAR_RADIUS = 60; // 도시 간 최소 거리(125유닛)의 절반 미만이라 서로 겹치지 않는다.
-
 // 레이 캐스팅 알고리즘 기반 점-폴리곤 내부 판정 (x,z 평면)
 export function pointInPolygon(x, z, poly) {
   let inside = false;

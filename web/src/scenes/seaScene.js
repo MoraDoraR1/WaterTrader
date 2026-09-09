@@ -16,7 +16,11 @@ import { mulSkillEffect, sumSkillEffect } from '../data/shipSkills.js';
 import { PLAYER_SKILLS } from '../data/playerSkills.js';
 import { gainSkillExp, getSkillLevel, buffMul, buffAdd, castSkill, isLearned } from '../systems/skills.js';
 import { CITIES } from '../data/cities.js';
-import { LAND_POLYGONS, pointOnAnyLand, project, HARBOR_CLEAR_RADIUS } from '../data/coastline.js';
+import { LAND_POLYGONS, pointOnAnyLand, project } from '../data/coastline.js';
+import {
+  CITY_MOUND_RADIUS, HARBOR_CHANNEL_HALF_WIDTH, HARBOR_BASIN_RADIUS,
+  computeCityMarkers, isPointInHarborChannel, cityMarkerStyle,
+} from '../render/seaCityVisuals.js';
 import { seaRegionAt, getSeaLockBucket } from '../data/seaRegions.js';
 import { SEA_NPC_SHIPS, NAVY_RESPONDER_SHIP_BY_REGION } from '../data/seaEntities.js';
 import { isDown, consumeJustPressed } from '../controls/keys.js';
@@ -139,8 +143,8 @@ export class SeaScene {
     this._lightningFlash = 0; // 벼락 발동 순간의 백색 스크린 플래시 잔여 강도(1→0으로 감쇠)
     this._lightningBolt = null; // 화면에 그릴 번개 줄기(짧은 수명의 지그재그 선)
 
-    this.moundColliders = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], r: 30 }));
-    this.cityMarkers = this._computeCityMarkers();
+    this.cityMarkers = computeCityMarkers(CITIES);
+    this.moundColliders = this.cityMarkers.map((marker) => ({ x: marker.pos.x, z: marker.pos.y, r: CITY_MOUND_RADIUS }));
 
     if (!state.shipHp) initShipHp();
     if (state.crewCount == null) initCrewCount();
@@ -185,7 +189,11 @@ export class SeaScene {
     hud.initThrottle(-3, 5);
 
     hud.initMinimap(LAND_POLYGONS);
-    this.minimapCities = CITIES.map((c) => ({ x: c.pos[0], z: c.pos[1], color: COUNTRY_COLORS[c.country] || '#e6c15a' }));
+    this.minimapCities = this.cityMarkers.map((marker) => ({
+      x: marker.pos.x, z: marker.pos.y,
+      color: COUNTRY_COLORS[marker.country] || '#e6c15a',
+      syntheticLand: marker.syntheticLand,
+    }));
     this.waypoint = null;
   }
 
@@ -530,66 +538,12 @@ export class SeaScene {
     return buffAdd(key, base);
   }
 
-  // 실제 해안선(coastline.js)을 검사해 "확실히 뭍이 아닌" 방향으로 정박지를 찾는다 — 3D 시절과
-  // 동일한 알고리즘(메시 생성 부분만 제거).
-  _computeCityMarkers() {
-    const cx = CITIES.reduce((s, c) => s + c.pos[0], 0) / CITIES.length;
-    const cz = CITIES.reduce((s, c) => s + c.pos[1], 0) / CITIES.length;
-    const moundRadius = 27, pierLen = 19;
-    const MOUND_COLLIDER_R = 30;
-    const baseDockDist = moundRadius * 0.7 + pierLen * 0.9;
-    const ANGLE_STEP = (Math.PI * 2) / 64;
-    const ANGLE_OFFSETS = [0];
-    for (let i = 1; i <= 32; i++) ANGLE_OFFSETS.push(i * ANGLE_STEP, -i * ANGLE_STEP);
-
-    const markers = [];
-    for (const city of CITIES) {
-      let hx = city.pos[0] - cx, hz = city.pos[1] - cz;
-      const hlen = Math.hypot(hx, hz) || 1;
-      hx /= hlen; hz /= hlen;
-      const heuristicAngle = Math.atan2(hx, hz);
-
-      const clearOfLandAndMounds = (px, pz) => {
-        // 항구 반경 안은 항상 열린 바다로 친다 — 그래야 도킹 지점 탐색이 실제 해안선의
-        // 좁은 하구 모양에 휘둘리지 않고 도시 바로 앞의 넉넉한 만에서 곧장 자리를 찾는다.
-        if (!this._isInHarborClearance(px, pz) && pointOnAnyLand(px, pz)) return false;
-        for (const c2 of CITIES) {
-          const dx = px - c2.pos[0], dz = pz - c2.pos[1];
-          if (dx * dx + dz * dz < MOUND_COLLIDER_R * MOUND_COLLIDER_R) return false;
-        }
-        return true;
-      };
-      const isOpenSeaward = (angle, dist) => {
-        const ox = -Math.sin(angle), oz = -Math.cos(angle);
-        if (!clearOfLandAndMounds(city.pos[0] + ox * dist, city.pos[1] + oz * dist)) return false;
-        return clearOfLandAndMounds(city.pos[0] + ox * (dist + 18), city.pos[1] + oz * (dist + 18));
-      };
-      let outAngle = null, outDist = baseDockDist;
-      for (let ring = baseDockDist; ring <= baseDockDist + 260 && outAngle === null; ring += 6) {
-        for (const off of ANGLE_OFFSETS) {
-          if (isOpenSeaward(heuristicAngle + off, ring)) { outAngle = heuristicAngle + off; outDist = ring; break; }
-        }
-      }
-      if (outAngle === null) outAngle = heuristicAngle;
-      const dirX = Math.sin(outAngle), dirZ = Math.cos(outAngle);
-      markers.push({
-        cityId: city.id,
-        pos: new Vec2(city.pos[0], city.pos[1]),
-        dockPos: new Vec2(city.pos[0] - dirX * outDist, city.pos[1] - dirZ * outDist),
-        country: city.country,
-        capital: !!city.capital,
-      });
-    }
-    return markers;
-  }
-
   _isBlocked(x, z) {
     // 아직 해금되지 않은 원양 항로는 항구 반경 예외보다도 우선한다 — 잠긴 항로 안의 항구를
     // 근해 우회로 슬쩍 정박하는 일이 없도록, 육지처럼 아예 못 들어가는 벽으로 막는다.
     if (!isRouteUnlocked(getSeaLockBucket(x, z))) return true;
-    // 항구 반경(HARBOR_CLEAR_RADIUS) 안은 실제 해안선 모양과 무관하게 항상 바다로 취급한다
-    // (테주강 하구의 리스본처럼, 실제 해안선을 그대로 쓰면 진입로가 배 한 척 폭으로 좁아지는
-    // 항구가 있다 — 대신 도시 정중앙(moundColliders)만은 여전히 배가 못 들어가게 막는다).
+    // 도시 전체를 원형 바다로 지우지 않고, 도시에서 실제 정박점까지 이어지는 좁은 항구 수로와
+    // 정박 분지만 통항 가능하게 연다. 도시 지반은 항상 충돌 지형으로 남는다.
     if (this._isInHarborClearance(x, z)) {
       for (const m of this.moundColliders) {
         const dx = x - m.x, dz = z - m.z;
@@ -633,11 +587,7 @@ export class SeaScene {
   }
 
   _isInHarborClearance(x, z) {
-    for (const c of CITIES) {
-      const dx = x - c.pos[0], dz = z - c.pos[1];
-      if (dx * dx + dz * dz < HARBOR_CLEAR_RADIUS * HARBOR_CLEAR_RADIUS) return true;
-    }
-    return false;
+    return this.cityMarkers.some((marker) => isPointInHarborChannel(x, z, marker));
   }
 
   _findNearestCityMarker() {
@@ -1555,40 +1505,62 @@ export class SeaScene {
     }
   }
 
-  // _isBlocked()가 항구 반경 안을 항상 바다로 취급하는 것과 시각적으로 맞추기 위해, 그
-  // 반경 안에 걸린 육지 위에 바닷물색 원을 덧그려 실제로 열린 만처럼 보이게 한다(등각
-  // 투영이라 원이 화면에선 회전된 타원으로 보이므로, 월드 원을 여러 점으로 샘플링해
-  // 각각 화면 좌표로 옮긴 다각형으로 그린다).
+  // 해안 전체를 원형 바다로 지우던 표현은 도시를 바다 위 등대로 보이게 만들었다. 이제 충돌
+  // 판정과 동일하게, 도시 지반에서 정박 분지까지 이어지는 좁은 수로만 바다로 그린다.
   _drawHarborClearings(ctx, w, h) {
-    const SEGMENTS = 28;
-    for (const city of CITIES) {
-      const center = this.iso.toScreen(this.camera, city.pos[0], city.pos[1], w, h);
-      const approxR = HARBOR_CLEAR_RADIUS * this.iso.scaleX;
-      if (center.x < -approxR - 20 || center.x > w + approxR + 20 || center.y < -approxR - 20 || center.y > h + approxR + 20) continue;
-      const drawDisc = (radius, fill, stroke = null) => {
-        ctx.fillStyle = fill;
-        if (stroke) ctx.strokeStyle = stroke;
-        ctx.beginPath();
-        for (let i = 0; i <= SEGMENTS; i++) {
-          const a = (i / SEGMENTS) * Math.PI * 2;
-          const wx = city.pos[0] + Math.sin(a) * radius;
-          const wz = city.pos[1] + Math.cos(a) * radius;
-          const p = this.iso.toScreen(this.camera, wx, wz, w, h);
-          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-        }
-        ctx.closePath(); ctx.fill();
-        if (stroke) { ctx.lineWidth = 1.1; ctx.stroke(); }
-      };
-      drawDisc(HARBOR_CLEAR_RADIUS + 10, '#165a70');
-      drawDisc(HARBOR_CLEAR_RADIUS, WATER_LIGHT, 'rgba(190,224,217,0.48)');
+    const polygon = (points, fill, stroke = null, lineWidth = 1) => {
+      ctx.beginPath();
+      points.forEach(([x, z], index) => {
+        const p = this.iso.toScreen(this.camera, x, z, w, h);
+        if (index === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.fillStyle = fill; ctx.fill();
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
+    };
+    const disc = (x, z, radius, fill, stroke = null) => {
+      const points = [];
+      for (let i = 0; i < 28; i++) {
+        const angle = (i / 28) * Math.PI * 2;
+        points.push([x + Math.sin(angle) * radius, z + Math.cos(angle) * radius]);
+      }
+      polygon(points, fill, stroke, 1);
+    };
 
-      ctx.strokeStyle = 'rgba(190,230,228,0.42)';
+    for (const marker of this.cityMarkers) {
+      const cityP = this.iso.toScreen(this.camera, marker.pos.x, marker.pos.y, w, h);
+      const dockP = this.iso.toScreen(this.camera, marker.dockPos.x, marker.dockPos.y, w, h);
+      if ((cityP.x < -160 || cityP.x > w + 160 || cityP.y < -120 || cityP.y > h + 120)
+        && (dockP.x < -160 || dockP.x > w + 160 || dockP.y < -120 || dockP.y > h + 120)) continue;
+
+      const dx = marker.dockPos.x - marker.pos.x;
+      const dz = marker.dockPos.y - marker.pos.y;
+      const len = Math.hypot(dx, dz) || 1;
+      const ux = dx / len, uz = dz / len;
+      const px = -uz, pz = ux;
+      const sx = marker.pos.x + ux * (CITY_MOUND_RADIUS * 0.62);
+      const sz = marker.pos.y + uz * (CITY_MOUND_RADIUS * 0.62);
+      const ex = marker.dockPos.x + ux * HARBOR_BASIN_RADIUS;
+      const ez = marker.dockPos.y + uz * HARBOR_BASIN_RADIUS;
+      const channel = (halfWidth) => [
+        [sx + px * halfWidth, sz + pz * halfWidth],
+        [ex + px * halfWidth, ez + pz * halfWidth],
+        [ex - px * halfWidth, ez - pz * halfWidth],
+        [sx - px * halfWidth, sz - pz * halfWidth],
+      ];
+      polygon(channel(HARBOR_CHANNEL_HALF_WIDTH + 4), '#0d465d');
+      polygon(channel(HARBOR_CHANNEL_HALF_WIDTH), WATER_LIGHT, 'rgba(190,224,217,0.42)', 0.9);
+      disc(marker.dockPos.x, marker.dockPos.y, HARBOR_BASIN_RADIUS + 4, '#0d465d');
+      disc(marker.dockPos.x, marker.dockPos.y, HARBOR_BASIN_RADIUS, WATER_LIGHT, 'rgba(190,224,217,0.45)');
+
+      ctx.strokeStyle = 'rgba(195,230,224,0.45)';
       ctx.lineWidth = 0.8;
-      for (let i = 0; i < 4; i++) {
-        const wx = city.pos[0] - 28 + i * 17;
-        const wz = city.pos[1] + 13 + Math.sin(this.t + i) * 5;
-        const a = this.iso.toScreen(this.camera, wx, wz, w, h);
-        const b = this.iso.toScreen(this.camera, wx + 8, wz + 1, w, h);
+      for (let i = -1; i <= 1; i++) {
+        const along = 0.55 + i * 0.16;
+        const wx = sx + (ex - sx) * along + px * 3;
+        const wz = sz + (ez - sz) * along + pz * 3;
+        const a = this.iso.toScreen(this.camera, wx - px * 5, wz - pz * 5, w, h);
+        const b = this.iso.toScreen(this.camera, wx + px * 5, wz + pz * 5, w, h);
         ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       }
     }
@@ -1664,45 +1636,100 @@ export class SeaScene {
     for (const s of GEOGRAPHY_SITES) draw(s, 'geography', '🗺️');
   }
 
-  _drawHarborBeacon(ctx, p, marker, scale) {
-    const flagColor = COUNTRY_COLORS[marker.country] || '#8f9ba0';
+  _drawCityGround(ctx, w, h, marker) {
+    const style = cityMarkerStyle(marker.country);
+    const points = [];
+    const seed = marker.cityId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+    for (let i = 0; i < 30; i++) {
+      const angle = (i / 30) * Math.PI * 2;
+      const irregular = 1 + Math.sin(seed * 0.17 + i * 2.3) * 0.045;
+      const radius = CITY_MOUND_RADIUS * irregular;
+      points.push(this.iso.toScreen(
+        this.camera,
+        marker.pos.x + Math.sin(angle) * radius,
+        marker.pos.y + Math.cos(angle) * radius,
+        w, h,
+      ));
+    }
     ctx.save();
-    ctx.translate(p.x, p.y + 5);
+    ctx.beginPath();
+    points.forEach((point, index) => { if (index === 0) ctx.moveTo(point.x, point.y); else ctx.lineTo(point.x, point.y); });
+    ctx.closePath();
+    ctx.fillStyle = style.land; ctx.fill();
+    ctx.strokeStyle = style.edge; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.strokeStyle = 'rgba(226,216,169,0.42)'; ctx.lineWidth = 0.75; ctx.stroke();
+    ctx.restore();
+  }
+
+  _drawCitySettlement(ctx, p, marker, scale) {
+    const style = cityMarkerStyle(marker.country);
+    const flagColor = COUNTRY_COLORS[marker.country] || style.accent;
+    ctx.save();
+    ctx.translate(p.x, p.y + 3);
     ctx.scale(scale, scale);
+    ctx.fillStyle = 'rgba(4,12,13,0.34)';
+    ctx.beginPath(); ctx.ellipse(0, 1, 17, 4.8, 0, 0, Math.PI * 2); ctx.fill();
 
-    ctx.fillStyle = 'rgba(3,12,17,0.38)';
-    ctx.beginPath(); ctx.ellipse(0, 0, 11, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+    const wall = (x, base, width, height, roofHeight = 5) => {
+      ctx.fillStyle = style.wallShade; ctx.fillRect(x - width / 2 + 1.4, base - height + 1.4, width, height);
+      ctx.fillStyle = style.wall; ctx.fillRect(x - width / 2, base - height, width, height);
+      ctx.fillStyle = style.roof;
+      ctx.beginPath(); ctx.moveTo(x - width / 2 - 1.5, base - height);
+      ctx.lineTo(x, base - height - roofHeight); ctx.lineTo(x + width / 2 + 1.5, base - height); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = style.accent; ctx.fillRect(x - 1.1, base - height * 0.55, 2.2, height * 0.55);
+    };
+    const eave = (x, y, width, rise = 3.5) => {
+      ctx.fillStyle = style.roof;
+      ctx.beginPath();
+      ctx.moveTo(x - width / 2, y + 1); ctx.quadraticCurveTo(x - width * 0.25, y - rise, x, y - rise - 1);
+      ctx.quadraticCurveTo(x + width * 0.25, y - rise, x + width / 2, y + 1);
+      ctx.quadraticCurveTo(x + width * 0.34, y + 2.2, x, y + 1.2);
+      ctx.quadraticCurveTo(x - width * 0.34, y + 2.2, x - width / 2, y + 1); ctx.fill();
+    };
 
-    const pier = ctx.createLinearGradient(-10, -5, 10, 1);
-    pier.addColorStop(0, '#594a37'); pier.addColorStop(1, '#8a7557');
-    ctx.fillStyle = pier;
-    ctx.beginPath();
-    ctx.moveTo(-11, 0); ctx.lineTo(11, 0); ctx.lineTo(7, -7); ctx.lineTo(-7, -7); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(44,38,29,0.78)'; ctx.lineWidth = 0.9; ctx.stroke();
-
-    const tower = ctx.createLinearGradient(-6, -24, 6, -7);
-    tower.addColorStop(0, '#d8d0bc'); tower.addColorStop(0.5, '#f4efe2'); tower.addColorStop(1, '#b9ab91');
-    ctx.fillStyle = tower;
-    ctx.beginPath();
-    ctx.moveTo(-4.4, -17); ctx.quadraticCurveTo(-5.2, -12, -6.4, -7);
-    ctx.lineTo(6.4, -7); ctx.quadraticCurveTo(5.2, -12, 4.4, -17); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#9e927d'; ctx.stroke();
-
-    ctx.fillStyle = flagColor;
-    ctx.beginPath(); ctx.moveTo(-5.1, -12.5); ctx.lineTo(5.1, -12.5); ctx.lineTo(5.6, -9.2); ctx.lineTo(-5.6, -9.2); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#a94837'; ctx.fillRect(-4.8, -19.5, 9.6, 3.2);
-
-    ctx.fillStyle = '#293036'; ctx.beginPath(); ctx.roundRect(-4.7, -24.5, 9.4, 5.4, 1.2); ctx.fill();
-    ctx.shadowColor = '#ffd66c'; ctx.shadowBlur = 8;
-    ctx.fillStyle = '#ffd66c'; ctx.beginPath(); ctx.arc(0, -21.8, 2.5, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#4d4235';
-    ctx.beginPath(); ctx.moveTo(-6, -24.5); ctx.quadraticCurveTo(0, -30, 6, -24.5); ctx.closePath(); ctx.fill();
+    if (style.id === 'iberian') {
+      wall(-10, -1, 10, 10, 4); wall(10, -1, 11, 12, 4.5); wall(0, -2, 9, 18, 3.5);
+      ctx.fillStyle = style.accent; ctx.fillRect(-4.5, -12, 9, 1.8);
+      ctx.fillStyle = '#e7c96c'; ctx.beginPath(); ctx.arc(0, -15, 1.5, 0, Math.PI * 2); ctx.fill();
+    } else if (style.id === 'north_sea') {
+      wall(-10, -1, 11, 14, 8); wall(1, -2, 12, 18, 10); wall(12, -1, 9, 12, 7);
+      ctx.fillStyle = '#d5c999'; for (const x of [-10, 1, 12]) ctx.fillRect(x - 1.1, -9, 2.2, 2.8);
+    } else if (style.id === 'mediterranean') {
+      wall(-10, -1, 12, 11, 3.5); wall(9, -1, 13, 12, 3.8);
+      ctx.fillStyle = style.wall; ctx.fillRect(-4.5, -21, 9, 20);
+      ctx.fillStyle = style.roof; ctx.fillRect(-5.5, -24, 11, 4);
+      ctx.fillStyle = style.accent; ctx.beginPath(); ctx.arc(0, -15.5, 1.7, 0, Math.PI * 2); ctx.fill();
+    } else if (style.id === 'ottoman') {
+      ctx.fillStyle = style.wall; ctx.fillRect(-13, -12, 25, 11);
+      ctx.fillStyle = style.roof; ctx.beginPath(); ctx.arc(-2, -12, 8, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = style.wallShade; ctx.fillRect(9, -24, 4, 23);
+      ctx.fillStyle = style.accent; ctx.beginPath(); ctx.moveTo(8, -24); ctx.lineTo(13, -24); ctx.lineTo(10.5, -29); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = style.accent; ctx.beginPath(); ctx.arc(-2, -20, 1.2, 0, Math.PI * 2); ctx.fill();
+    } else if (style.id === 'tropical') {
+      ctx.strokeStyle = '#42301f'; ctx.lineWidth = 1.4;
+      for (const x of [-11, -4, 4, 11]) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, -9); ctx.stroke(); }
+      ctx.fillStyle = style.wall; ctx.fillRect(-14, -15, 28, 7);
+      ctx.fillStyle = style.roof; ctx.beginPath(); ctx.moveTo(-17, -15); ctx.lineTo(0, -28); ctx.lineTo(17, -15); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#315c3c'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(15, -2); ctx.lineTo(18, -22); ctx.stroke();
+      for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; ctx.beginPath(); ctx.moveTo(18, -22); ctx.lineTo(18 + Math.cos(a) * 7, -22 + Math.sin(a) * 3); ctx.stroke(); }
+    } else if (style.id === 'chinese') {
+      ctx.fillStyle = style.wall; ctx.fillRect(-13, -11, 26, 10);
+      ctx.fillStyle = style.accent; ctx.fillRect(-10, -12, 3, 11); ctx.fillRect(7, -12, 3, 11);
+      eave(0, -12, 31, 5); ctx.fillStyle = style.wall; ctx.fillRect(-7, -22, 14, 8); eave(0, -22, 19, 4);
+    } else if (style.id === 'japanese') {
+      ctx.fillStyle = style.wallShade; ctx.fillRect(-13, -9, 26, 8); eave(0, -10, 31, 4);
+      ctx.fillStyle = style.wall; ctx.fillRect(-9, -18, 18, 7); eave(0, -19, 23, 4);
+      ctx.fillStyle = style.wall; ctx.fillRect(-5, -25, 10, 5); eave(0, -26, 15, 3);
+    } else {
+      ctx.fillStyle = style.wall; ctx.fillRect(-14, -10, 28, 9);
+      ctx.fillStyle = '#77503c'; for (const x of [-10, -3, 4, 11]) ctx.fillRect(x, -11, 1.7, 10);
+      eave(0, -12, 34, 5); ctx.strokeStyle = style.accent; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(-9, -5); ctx.lineTo(9, -5); ctx.stroke();
+    }
 
     ctx.strokeStyle = '#4a3b2d'; ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.moveTo(0, -29); ctx.lineTo(0, -34); ctx.lineTo(7, -31.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -27); ctx.lineTo(0, -33); ctx.lineTo(7, -30.5); ctx.stroke();
     ctx.fillStyle = flagColor;
-    ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(7, -31.5); ctx.lineTo(0, -29.5); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0, -33); ctx.lineTo(7, -30.5); ctx.lineTo(0, -28.5); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 
@@ -1712,8 +1739,8 @@ export class SeaScene {
     const dockRange = DOCK_RANGE + sumSkillEffect(this.ship.shipDef, 'dockRangeAdd', 0);
     const dist = marker.dockPos.distanceTo(this.ship.pos);
 
-    // 확대된 실제 정박 판정 범위를 가까이 다가왔을 때 그대로 표시한다. 도시 아이콘과
-    // 정박 지점을 점선으로 연결해 넓어진 범위가 어디를 기준으로 하는지도 분명하게 보인다.
+    // 실제 정박 판정 범위를 가까이 다가왔을 때 표시한다. 범위는 바다의 정박 분지를 기준으로
+    // 하고, 도시 지반은 그 위에 다시 그려져 육지와 바다의 역할이 뒤섞이지 않는다.
     if (dist < dockRange + 150) {
       const pulse = 0.5 + Math.sin(this.t * 2.1) * 0.12;
       ctx.save();
@@ -1735,10 +1762,11 @@ export class SeaScene {
       ctx.restore();
     }
 
-    if (p.x < -40 || p.x > w + 40 || p.y < -50 || p.y > h + 40) return;
-    // 오프스크린 저해상도 비트맵 대신 현재 고해상도 컨텍스트에 등대를 직접 그린다.
-    const s = marker.capital ? 1.35 : 1.05;
-    this._drawHarborBeacon(ctx, p, marker, s);
+    if (p.x < -55 || p.x > w + 55 || p.y < -60 || p.y > h + 50) return;
+    this._drawCityGround(ctx, w, h, marker);
+    // 바다의 등대 아이콘이 아니라, 문화권별 지붕·벽·도시 탑이 보이는 육지 정착지를 그린다.
+    const s = marker.capital ? 1.28 : 1;
+    this._drawCitySettlement(ctx, p, marker, s);
 
     const city = CITIES.find((candidate) => candidate.id === marker.cityId);
     if (city && (dist < 260 || marker.capital)) {
@@ -1747,7 +1775,7 @@ export class SeaScene {
       ctx.textAlign = 'center';
       const label = marker.capital ? `★ ${city.name}` : city.name;
       const tw = ctx.measureText(label).width;
-      const y = p.y - 34 * s;
+      const y = p.y - 37 * s;
       ctx.fillStyle = 'rgba(8,24,29,0.76)'; ctx.fillRect(p.x - tw / 2 - 4, y - 8, tw + 8, 11);
       ctx.fillStyle = marker.capital ? '#f2d889' : '#e9e2cc'; ctx.fillText(label, p.x, y);
       ctx.restore();

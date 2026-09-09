@@ -12,6 +12,7 @@ import { openSupplies } from './ui/suppliesPanel.js';
 import { WORLD_REGIONS } from './data/worldRegions.js';
 import { LAND_POLYGONS, project } from './data/coastline.js';
 import { CITIES } from './data/cities.js';
+import { computeCityMarkers } from './render/seaCityVisuals.js';
 import { SHIPS, SHIP_ROLES, SHIP_CLASSES, COUNTRY_COLORS, COUNTRY_NAMES, getShip } from './data/ships.js';
 import { getEffectiveShipDef, PART_SLOTS, getPart, partsBySlot, getBaseArmor } from './data/shipParts.js';
 import { getCombatPower } from './systems/combatPower.js';
@@ -198,7 +199,16 @@ function goToCity(cityId) {
 // ---- 전체 지도(월드맵): M키로 토글, 화살표로 해역 페이지 전환 ----
 // 이제 모든 페이지가 전세계 대륙/도시 데이터를 공유하고, 페이지별 위경도 범위(bounds)만
 // 다르게 잡아 확대해 보여주는 "지도책" 방식이다(placeholder 페이지는 더 이상 없음).
-const worldMapCityBase = CITIES.map((c) => ({ id: c.id, x: c.pos[0], z: c.pos[1], name: c.name, color: COUNTRY_COLORS[c.country] || '#e6c15a', capital: !!c.capital }));
+const worldMapMarkerById = new Map(computeCityMarkers(CITIES).map((marker) => [marker.cityId, marker]));
+const worldMapCityBase = CITIES.map((city) => {
+  const marker = worldMapMarkerById.get(city.id);
+  return {
+    id: city.id,
+    x: marker?.pos.x ?? city.pos[0], z: marker?.pos.y ?? city.pos[1],
+    name: city.name, color: COUNTRY_COLORS[city.country] || '#e6c15a', capital: !!city.capital,
+    syntheticLand: !!marker?.syntheticLand, styleId: marker?.styleId || 'iberian',
+  };
+});
 let worldMapIndex = 0;
 
 function regionBoundsToWorld(b) {
@@ -261,6 +271,27 @@ document.getElementById('world-map-next').addEventListener('click', () => cycleW
 wireShipyardTabs();
 wireCompendiumTabs();
 wireSkillTabs();
+
+// 키보드 단축키를 외우지 않아도 모든 주요 창을 마우스로 닫을 수 있게 같은 위치·크기의
+// 명시적 닫기 버튼을 제공한다. market-panel은 시장/은행/보급/선원 창이 함께 재사용한다.
+const UI_CLOSE_HANDLERS = {
+  'dialogue-close': () => hud.hideDialogue(),
+  'inventory-close': () => hud.closeInventory(),
+  'world-map-close': closeWorldMap,
+  'ship-info-close': closeShipInfo,
+  'shipyard-close': () => hud.hideShipyard(),
+  'skill-close': () => hud.hideSkillPanel(),
+  'titles-close': () => hud.hideTitlesPanel(),
+  'compendium-close': () => hud.hideCompendiumPanel(),
+  'market-close': () => hud.hideMarket(),
+  'quest-close': () => hud.hideQuestBoard(),
+};
+for (const [id, close] of Object.entries(UI_CLOSE_HANDLERS)) {
+  document.getElementById(id)?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    close();
+  });
+}
 
 // 퀵슬롯(9칸) HUD 표시 — 장착된 스킬의 쿨다운/지속시간을 매 프레임 반영한다. 버프 엔진이
 // systems/skills.js로 공용화돼 있어 바다·도시 어느 화면에서도 같은 정보를 보여줄 수 있다.

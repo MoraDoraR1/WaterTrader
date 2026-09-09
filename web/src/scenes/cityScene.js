@@ -175,6 +175,7 @@ export class CityScene {
     this.sizeMul = this.isCapital ? 1.4 : 1;
     this.seed = citySeed(city.id);
     this.t = 0;
+    this.reduceMotion = !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     this.buildingColliders = [];
     this._buildings = this._layoutBuildings();
@@ -304,7 +305,7 @@ export class CityScene {
       const pos = new Vec2(Math.cos(angle) * r, Math.sin(angle) * r - 10);
       // 예전엔 상인만 절반 확률로 여성이고 나머지 전 역할이 전부 남성으로 고정돼 있었다 —
       // 이제 서양식 실루엣도 성별로 갈리니(치마/장식) 모든 역할에 고르게 다양성을 준다.
-      return { npc, pos, facing: angle + Math.PI, gender: i % 2 === 0 ? 'female' : 'male' };
+      return { npc, pos, facing: angle + Math.PI, gender: i % 2 === 0 ? 'female' : 'male', idleOffset: i * 1.73 };
     });
   }
 
@@ -716,7 +717,7 @@ export class CityScene {
     for (const d of drawables) d.draw();
   }
 
-  _drawFallbackCharacter(ctx, p, height, outfit, gender) {
+  _drawFallbackCharacter(ctx, p, height, outfit, gender, walking = false, phase = 0) {
     // 생성 이미지가 첫 프레임에 아직 디코딩되지 않았을 때만 보이는 벡터 폴백.
     // 작은 비트맵을 확대하지 않고 현재 고해상도 컨텍스트에서 곡선으로 직접 그린다.
     const s = height / 39;
@@ -725,9 +726,10 @@ export class CityScene {
     ctx.lineCap = 'round';
     ctx.strokeStyle = '#3a2b23';
     ctx.lineWidth = 2.1 * s;
+    const stride = walking && !this.reduceMotion ? Math.sin(phase) * 2.2 * s : 0;
     ctx.beginPath();
-    ctx.moveTo(p.x - 2.2 * s, footY - 10 * s); ctx.lineTo(p.x - 2.8 * s, footY);
-    ctx.moveTo(p.x + 2.2 * s, footY - 10 * s); ctx.lineTo(p.x + 2.8 * s, footY);
+    ctx.moveTo(p.x - 2.2 * s, footY - 10 * s); ctx.lineTo(p.x - 2.8 * s + stride, footY);
+    ctx.moveTo(p.x + 2.2 * s, footY - 10 * s); ctx.lineTo(p.x + 2.8 * s - stride, footY);
     ctx.stroke();
 
     ctx.fillStyle = outfit || '#315d78';
@@ -750,6 +752,45 @@ export class CityScene {
     ctx.restore();
   }
 
+  _drawGeneratedCharacter(ctx, image, p, height, { flip = 1, walking = false, phase = 0, motionBlend = 1, idlePhase = 0 } = {}) {
+    const width = height * (image.naturalWidth / image.naturalHeight);
+    const unit = height / 39;
+    const activeMotion = walking && !this.reduceMotion;
+    const blend = activeMotion ? motionBlend : 0;
+    const bob = activeMotion ? Math.abs(Math.cos(phase)) * 1.15 * unit * blend
+      : (!this.reduceMotion ? Math.sin(idlePhase) * 0.16 * unit : 0);
+    const lean = activeMotion ? Math.sin(phase) * 0.022 * blend : 0;
+    const footY = p.y + 4 * this.camera.zoom + bob;
+
+    ctx.save();
+    ctx.translate(p.x, footY);
+    ctx.rotate(lean * flip);
+    ctx.scale(flip, 1);
+    if (!activeMotion || blend < 0.04) {
+      ctx.drawImage(image, -width / 2, -height, width, height);
+      ctx.restore();
+      return;
+    }
+
+    // 정지 전신 이미지를 그대로 미끄러뜨리지 않고, 하체를 좌우 두 조각으로 나눠 교차 보폭을
+    // 만든다. 상체는 한 장으로 유지해 얼굴과 의상이 흔들리거나 갈라지지 않는다.
+    const cutRatio = 0.70;
+    const sourceCutY = Math.floor(image.naturalHeight * cutRatio);
+    const sourceHalfW = Math.floor(image.naturalWidth / 2);
+    const destCutY = -height + height * cutRatio;
+    const lowerH = height * (1 - cutRatio);
+    const step = Math.sin(phase) * 1.35 * unit * blend;
+    const liftLeft = Math.max(0, Math.cos(phase)) * 0.8 * unit * blend;
+    const liftRight = Math.max(0, -Math.cos(phase)) * 0.8 * unit * blend;
+
+    ctx.drawImage(image, 0, 0, image.naturalWidth, sourceCutY, -width / 2, -height, width, height * cutRatio);
+    ctx.drawImage(image, 0, sourceCutY, sourceHalfW, image.naturalHeight - sourceCutY,
+      -width / 2 + step, destCutY - liftLeft, width / 2, lowerH + liftLeft);
+    ctx.drawImage(image, sourceHalfW, sourceCutY, image.naturalWidth - sourceHalfW, image.naturalHeight - sourceCutY,
+      -step, destCutY - liftRight, width / 2, lowerH + liftRight);
+    ctx.restore();
+  }
+
   _drawNpc(ctx, w, h, o) {
     const p = this.iso.toScreen(this.camera, o.pos.x, o.pos.y, w, h);
     const roleColor = NPC_ROLE_COLORS[o.npc.role] || '#999';
@@ -761,8 +802,7 @@ export class CityScene {
     let spriteHeight;
     if (generated) {
       spriteHeight = 36 * this.camera.zoom;
-      const spriteWidth = spriteHeight * (generated.naturalWidth / generated.naturalHeight);
-      ctx.drawImage(generated, p.x - spriteWidth / 2, p.y - spriteHeight + 4 * this.camera.zoom, spriteWidth, spriteHeight);
+      this._drawGeneratedCharacter(ctx, generated, p, spriteHeight, { idlePhase: this.t * 1.55 + o.idleOffset });
     } else {
       spriteHeight = 36 * this.camera.zoom;
       this._drawFallbackCharacter(ctx, p, spriteHeight, roleColor, o.gender);
@@ -787,15 +827,19 @@ export class CityScene {
     const generated = getCharacterImage(state.gender, this.city.country, true);
     if (generated) {
       const spriteHeight = 39 * this.camera.zoom;
-      const spriteWidth = spriteHeight * (generated.naturalWidth / generated.naturalHeight);
       const flip = Math.sin(this.character.facing) < -0.05 ? -1 : 1;
-      ctx.save();
-      ctx.translate(cp.x, 0);
-      ctx.scale(flip, 1);
-      ctx.drawImage(generated, -spriteWidth / 2, cp.y - spriteHeight + 4 * this.camera.zoom, spriteWidth, spriteHeight);
-      ctx.restore();
+      this._drawGeneratedCharacter(ctx, generated, cp, spriteHeight, {
+        flip,
+        walking: this.character.walking,
+        phase: this.character.walkPhase,
+        motionBlend: this.character.motionBlend,
+      });
     } else {
-      this._drawFallbackCharacter(ctx, cp, 39 * this.camera.zoom, state.gender === 'female' ? '#713f5d' : '#315d78', state.gender);
+      this._drawFallbackCharacter(
+        ctx, cp, 39 * this.camera.zoom,
+        state.gender === 'female' ? '#713f5d' : '#315d78', state.gender,
+        this.character.walking, this.character.walkPhase,
+      );
     }
   }
 }

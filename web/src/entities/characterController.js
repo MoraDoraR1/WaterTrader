@@ -2,14 +2,19 @@
 // (화면/카메라 기준 방향 재매핑은 호출부인 cityScene.update()에서 처리한다.)
 import { Vec2, clamp, lerpAngle } from '../util/math2d.js';
 
+export const CITY_WALK_SPEED = 10;
+
 export class CharacterController {
   constructor() {
     this.pos = new Vec2(0, 0);
     this.facing = 0;
     this.moveTarget = null;
-    this.speed = 4.6;
+    // 기존 4.6 대비 2.17배. 넓어진 대도시에서도 NPC 사이 이동이 지체되지 않는 속도다.
+    this.speed = CITY_WALK_SPEED;
     this.turnSpeed = 10;
     this.walking = false;
+    this.walkPhase = 0;
+    this.motionBlend = 0;
     this.radius = 0.6;
   }
 
@@ -20,6 +25,7 @@ export class CharacterController {
   update(delta, inputVec, bounds, obstacles) {
     let moveX = 0, moveZ = 0;
     this.walking = false;
+    const startX = this.pos.x, startZ = this.pos.y;
 
     if (inputVec.x * inputVec.x + inputVec.y * inputVec.y > 0.0001) {
       this.moveTarget = null;
@@ -50,6 +56,15 @@ export class CharacterController {
       if (obstacles) this._resolveObstacles(obstacles);
       const targetFacing = Math.atan2(moveX, moveZ);
       this.facing = lerpAngle(this.facing, targetFacing, Math.min(1, this.turnSpeed * delta));
+    }
+
+    const moved = Math.hypot(this.pos.x - startX, this.pos.y - startZ);
+    this.walking = moved > 0.0001;
+    if (this.walking) {
+      this.walkPhase = (this.walkPhase + moved * 1.7) % (Math.PI * 2);
+      this.motionBlend = Math.min(1, this.motionBlend + delta * 10);
+    } else {
+      this.motionBlend = Math.max(0, this.motionBlend - delta * 8);
     }
   }
 

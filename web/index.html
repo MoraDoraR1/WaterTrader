@@ -554,6 +554,16 @@
   .sy-tab.active, .buy-filter-chip.active { box-shadow: inset 0 -2px 0 var(--brass); }
   #world-map-canvas { border-color: rgba(214,168,75,0.42); box-shadow: 0 9px 26px rgba(0,0,0,0.32); }
   .close-hint { color: var(--mist) !important; letter-spacing: 0.04rem; }
+  .ui-close-btn {
+    position: absolute; top: 10px; right: 10px; z-index: 6;
+    width: 32px; height: 32px; padding: 0; border-radius: 50%; cursor: pointer;
+    display: grid; place-items: center; font: 700 20px/1 system-ui, sans-serif;
+    color: var(--parchment) !important; background: rgba(8,28,39,0.92) !important;
+    border: 1px solid rgba(214,168,75,0.55) !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.38); transition: transform .14s ease, background .14s ease;
+  }
+  .ui-close-btn:hover { transform: scale(1.08); background: rgba(125,60,42,0.92) !important; }
+  .ui-close-btn:active { transform: scale(0.96); }
   #toast .toast-item { background: rgba(7,26,38,0.94); border-color: rgba(214,168,75,0.5);
     box-shadow: 0 8px 26px rgba(0,0,0,0.42); backdrop-filter: blur(8px); }
 
@@ -674,12 +684,14 @@
   <div id="action-hints" class="hidden"></div>
 
   <div id="dialogue-box" class="hidden">
+    <button type="button" class="ui-close-btn" id="dialogue-close" aria-label="대화 닫기" title="닫기">×</button>
     <div class="name" id="dialogue-name"></div>
     <div class="line" id="dialogue-line"></div>
     <div class="actions" id="dialogue-actions"></div>
   </div>
 
   <div id="inventory-panel" class="hidden">
+    <button type="button" class="ui-close-btn" id="inventory-close" aria-label="인벤토리 닫기" title="닫기">×</button>
     <h3>인벤토리</h3>
     <div id="inventory-cargo"></div>
     <div id="inventory-grid"></div>
@@ -688,6 +700,7 @@
 
   <div id="world-map-panel" class="hidden">
     <div id="world-map-book">
+      <button type="button" class="ui-close-btn" id="world-map-close" aria-label="전체 지도 닫기" title="닫기">×</button>
       <div id="world-map-header">
         <button class="wm-arrow" id="world-map-prev">◀</button>
         <div id="world-map-header-text">
@@ -704,6 +717,7 @@
 
   <div id="ship-info-panel" class="hidden">
     <div id="ship-info-card">
+      <button type="button" class="ui-close-btn" id="ship-info-close" aria-label="선박 정보 닫기" title="닫기">×</button>
       <div id="ship-info-header">
         <div id="ship-info-name">-</div>
         <span id="ship-info-role" class="role-badge"></span>
@@ -731,6 +745,7 @@
 
   <div id="shipyard-panel" class="hidden">
     <div id="shipyard-card">
+      <button type="button" class="ui-close-btn" id="shipyard-close" aria-label="조선소 닫기" title="닫기">×</button>
       <div id="shipyard-header">
         <div id="shipyard-header-title">🔨 조선소</div>
         <div id="shipyard-gold">💰 <span id="shipyard-gold-amount">0</span> 두캇</div>
@@ -751,6 +766,7 @@
 
   <div id="skill-panel" class="hidden">
     <div id="skill-card">
+      <button type="button" class="ui-close-btn" id="skill-close" aria-label="스킬 창 닫기" title="닫기">×</button>
       <div id="skill-header-title">🎓 선장의 스킬</div>
       <div id="skill-tabs">
         <button class="sy-tab" data-tab="quickslots">퀵슬롯</button>
@@ -765,6 +781,7 @@
 
   <div id="titles-panel" class="hidden">
     <div id="titles-card">
+      <button type="button" class="ui-close-btn" id="titles-close" aria-label="칭호 창 닫기" title="닫기">×</button>
       <div id="titles-header-title">🎖 칭호</div>
       <div id="titles-body"></div>
       <div class="close-hint">V 또는 ESC 로 닫기</div>
@@ -773,6 +790,7 @@
 
   <div id="compendium-panel" class="hidden">
     <div id="compendium-card">
+      <button type="button" class="ui-close-btn" id="compendium-close" aria-label="도감 닫기" title="닫기">×</button>
       <div id="compendium-header-title">📖 항해 도감</div>
       <div id="compendium-tabs">
         <button class="sy-tab" data-tab="archaeology">고고학</button>
@@ -787,6 +805,7 @@
 
   <div id="market-panel" class="hidden">
     <div id="market-card">
+      <button type="button" class="ui-close-btn" id="market-close" aria-label="거래 창 닫기" title="닫기">×</button>
       <div id="market-header">
         <div id="market-header-title">🏺 시장</div>
         <div id="market-gold">💰 <span id="market-gold-amount">0</span> 두캇</div>
@@ -800,6 +819,7 @@
 
   <div id="quest-panel" class="hidden">
     <div id="quest-card">
+      <button type="button" class="ui-close-btn" id="quest-close" aria-label="의뢰 게시판 닫기" title="닫기">×</button>
       <div id="quest-header-title">📜 의뢰 게시판</div>
       <div id="quest-body"></div>
       <div class="close-hint">ESC 로 닫기</div>

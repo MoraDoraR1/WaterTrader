@@ -1,5 +1,6 @@
-sourceCommit: 03ca4a5
+date: 2026-09-09
 command: npm run verify
+workingDirectory: web
 
 > bada-sangin-web@0.1.0 verify
 > node scripts/verify-smooth-rendering.mjs && node build.mjs && node build-artifact.mjs
@@ -7,7 +8,10 @@ command: npm run verify
 [suite:render-smoothing] PASS - display-resolution backing canvas and high-quality interpolation enabled
 [suite:legacy-pixel-removal] PASS - low-resolution character and harbor marker sprites removed
 [suite:character-assets] PASS - 12 smooth WebP character assets available
+[suite:city-character-motion] PASS - 2.17x city speed with movement-gated player walk cycle
+[suite:city-placement] PASS - all 69 cities have land-backed settlements and water docking points across 8 regional styles
+[suite:mouse-close-controls] PASS - 10 overlays expose wired mouse close buttons
 build ok
-artifact built: dist/bada-sangin-standalone.html 514KB JS 92 embedded images (78 ships, 12 characters)
+artifact built: dist/bada-sangin-standalone.html and docs/index.html 520KB JS 92 embedded images (78 ships, 12 characters)
 exitCode: 0
-durationSeconds: 0.5
+durationSeconds: 7.3

@@ -1,13 +1,15 @@
-# Smooth-rendering invariants
+# City navigation and settlement invariants
 
-Independent expectation source: the user directive and `web/docs/VISUAL_GUIDE.md`, read separately from the implementation.
+Independent expectation source: the user's 2026-09-08/09 directives, the supplied failure screenshot, and `design/ART_DIRECTION.md`, read separately from implementation results.
 
 | Invariant | Expected | Observed | Evidence |
 | --- | --- | --- | --- |
-| Main presentation | No enlarged nearest-neighbour dots | CSS reports `image-rendering: auto`; runtime canvas uses high-quality smoothing | `runtime-results.json`, `verify.log` |
-| Backing resolution | Match actual display pixels while logical input stays 480×270 | 1440×900 → 1440×900 backing; 1280×720 → 1280×720 backing; logical remains 480×270 | `runtime-results.json` |
-| Character presentation | Existing 12 illustrated WebP cutouts retain smooth alpha edges; no 10×12 fallback | 12 assets embedded; city screenshot shows illustrated characters; legacy module removed | `02-city-smooth.jpg`, `verify.log` |
-| Harbor presentation | No cached low-resolution bitmap marker | Lighthouse is drawn directly in the high-resolution scene | `03-smooth-harbor-marker.jpg`, `verify.log` |
-| Gameplay preservation | Movement, docking, city transition, and restart still work | W input moved ship and raised notch; click docked at Lisboa; reload returned to title | `runtime-results.json` |
+| Player speed | City speed is at least 2× the former 4.6 | Runtime speed is 10.0 (2.17×); 7.0 world units moved during the held-W sample | `city-polish-runtime.json`, `verify.log` |
+| Player walk cycle | Motion plays only while actual displacement occurs and returns to standing at rest | `walking=true`, non-zero phase, blend=1 during movement; `walking=false` after key-up | `07-player-walk-motion.jpg`, `city-polish-runtime.json` |
+| Lisbon placement | Lisbon must be a city on land, not a lighthouse on water | Lisbon resolves to natural land with an Iberian townhouse/civic-tower silhouette; dock remains a separate water basin | `06-lisbon-land-city.jpg`, `city-polish-runtime.json` |
+| All-city placement | Every city has land footing and every dock is in open water | 69/69 have natural or explicit small-island land; 0 docks are on coastline land | `verify.log` |
+| Cultural differentiation | Other cities use locally appropriate non-colour silhouettes | Eight groups verified: Iberian, North Sea, Mediterranean, Ottoman, tropical, Chinese, Japanese, Korean | `verify.log`, `design/ART_DIRECTION.md` |
+| Mouse dismissal | Major windows expose a visible, clickable close control | 10 controls are present/wired; real pointer clicks closed inventory and world map | `08-inventory-close-open.jpg`, `09-inventory-close-result.jpg`, `city-polish-runtime.json` |
+| Rendering preservation | No enlarged nearest-neighbour dots return | Display-resolution Canvas2D smoothing and 12 illustrated WebP assets remain enabled | `verify.log` |
 
-No economy, collision, docking-radius, save-schema, camera, or content constant changed in this revision.
+No economy, quest, combat, audio, save-schema, or docking-radius constant changed in this revision.

@@ -1,0 +1,50 @@
+{
+  "testedRuntime": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 1
+  },
+  "cityMarker": {
+    "naturalLand": true,
+    "syntheticLand": false,
+    "styleId": "iberian",
+    "cityPos": [
+      -1489.6000000000001,
+      879.2000000000002
+    ],
+    "dockPos": [
+      -1526.4873482793637,
+      863.7299147734433
+    ]
+  },
+  "movement": {
+    "before": {
+      "x": -9.41527713885101,
+      "z": 9.551024433482494,
+      "speed": 10
+    },
+    "during": {
+      "x": -11.418510649952504,
+      "z": 7.547790922381001,
+      "walking": true,
+      "walkPhase": 4.816100000000011,
+      "motionBlend": 1
+    },
+    "after": {
+      "x": -14.247644881479884,
+      "z": 4.718656690853623,
+      "walking": false,
+      "walkPhase": 5.33461469282043
+    },
+    "movedDistance": 6.834000000000009
+  },
+  "mouseClose": {
+    "inventory": "PASS",
+    "worldMap": "PASS",
+    "totalWiredButtons": 10
+  },
+  "consoleErrors": [],
+  "failedRequests": [],
+  "httpErrors": []
+}
