@@ -1,61 +1,56 @@
-# QA Report — Smooth Rendering Revision
+# QA Report — City Navigation & Coastal Settlement Revision
 
 ## Verdict
 
-**PASS for the requested rendering scope.** The enlarged-dot presentation is removed, the actual standalone build renders smoothly, and movement, docking, city entry, 1280×720 layout, and restart still work. This is not a new full-game balance or content certification.
+**PASS for the requested revision scope.** City walking is 2.17× faster, user movement has a movement-gated walk cycle, all 69 sea-map cities are land-backed settlements with separate water docking points, and all 10 applicable overlays have mouse-operable close buttons.
 
-- Tested source: `03ca4a5530658004c806adabee587ce697dd9f90`
-- Runtime: Google Chrome 152.0.7977.77, standalone `docs/index.html`
-- Viewports: 1440×900 and 1280×720
+- Tested source: `97f4d6b60ceb27108eb5386fd8ad8b623450a263`
+- Runtime: Headless Chrome 152, generated `docs/index.html`
+- Viewport: 1440×900
 
 ## Suite discovery
 
-| Suite | Discovered from | Files | Runner | Observed in verify | Result |
-| --- | --- | --- | --- | --- | --- |
-| render-smoothing | `web/package.json` | `web/scripts/verify-smooth-rendering.mjs` | `npm run verify` | yes | PASS |
-| legacy-pixel-removal | `web/package.json` | same | `npm run verify` | yes | PASS |
-| character-assets | `web/package.json` | same | `npm run verify` | yes | PASS |
-| browser-visual-regression | BUILD_BRIEF supplemental suite | standalone artifact + Playwright scenario | Chrome 152 | supplemental, outside verify | PASS |
+| Suite | Source | Runner | Result |
+| --- | --- | --- | --- |
+| render-smoothing | `web/scripts/verify-smooth-rendering.mjs` | `npm run verify` | PASS |
+| legacy-pixel-removal | same | `npm run verify` | PASS |
+| character-assets | same | `npm run verify` | PASS |
+| city-character-motion | same | `npm run verify` | PASS |
+| city-placement | same | `npm run verify` | PASS |
+| mouse-close-controls | same | `npm run verify` | PASS |
+| scoped-browser-runtime | `web/scripts/browser-city-polish-qa.mjs` | Chrome DevTools Protocol | PASS |
 
-No CI workflow or additional test directory was found. `web/dist/` is generated output and excluded from suite discovery.
+No CI workflow or additional automated test directory was discovered. `web/dist/` is generated output and excluded from suite discovery.
 
 ## Independent verification
 
-- Authoritative command: `npm run verify`; exit 0. Full output: `qa/evidence/verify.log`.
-- Browser launch returned status 200 with zero console errors and zero failed resource responses.
-- Runtime canvas matched the display: 1440×900 and 1280×720, while the preserved logical coordinate system remained 480×270.
-- Real W input changed throttle notch 0→1 and moved the ship.
-- A real canvas click inside Lisboa's docking state transitioned `sea → city`.
-- Reload returned to the visible title state.
-- Heavy sampled state: Lisboa city. rAF interval p50 16.7 ms, p95 16.8 ms, worst 16.8 ms across 95 samples. No product performance budget exists, so this is reported without an invented pass threshold.
+- `npm run verify` exited 0 and rebuilt both the standalone artifact and the GitHub Pages entry. Full output: `qa/evidence/verify.log`.
+- City walk speed is 10.0 world units/second, up from 4.6 (2.17×). Real W input moved the player 6.834 world units during the sample.
+- During movement, `walking=true`, `motionBlend=1`, and the walk phase advanced. After key release, `walking=false`.
+- All 69 cities have natural or synthesized land backing and a water-side dock; Lisbon uses natural land and the Iberian settlement style.
+- Eight regional settlement styles are represented. The four tiny-island cases receive explicit land footprints instead of floating markers.
+- All 10 close controls are statically present and wired. Inventory and world map close buttons were also clicked with real pointer input.
+- Browser run recorded zero console errors, failed requests, or HTTP errors.
 
 ## Visual findings
 
-| Frame | Trigger | Evidence | Result |
-| --- | --- | --- | --- |
-| Sea start | New voyage | `qa/evidence/01-sea-start.jpg` | Smooth vector/Canvas edges; non-empty render |
-| Lisboa city | Enter city | `qa/evidence/02-city-smooth.jpg` | Illustrated character faces and clothing remain clear; no nearest-neighbour blocks |
-| Harbor beacon | Approach Lisboa | `qa/evidence/03-smooth-harbor-marker.jpg` | Direct vector lighthouse replaces cached bitmap marker |
-| 1280×720 city | Resize active city | `qa/evidence/04-city-1280x720.jpg` | No body overflow; HUD and game scene remain usable |
-| Restart | Reload | `qa/evidence/05-restart-title.jpg` | Valid title state restored |
+| Frame | Evidence | Result |
+| --- | --- | --- |
+| Lisbon sea map | `qa/evidence/06-lisbon-land-city.jpg` | Iberian building cluster sits on land; docking basin remains water; no lighthouse |
+| Player walking | `qa/evidence/07-player-walk-motion.jpg` | Smooth illustrated user character is captured during an active walk phase |
+| Inventory open | `qa/evidence/08-inventory-close-open.jpg` | Visible top-right × button with sufficient pointer target |
+| Inventory dismissed | `qa/evidence/09-inventory-close-result.jpg` | Real pointer click closes the overlay and restores the city view |
 
-## First-time onboarding, core fantasy, signature frame
+## Scope notes
 
-- First-time onboarding: title, start action, ship state, and first movement were observed. The separate clean-context premise adjudication is `NOT_RUN` because sub-agent spawning is not authorized in this session; therefore no full-game onboarding certification is claimed.
-- Core fantasy performance: the observable loop of sailing, approaching an era-styled harbor, and entering a populated trade city was performed once. Long-form trade/combat progression was outside scope.
-- Signature frame: `02-city-smooth.jpg` meets the current city guide's smooth illustrated character requirement and preserves country-specific Lisbon materials. `03-smooth-harbor-marker.jpg` verifies the sea-mode marker treatment.
-
-## Findings and routing
-
-No blocker or major issue was found within the smooth-rendering revision scope. No design or product change is requested from this pass.
-
-## Model playtest note
-
-Subjectively, the city scene now reads as illustrated figures placed in a clean isometric environment instead of tiny bitmaps enlarged several times. The ship geometry remains deliberately simple, but its edges are smooth; further realism would require new ship scene assets rather than another interpolation change. This observation does not affect the PASS verdict.
+- The sea, city, and panel signature moments defined in `design/ART_DIRECTION.md` are present in the captured run.
+- The scoped browser run used a Lisbon checkpoint setup before testing city movement; it does not claim a new end-to-end economy or progression certification.
+- No blocker or major issue was found in this revision.
 
 ## Not tested
 
-- Long-session economy and balance, all quest/skill routes, every combat outcome, audio listening, alternate browsers/devices, and translations other than Korean.
-- Fun, retention, and commercial readiness are reserved for human playtesting.
+- Every regional city silhouette was not screenshot-reviewed individually; all 69 placement invariants and all eight style assignments were checked programmatically.
+- Long-session economy, every quest or combat branch, audio listening, alternate browsers/devices, and non-Korean localization remain outside scope.
+- Human judgments about speed feel, fun, readability, and onboarding remain reserved for the playtest protocol.
 
-Raw state and timing data: `qa/evidence/runtime-results.json`. Independent expectations: `qa/evidence/design-invariants.md`.
+Raw runtime data: `qa/evidence/city-polish-runtime.json`. Independent expectations: `qa/evidence/design-invariants.md`.

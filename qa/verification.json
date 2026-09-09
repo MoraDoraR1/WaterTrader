@@ -1,78 +1,69 @@
 {
-  "sourceCommit": "03ca4a5530658004c806adabee587ce697dd9f90",
+  "sourceCommit": "97f4d6b60ceb27108eb5386fd8ad8b623450a263",
   "environment": {
     "targetPlatform": "desktop web browser",
     "targetRuntime": "modern Chromium on static GitHub Pages",
-    "testedRuntime": "Google Chrome 152.0.7977.77 via Playwright",
-    "viewports": ["1440x900", "1280x720"],
+    "testedRuntime": "Headless Chrome 152 via Chrome DevTools Protocol",
+    "viewports": ["1440x900"],
     "entry": "docs/index.html"
   },
   "verify": {
     "command": "npm run verify",
     "workingDirectory": "web",
     "exitCode": 0,
-    "durationSeconds": 0.5,
+    "durationSeconds": 7.3,
     "log": "qa/evidence/verify.log"
   },
   "suites": [
     { "id": "render-smoothing", "executed": true, "result": "PASS" },
     { "id": "legacy-pixel-removal", "executed": true, "result": "PASS" },
     { "id": "character-assets", "executed": true, "result": "PASS" },
-    { "id": "browser-visual-regression", "executed": true, "result": "PASS", "supplemental": true }
+    { "id": "city-character-motion", "executed": true, "result": "PASS" },
+    { "id": "city-placement", "executed": true, "result": "PASS" },
+    { "id": "mouse-close-controls", "executed": true, "result": "PASS" },
+    { "id": "scoped-browser-runtime", "executed": true, "result": "PASS", "supplemental": true }
   ],
   "completeRun": {
-    "scenario": "clean start -> sail input -> harbor approach -> dock -> city -> restart",
+    "scenario": "generated GitHub Pages artifact -> Lisbon sea checkpoint -> city -> real W movement -> mouse-close inventory and world map",
     "normalSpeed": true,
     "steps": [
-      "Opened the standalone deployment artifact in a clean browser context",
-      "Started a new voyage and pressed W",
-      "Placed the ship at the Lisboa dock checkpoint and used a real canvas click",
-      "Observed the Lisboa city scene and generated characters",
-      "Reloaded and observed the title state"
+      "Opened docs/index.html in a clean Chrome profile",
+      "Captured Lisbon as a land-backed Iberian settlement with a separate water dock",
+      "Entered the Lisbon city checkpoint and held W through real browser input",
+      "Observed movement-gated player walking and the stopped state after key release",
+      "Opened inventory and world map with real keyboard input and dismissed both with real pointer clicks"
     ],
     "result": "PASS"
   },
   "checkpoints": [
     {
-      "id": "sea-start",
-      "state": "screen=sea; ship=(-1750,910)",
-      "runtime": "1440x900 display and 1440x900 backing canvas; no console/resource errors",
-      "visual": "qa/evidence/01-sea-start.jpg"
+      "id": "lisbon-land-city",
+      "state": "naturalLand=true; syntheticLand=false; styleId=iberian",
+      "runtime": "city=(-1489.6,879.2); dock=(-1526.49,863.73)",
+      "visual": "qa/evidence/06-lisbon-land-city.jpg"
     },
     {
-      "id": "real-input-movement",
-      "state": "W changed notch 0->1 and ship z 910->911.9948591799997",
-      "runtime": "Playwright keyboard input in Chrome",
-      "visual": "qa/evidence/01-sea-start.jpg"
+      "id": "player-walk-motion",
+      "state": "speed=10; walking=true during input; walking=false after release",
+      "runtime": "movedDistance=6.834; walkPhase=4.8161; motionBlend=1",
+      "visual": "qa/evidence/07-player-walk-motion.jpg"
     },
     {
-      "id": "harbor-marker",
-      "state": "nearest harbor=lisboa; hoveredCity=lisboa",
-      "runtime": "Canvas click remained active with logical coordinate mapping",
-      "visual": "qa/evidence/03-smooth-harbor-marker.jpg"
+      "id": "inventory-mouse-close",
+      "state": "inventory open then dismissed by real pointer click",
+      "runtime": "inventory=PASS; worldMap=PASS; totalWiredButtons=10",
+      "visual": "qa/evidence/08-inventory-close-open.jpg",
+      "resultVisual": "qa/evidence/09-inventory-close-result.jpg"
     },
     {
-      "id": "city-smooth",
-      "state": "screen=city; city=lisboa; characterAssets=12",
-      "runtime": "p50=16.7ms; p95=16.8ms; worst=16.8ms over 95 rAF samples",
-      "visual": "qa/evidence/02-city-smooth.jpg"
-    },
-    {
-      "id": "minimum-viewport",
-      "state": "screen=city; city=lisboa",
-      "runtime": "1280x720 viewport; 1280x720 backing; body scroll size 1280x720",
-      "visual": "qa/evidence/04-city-1280x720.jpg"
-    },
-    {
-      "id": "restart",
-      "state": "screen=title; titleVisible=true",
-      "runtime": "Page reload completed without console/resource errors",
-      "visual": "qa/evidence/05-restart-title.jpg"
+      "id": "runtime-errors",
+      "state": "consoleErrors=0; failedRequests=0; httpErrors=0",
+      "runtime": "Headless Chrome 152 at 1440x900"
     }
   ],
-  "rawRuntimeEvidence": "qa/evidence/runtime-results.json",
+  "rawRuntimeEvidence": "qa/evidence/city-polish-runtime.json",
   "notRun": [
-    "Long-session balance, every quest branch, combat victory/failure, audio listening, and non-Korean localization were outside this rendering-only revision.",
-    "The independent first-minute premise adjudication required by full-game certification was not run because this session does not authorize sub-agent spawning."
+    "Every culture-specific city was not manually screenshot-reviewed; all city placement and style invariants were checked programmatically.",
+    "Long-session balance, every quest and combat branch, audio listening, alternate browsers, and human fun assessment were outside this scoped revision."
   ]
 }
