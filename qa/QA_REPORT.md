@@ -4,9 +4,9 @@
 
 **PASS for the requested rendering scope.** The enlarged-dot presentation is removed, the actual standalone build renders smoothly, and movement, docking, city entry, 1280×720 layout, and restart still work. This is not a new full-game balance or content certification.
 
-Tested source: `03ca4a5530658004c806adabee587ce697dd9f90`  
-Runtime: Google Chrome 152.0.7977.77, standalone `docs/index.html`  
-Viewports: 1440×900 and 1280×720
+- Tested source: `03ca4a5530658004c806adabee587ce697dd9f90`
+- Runtime: Google Chrome 152.0.7977.77, standalone `docs/index.html`
+- Viewports: 1440×900 and 1280×720
 
 ## Suite discovery
 
