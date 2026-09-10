@@ -188,6 +188,10 @@ export const hud = {
   showTitlesPanel(v) { $('titles-panel').classList.toggle('hidden', !v); },
   hideTitlesPanel() { $('titles-panel').classList.add('hidden'); },
   isTitlesPanelOpen() { return !$('titles-panel').classList.contains('hidden'); },
+
+  showGuidePanel(v) { $('guide-panel').classList.toggle('hidden', !v); },
+  hideGuidePanel() { $('guide-panel').classList.add('hidden'); },
+  isGuidePanelOpen() { return !$('guide-panel').classList.contains('hidden'); },
   // sections: [{ heading, rows }] — 축(교역/모험/전투/악명)마다 소제목 하나 + 그 축에서
   // 이미 달성한(잠금 여부와 무관하게 과거에 도달한) 칭호 전부를 행으로 나열한다.
   // renderQuestBoard와 완전히 같은 구조(quest-section-title 재사용)로 그린다.

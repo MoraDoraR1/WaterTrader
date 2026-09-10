@@ -1025,8 +1025,14 @@ export class SeaScene {
         }
       }
       if (!this._boardable) this._updateInvestigatePrompt();
-      const wPressed = consumeJustPressed('KeyW');
-      const sPressed = consumeJustPressed('KeyS');
+      // W/S를 "누르고 있는 동안" 계속 스로틀이 움직이도록 한다(예전엔 키를 누를 때마다 딱
+      // 한 단만 올라가 최고 속도까지 W를 여러 번 다시 눌러야 했다 — 자동 항법(waypoint)이
+      // 이미 매 프레임 throttleUp/Down을 불러 순항 노치까지 사실상 즉시 도달하는 것과
+      // 비교하면 수동 조작만 유난히 굼떠 보이던 불일치였다). 실제 체감 가속도는 이 노치
+      // 목표치를 그대로 좇는 accel 램프(ShipController.update)가 계속 담당하므로, 노치 자체가
+      // 빨리 바뀌어도 배가 순간이동하듯 급가속하지는 않는다.
+      const wPressed = isDown('KeyW');
+      const sPressed = isDown('KeyS');
       const manualTurn = (isDown('KeyA') ? 1 : 0) - (isDown('KeyD') ? 1 : 0);
       if (this.waypoint && (wPressed || sPressed || manualTurn !== 0)) this.waypoint = null;
       if (wPressed) this.ship.throttleUp();

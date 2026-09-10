@@ -35,6 +35,7 @@ import { initTooltips } from './ui/tooltip.js';
 import { openSkillPanel, wireSkillTabs } from './ui/skillPanel.js';
 import { openCompendiumPanel, wireCompendiumTabs } from './ui/compendiumPanel.js';
 import { openTitlesPanel } from './ui/titlesPanel.js';
+import { openGuidePanel, wireGuideTabs } from './ui/guidePanel.js';
 import {
   decayInfamy, getInfamyTitle, getTradeTitle, getAdventureTitle, getCombatTitle, getEquippedTitleEntry,
   addTradeFame, addAdventureFame, addCombatFame, addInfamy, checkWealthMilestone, checkDiscoveryMilestone,
@@ -241,6 +242,22 @@ function resizeWorldMapCanvas() {
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 }
 
+// KeyE와 우측 상단 🎒 버튼이 공유하는 인벤토리 토글 로직.
+function doToggleInventory() {
+  const priceMap = state.screen === 'city' && citySceneObj
+    ? Object.fromEntries(getMarketRows(citySceneObj.city.id).map((r) => [r.good.id, r.price]))
+    : null;
+  const supplies = Object.values(SUPPLY_DEFS).map((def) => ({ icon: def.icon, name: def.name, qty: state[def.id] }));
+  hud.toggleInventory(state.inventory, priceMap, supplies, { used: getCargoUsed(), cap: getCargoCapacity() });
+}
+
+// 여러 헤더 버튼이 공유하는 "지금 다른 큰 패널이 열려 있는지" 판정 — 애니메이션 루프의
+// 키보드 단축키 가드와 동일한 기준(패널끼리 겹쳐 뜨는 것을 막는다)을 마우스 버튼에도 적용한다.
+function isAnyBigPanelOpen() {
+  return hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen()
+    || hud.isSkillPanelOpen() || hud.isCompendiumPanelOpen() || hud.isTitlesPanelOpen() || hud.isGuidePanelOpen();
+}
+
 function openWorldMap() {
   if (state.screen === 'title') return;
   resizeWorldMapCanvas();
@@ -272,6 +289,7 @@ wireShipyardTabs();
 wireMarketTabs();
 wireCompendiumTabs();
 wireSkillTabs();
+wireGuideTabs();
 
 // 키보드 단축키를 외우지 않아도 모든 주요 창을 마우스로 닫을 수 있게 같은 위치·크기의
 // 명시적 닫기 버튼을 제공한다. market-panel은 시장/은행/보급/선원 창이 함께 재사용한다.
@@ -286,6 +304,7 @@ const UI_CLOSE_HANDLERS = {
   'compendium-close': () => hud.hideCompendiumPanel(),
   'market-close': () => hud.hideMarket(),
   'quest-close': () => hud.hideQuestBoard(),
+  'guide-close': () => hud.hideGuidePanel(),
 };
 for (const [id, close] of Object.entries(UI_CLOSE_HANDLERS)) {
   document.getElementById(id)?.addEventListener('click', (event) => {
@@ -340,6 +359,32 @@ function refreshInfamyIndicator() {
 subscribe(refreshInfamyIndicator);
 document.getElementById('rank-box').addEventListener('click', () => {
   hud.isTitlesPanelOpen() ? hud.hideTitlesPanel() : openTitlesPanel();
+});
+
+// ---- 우측 상단 헤더 버튼바 — 키보드 단축키와 동일한 동작을 마우스로도 열게 한다. ----
+document.getElementById('menu-inventory').addEventListener('click', () => {
+  if (hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen() || hud.isGuidePanelOpen()) return;
+  doToggleInventory();
+});
+document.getElementById('menu-map').addEventListener('click', () => {
+  if (isAnyBigPanelOpen()) return;
+  hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
+});
+document.getElementById('menu-shipinfo').addEventListener('click', () => {
+  if (hud.isWorldMapOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen() || hud.isGuidePanelOpen()) return;
+  hud.isShipInfoOpen() ? closeShipInfo() : openShipInfo();
+});
+document.getElementById('menu-skills').addEventListener('click', () => {
+  if (hud.isWorldMapOpen() || hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen() || hud.isCompendiumPanelOpen() || hud.isGuidePanelOpen()) return;
+  hud.isSkillPanelOpen() ? hud.hideSkillPanel() : openSkillPanel();
+});
+document.getElementById('menu-compendium').addEventListener('click', () => {
+  if (hud.isWorldMapOpen() || hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen() || hud.isSkillPanelOpen() || hud.isGuidePanelOpen()) return;
+  hud.isCompendiumPanelOpen() ? hud.hideCompendiumPanel() : openCompendiumPanel();
+});
+document.getElementById('menu-guide').addEventListener('click', () => {
+  if (isAnyBigPanelOpen() && !hud.isGuidePanelOpen()) return;
+  hud.isGuidePanelOpen() ? hud.hideGuidePanel() : openGuidePanel();
 });
 
 // ---- 선박 정보 카드 ----
@@ -470,8 +515,7 @@ function animate(now) {
   if (state.screen !== 'title') {
     checkQuestChainAnnouncements();
     decayInfamy(delta);
-    const anyBigPanelOpen = hud.isShipInfoOpen() || hud.isShipyardOpen() || hud.isMarketOpen() || hud.isQuestBoardOpen()
-      || hud.isSkillPanelOpen() || hud.isCompendiumPanelOpen() || hud.isTitlesPanelOpen();
+    const anyBigPanelOpen = isAnyBigPanelOpen();
     if (consumeJustPressed('KeyM') && !anyBigPanelOpen) {
       hud.isWorldMapOpen() ? closeWorldMap() : openWorldMap();
     }
@@ -479,16 +523,16 @@ function animate(now) {
       if (consumeJustPressed('ArrowLeft')) cycleWorldMap(-1);
       if (consumeJustPressed('ArrowRight')) cycleWorldMap(1);
     }
-    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
+    if (consumeJustPressed('KeyT') && !hud.isWorldMapOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isGuidePanelOpen()) {
       hud.isShipInfoOpen() ? closeShipInfo() : openShipInfo();
     }
-    if (consumeJustPressed('KeyK') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isCompendiumPanelOpen()) {
+    if (consumeJustPressed('KeyK') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isCompendiumPanelOpen() && !hud.isGuidePanelOpen()) {
       hud.isSkillPanelOpen() ? hud.hideSkillPanel() : openSkillPanel();
     }
-    if (consumeJustPressed('KeyC') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isSkillPanelOpen()) {
+    if (consumeJustPressed('KeyC') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isSkillPanelOpen() && !hud.isGuidePanelOpen()) {
       hud.isCompendiumPanelOpen() ? hud.hideCompendiumPanel() : openCompendiumPanel();
     }
-    if (consumeJustPressed('KeyV') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isSkillPanelOpen() && !hud.isCompendiumPanelOpen()) {
+    if (consumeJustPressed('KeyV') && !hud.isWorldMapOpen() && !hud.isShipInfoOpen() && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isSkillPanelOpen() && !hud.isCompendiumPanelOpen() && !hud.isGuidePanelOpen()) {
       hud.isTitlesPanelOpen() ? hud.hideTitlesPanel() : openTitlesPanel();
     }
     if (consumeJustPressed('KeyF')) {
@@ -516,16 +560,13 @@ function animate(now) {
         }
       }
     }
-    if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen()) {
-      const priceMap = state.screen === 'city' && citySceneObj
-        ? Object.fromEntries(getMarketRows(citySceneObj.city.id).map((r) => [r.good.id, r.price]))
-        : null;
-      const supplies = Object.values(SUPPLY_DEFS).map((def) => ({ icon: def.icon, name: def.name, qty: state[def.id] }));
-      hud.toggleInventory(state.inventory, priceMap, supplies, { used: getCargoUsed(), cap: getCargoCapacity() });
+    if (consumeJustPressed('KeyE') && !hud.isShipyardOpen() && !hud.isMarketOpen() && !hud.isQuestBoardOpen() && !hud.isGuidePanelOpen()) {
+      doToggleInventory();
     }
     if (consumeJustPressed('Escape')) {
       hud.hideDialogue();
       hud.closeInventory();
+      hud.hideGuidePanel();
       closeWorldMap();
       closeShipInfo();
       hud.hideShipyard();

@@ -12,8 +12,13 @@ import { mulSkillEffect } from '../data/shipSkills.js';
 const SPEED_STAT_TO_UNIT = 0.2848;
 const MAX_FWD = 5;
 const MAX_REV = -3;
-const ACCEL_BASE = 4.5;
-const TURN_ACCEL_BASE = 0.6;
+// 가감속/선회 반응성 — 예전 값(4.5/0.6)은 노치를 최고로 올려도 실제 속도·선회율이 목표치를
+// 따라잡는 데 1.5~2초 넘게 걸려, 조타에 "붕 뜬" 지연감을 줬다(수동 입력이 노치 하나당
+// 키 입력 한 번씩만 반영되던 예전 방식과 겹쳐 더 둔하게 느껴졌다). 최고 속도·최고 선회율
+// 자체(선박 데이터의 speed/turnRate)는 그대로 두고, 그 목표치에 도달하는 "램프 속도"만
+// 약 2.5배 끌어올려 입력에 더 즉각적으로 반응하게 했다.
+const ACCEL_BASE = 11;
+const TURN_ACCEL_BASE = 1.6;
 
 function degToRad(d) { return (d * Math.PI) / 180; }
 
