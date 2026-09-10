@@ -1,17 +1,24 @@
 // 승무원 급여/사기/머릿수 시스템.
 // - 사기(crewMorale, 0~100)는 백병전 전투력에 곱연산(getMoralePowerMul)되는 "컨디션" 지표로,
-//   입항 시 일부 회복되고 못 내면 크게 깎인다 — 예전부터 있던 기능.
+//   급여를 낼 때마다 일부 회복되고 못 내면 크게 깎인다 — 예전부터 있던 기능.
 // - 선원 수(state.crewCount)는 실제 "머릿수" 자원이다. 배마다 정원(shipDef.crew)이 있고,
 //   전투 피격이나 식량/식수 고갈로 실제로 줄어든다(부상·이탈·아사). 정원의 MIN_CREW_RATIO
 //   미만으로 떨어지면 항구에서 출항 자체가 막히고, 항해 중에 그 밑으로 떨어지면(전투/기아로
 //   바다 한복판에서) 속도가 부족 비율만큼 깎인다 — 사기와 달리 "탈 수 있는 인원이 없어서
-//   물리적으로 배를 못 몬다"는 의미다. 입항해서 급여를 낼 수 있으면 일부 재충원된다.
+//   물리적으로 배를 못 몬다"는 의미다. 급여를 낼 수 있으면 입항 시에 한해 일부 재충원된다.
+// - 급여 지급(사용자 요청)은 예전엔 입항할 때만 일어났다 — 오래 항구에 안 들르고 바다에
+//   머물면 사기가 오를 기회 자체가 없었다. 이제 항해일자(state.dayTimer)가 하루 넘어갈
+//   때마다 위치와 무관하게(바다 위에서도) 자동으로 한 번 지급되도록 했다 — state.wagesLastDay로
+//   하루 한 번만 나가게 가드해, 입항 직후 또 하루가 넘어가는 순간이 겹쳐도 이중으로 빠져나가지
+//   않는다. 항구 도착 시 추가로 붙는 신규 선원 충원·순환 보급 보너스는 "그 방문에서 실제로
+//   새 급여가 나갔을 때"만 함께 준다(같은 날 이미 바다에서 냈다면 입항 자체는 공짜).
 import { state, notify } from '../state.js';
 import { getShip } from '../data/ships.js';
 import { sumSkillEffect, mulSkillEffect } from '../data/shipSkills.js';
 
-const WAGE_PER_CREW = 0.5; // 승무원 1명당 입항 시 지급하는 급여
-const MORALE_DOCK_RECOVER = 15;
+const VOYAGE_DAY_SECONDS = 60; // entities/weather.js DAY_CYCLE_SECONDS와 동일 기준
+const WAGE_PER_CREW = 0.25; // 승무원 1명당 하루치 급여(사용자 요청으로 0.5→0.25 인하)
+const MORALE_WAGE_RECOVER = 15;
 const MORALE_COMBAT_HIT_LOSS = 4;
 const MORALE_UNPAID_PENALTY = 20;
 
@@ -44,21 +51,14 @@ export function getCrewSpeedMul() {
   return Math.max(CREW_SPEED_FLOOR, crew / minCrew);
 }
 
-export function payWagesOnDock() {
-  const shipDef = getShip(state.currentShipId);
+function settleWage(shipDef) {
   const crew = shipDef?.crew || 20;
   const wage = Math.round(crew * WAGE_PER_CREW);
   const morale = state.crewMorale ?? 100;
   let paid;
   if (state.gold >= wage) {
     state.gold -= wage;
-    state.crewMorale = Math.min(100, morale + MORALE_DOCK_RECOVER);
-    const recruited = Math.max(0, Math.round(crew * CREW_RECOVER_PCT_ON_DOCK));
-    state.crewCount = Math.min(crew, (state.crewCount ?? crew) + recruited);
-    // 순환 보급 스킬 — 급여를 낼 수 있었을 때만(=정상적으로 입항 처리됐을 때만) 식량·식수를
-    // 추가로 얹어준다.
-    const supplyBonus = sumSkillEffect(shipDef, 'dockSupplyBonusAdd', 0);
-    if (supplyBonus > 0) { state.food += supplyBonus; state.water += supplyBonus; }
+    state.crewMorale = Math.min(100, morale + MORALE_WAGE_RECOVER);
     paid = true;
   } else {
     state.gold = 0;
@@ -67,6 +67,35 @@ export function payWagesOnDock() {
   }
   notify({ crewChanged: true });
   return { wage, paid };
+}
+
+// 항해일자가 넘어갈 때마다(위치 무관 — 항구든 바다든) 하루 한 번만 급여를 지급한다.
+// 이미 오늘치를 냈다면 null을 반환해 아무 것도 하지 않는다(중복 지급 방지).
+export function payDailyWages() {
+  const day = 1 + Math.floor((state.dayTimer || 0) / VOYAGE_DAY_SECONDS);
+  if (day <= (state.wagesLastDay ?? 1)) return null;
+  state.wagesLastDay = day;
+  return settleWage(getShip(state.currentShipId));
+}
+
+// 입항 시 호출 — 오늘치 급여가 아직 안 나갔다면 payDailyWages()로 지급하고, 그 자리에서
+// 실제로 새로 지급됐을 때만(=이미 바다에서 그날 치를 냈다면 제외) 항구 전용 보너스인
+// 신규 선원 충원과 순환 보급 스킬 식량/식수를 함께 얹어준다.
+export function payWagesOnDock() {
+  const result = payDailyWages();
+  if (!result) return { wage: 0, paid: true };
+  if (result.paid) {
+    const shipDef = getShip(state.currentShipId);
+    const crew = shipDef?.crew || 20;
+    const recruited = Math.max(0, Math.round(crew * CREW_RECOVER_PCT_ON_DOCK));
+    state.crewCount = Math.min(crew, (state.crewCount ?? crew) + recruited);
+    // 순환 보급 스킬 — 급여를 낼 수 있었을 때만(=정상적으로 입항 처리됐을 때만) 식량·식수를
+    // 추가로 얹어준다.
+    const supplyBonus = sumSkillEffect(shipDef, 'dockSupplyBonusAdd', 0);
+    if (supplyBonus > 0) { state.food += supplyBonus; state.water += supplyBonus; }
+    notify({ crewChanged: true });
+  }
+  return result;
 }
 
 export function loseMoraleFromCombat() {

@@ -35,7 +35,7 @@ import { ADVENTURE_FAME_PER_DISCOVERY, ADVENTURE_FAME_PER_EXPLORATION, COMBAT_FA
 import { checkExplorationSite } from '../systems/exploration.js';
 import { isRouteUnlocked, getRouteUnlockInfo } from '../systems/routeUnlock.js';
 import { RANKS } from '../data/ranks.js';
-import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory } from '../systems/crew.js';
+import { loseMoraleFromCombat, getMoralePowerMul, getCrewSpeedMul, getCurrentMinCrew, loseCrewFromSupplies, rescueCrewFromVictory, payDailyWages } from '../systems/crew.js';
 import { audio } from '../systems/audio.js';
 import { formatCityEventBadge, getCargoCapacity, getCargoUsed } from '../systems/market.js';
 import { getGood } from '../data/goods.js';
@@ -890,6 +890,16 @@ export class SeaScene {
     hud.toast(`${reason} 바닥나 선원들이 지쳐갑니다! 선체가 상하고 선원이 줄어듭니다. (항구에서 보급하세요)`);
   }
 
+  // 선원 급여(사용자 요청) — 예전엔 입항해야만 지급됐다. 이제 항해일자가 넘어갈 때마다
+  // 바다 위에서도 똑같이 자동 지급된다(하루 한 번, payDailyWages가 중복 지급을 막는다).
+  _processWages() {
+    const result = payDailyWages();
+    if (!result || result.wage <= 0) return;
+    hud.toast(result.paid
+      ? `⚓ 오늘치 승무원 급여 ${result.wage.toLocaleString('ko-KR')} 두캇을 지급했습니다.`
+      : '⚓ 골드가 부족해 급여를 지급하지 못해 사기가 떨어졌습니다!');
+  }
+
   // 골드를 주는 발견 이벤트 대신, 날씨 자체가 위험과 보상을 함께 주는 "이벤트"다 — 폭풍
   // 중 순풍을 타고 달리면(entities/shipController.js의 바람 시스템이 이미 자연스럽게
   // 최대 +25%까지 속도를 올려준다) 그만큼 선체에도 무리가 간다. 반대로 역풍으로 폭풍을
@@ -992,6 +1002,7 @@ export class SeaScene {
     this.weather.update(delta);
     state.dayTimer = this.weather.dayTimer;
     this._processSupplies();
+    this._processWages();
     this.wind.stormActive = this.weather.stormActive;
     this.wind.update(delta);
 

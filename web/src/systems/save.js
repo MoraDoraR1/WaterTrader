@@ -32,6 +32,7 @@ export function saveGame() {
     materials: state.materials,
     cannonballs: state.cannonballs,
     suppliesLastDay: state.suppliesLastDay,
+    wagesLastDay: state.wagesLastDay,
     inventory: state.inventory,
     quests: state.quests,
     questRespawnAt: state.questRespawnAt,
@@ -103,6 +104,7 @@ export function applySave(data) {
   if (typeof data.materials === 'number') state.materials = data.materials;
   if (typeof data.cannonballs === 'number') state.cannonballs = data.cannonballs;
   if (typeof data.suppliesLastDay === 'number') state.suppliesLastDay = data.suppliesLastDay;
+  if (typeof data.wagesLastDay === 'number') state.wagesLastDay = data.wagesLastDay;
   if (Array.isArray(data.inventory)) state.inventory = data.inventory;
   state.quests = data.quests || {};
   state.questRespawnAt = data.questRespawnAt && typeof data.questRespawnAt === 'object' ? data.questRespawnAt : {};

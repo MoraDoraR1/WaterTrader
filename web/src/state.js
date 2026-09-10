@@ -25,6 +25,7 @@ export const state = {
   materials: 3,
   cannonballs: 18, // 시작 화력 3~5회 교전분 — 초기 배(포 4문)는 일제사격 1회에 2발을 쏘지만 소모는 1개뿐이다.
   suppliesLastDay: 1, // 마지막으로 식량/식수 소모를 처리한 항해일자 — 날짜가 넘어갈 때마다 갱신.
+  wagesLastDay: 1, // 마지막으로 선원 급여를 지급한 항해일자 — 입항/바다 위 어느 쪽에서 넘어가든 하루 한 번만 지급되게 막는다.
   dockedCityId: null,
   inCombat: false,
   // 시작 시점에 실제로 사고파는(둘 중 아무 항구에서나) 품목만 들려 보낸다 — 아직 어느
