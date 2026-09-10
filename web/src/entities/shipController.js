@@ -87,8 +87,15 @@ export class ShipController {
     const speedFactor = 0.35 + 0.65 * Math.min(1, Math.abs(this.curSpeed) / maxSpeed);
     const dir = this.curSpeed < 0 ? -1 : 1;
     const targetTurnRate = this.turnInput * turnRateBase * speedFactor * dir;
-    const maxTurnStep = this.turnAccel * delta;
-    this.curTurnRate += clamp(targetTurnRate - this.curTurnRate, -maxTurnStep, maxTurnStep);
+    if (this.turnInput === 0) {
+      // A/D를 떼는 순간 배가 관성으로 계속 돌아가지 않도록 즉시 멈춘다(사용자 요청) — 누르고
+      // 있는 동안의 가속 램프(turnAccel)는 그대로 두되, 입력이 없을 땐 curTurnRate를 곧장
+      // 0으로 스냅해 "뗐는데도 의도한 양보다 더 돌아버리는" 체감을 없앤다.
+      this.curTurnRate = 0;
+    } else {
+      const maxTurnStep = this.turnAccel * delta;
+      this.curTurnRate += clamp(targetTurnRate - this.curTurnRate, -maxTurnStep, maxTurnStep);
+    }
     this.heading += this.curTurnRate * delta;
 
     const targetSpeed = this.notch * notchSpeed * this.speedMul * this.windMul * this.crewSpeedMul * this.combatSpeedMul * this.titleSpeedMul;

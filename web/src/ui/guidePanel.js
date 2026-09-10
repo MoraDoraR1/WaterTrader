@@ -22,7 +22,7 @@ const TABS = [
   ` },
   { id: 'controls', label: '조작법', html: `
     <h4>이동</h4>
-    <p><b>바다에서</b>: <span class="g-key">W</span>를 누르고 있으면 가속, <span class="g-key">S</span>를 누르고 있으면 감속·후진 — 홀드하는 동안 계속 속도가 바뀝니다. <span class="g-key">A</span>/<span class="g-key">D</span>로 좌우 조향(순풍·역풍의 영향을 받음).<br><b>항구에서</b>: 캐릭터를 4방향으로 이동.</p>
+    <p><b>바다에서</b>: <span class="g-key">W</span>를 누르고 있으면 가속, <span class="g-key">S</span>를 누르고 있으면 감속·후진 — 홀드하는 동안 계속 속도가 바뀝니다. <span class="g-key">A</span>/<span class="g-key">D</span>로 좌우 조향하며, 떼는 즉시 선회가 멈춥니다(순풍·역풍의 영향을 받음).<br><b>항구에서</b>: 캐릭터를 4방향으로 이동.</p>
     <p><span class="g-key">Space</span> — 바다 전투 중 누르고 있으면 현측 포격 지속. 백병전 중에는 연타할수록 유리합니다.</p>
     <h4>상호작용 &amp; 메뉴</h4>
     <p><span class="g-key">F</span> 정박·승선/대화 · <span class="g-key">E</span> 화물칸(🎒 버튼) · <span class="g-key">M</span> 전체 지도(🗺️ 버튼, 열린 상태에서 ◀▶로 지역 전환) · <span class="g-key">T</span> 선박 정보(🚢 버튼) · <span class="g-key">V</span> 칭호(🎖 버튼) · <span class="g-key">K</span> 스킬 패널(📯 버튼) · <span class="g-key">C</span> 항해 도감(📖 버튼) · <span class="g-key">R</span> 바다 위 응급 수리 · <span class="g-key">Esc</span> 열린 창 전부 닫기</p>
